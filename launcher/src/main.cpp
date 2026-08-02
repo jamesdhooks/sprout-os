@@ -160,17 +160,59 @@ int run_smoke_test(SDL_Renderer* renderer) {
   sprout::launcher::ProfileRepository profiles(directory.path() / "data" /
                                                 "profiles.sqlite3");
   sprout::launcher::SetupWizard wizard(configuration, profiles);
-  sprout::launcher::SetupPresentation setup(wizard);
+  const auto source_path = directory.path() / "profile-image.bmp";
+  SDL_Surface* source =
+      SDL_CreateRGBSurfaceWithFormat(0, 8, 4, 32, SDL_PIXELFORMAT_RGBA32);
+  if (source == nullptr) {
+    std::cerr << "Profile image smoke fixture failed: " << SDL_GetError() << '\n';
+    return EXIT_FAILURE;
+  }
+  SDL_FillRect(source, nullptr, SDL_MapRGB(source->format, 82, 142, 104));
+  const int source_result = SDL_SaveBMP(source, source_path.string().c_str());
+  SDL_FreeSurface(source);
+  if (source_result != 0) {
+    std::cerr << "Profile image smoke fixture save failed: " << SDL_GetError() << '\n';
+    return EXIT_FAILURE;
+  }
+
+  sprout::launcher::SetupPresentation setup(wizard, true);
+  const auto image_root = directory.path() / "data" / "profile-images";
+  sprout::launcher::ProfileImageImporter importer(image_root, profiles);
+  bool imported_portrait = false;
   while (setup.step() != sprout::launcher::SetupStep::Complete) {
     sprout::launcher::render_setup(renderer, setup);
-    (void)setup.handle(Action::Confirm);
+    if (setup.step() == sprout::launcher::SetupStep::Avatars) {
+      const auto event = setup.handle(Action::Confirm);
+      if (event != sprout::launcher::SetupPresentationEvent::ImportParentImageRequested) {
+        std::cerr << "Setup smoke test did not request the staged profile image\n";
+        return EXIT_FAILURE;
+      }
+      sprout::launcher::ProfileImageCropPresentation crop(
+          importer, "parent-primary", source_path);
+      (void)crop.handle(Action::ZoomIn);
+      (void)crop.handle(Action::Right);
+      sprout::launcher::render_profile_image_crop(renderer, crop);
+      if (crop.handle(Action::Confirm) !=
+          sprout::launcher::ProfileImageCropEvent::Imported) {
+        std::cerr << "Setup smoke test could not activate the profile image\n";
+        return EXIT_FAILURE;
+      }
+      setup.complete_avatar_step();
+      imported_portrait = true;
+    } else {
+      (void)setup.handle(Action::Confirm);
+    }
     if (!setup.error_message().empty()) {
       std::cerr << "Setup smoke test failed: " << setup.error_message() << '\n';
       return EXIT_FAILURE;
     }
   }
+  if (!imported_portrait) {
+    std::cerr << "Setup smoke test skipped the profile image flow\n";
+    return EXIT_FAILURE;
+  }
   LauncherState persisted(load_launcher_profiles(profiles));
-  sprout::launcher::render_launcher(renderer, persisted);
+  sprout::launcher::render_launcher(renderer, persisted, image_root);
   return EXIT_SUCCESS;
 }
 
