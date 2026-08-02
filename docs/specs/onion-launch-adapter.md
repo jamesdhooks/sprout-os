@@ -38,7 +38,7 @@ Every attempt produces one structured outcome: completed, policy denied, invalid
 
 ## Verification boundary
 
-Desktop contract tests cover GB/SNES mapping, paths containing spaces, denied and malformed targets, missing files, unsupported extensions, missing launchers, start failure, non-zero exit, and missing exit status. Windows intentionally cannot execute Onion shell scripts.
+Desktop contract tests cover GB/SNES mapping, paths containing spaces, denied and malformed targets, missing files, unsupported extensions, missing launchers, start failure, non-zero exit, and missing exit status. Windows intentionally cannot execute Onion shell scripts. A Linux host test additionally executes the fixed script through the POSIX runner and covers normal return, a non-zero exit, and missing execute permission.
 
 The following remain open until a development card is available:
 

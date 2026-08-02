@@ -14,6 +14,7 @@ using sprout::launcher::EmulatedLaunchTarget;
 using sprout::launcher::LaunchOutcome;
 using sprout::launcher::LaunchProcess;
 using sprout::launcher::OnionLaunchAdapter;
+using sprout::launcher::OnionLaunchProcess;
 using sprout::launcher::OnionSystem;
 using sprout::launcher::ProcessResult;
 
@@ -198,6 +199,44 @@ void test_launcher_and_process_outcomes() {
           "missing exit status should be abnormal");
 }
 
+#ifndef _WIN32
+void test_posix_process_runner() {
+  TemporaryCard card;
+  const auto launcher = card.root() / "Emu/GB/launch.sh";
+  const auto rom = card.rom("GB/process.gb");
+  OnionLaunchProcess process;
+  OnionLaunchAdapter adapter(card.root(), process);
+
+  {
+    std::ofstream output(launcher, std::ios::binary | std::ios::trunc);
+    output << "#!/bin/sh\nexit 0\n";
+  }
+  std::filesystem::permissions(
+      launcher,
+      std::filesystem::perms::owner_read |
+          std::filesystem::perms::owner_write |
+          std::filesystem::perms::owner_exec);
+  require(adapter.launch(allowed(OnionSystem::GameBoy, rom)).completed(),
+          "POSIX runner should execute the fixed Onion script");
+
+  {
+    std::ofstream output(launcher, std::ios::binary | std::ios::trunc);
+    output << "#!/bin/sh\nexit 17\n";
+  }
+  auto result = adapter.launch(allowed(OnionSystem::GameBoy, rom));
+  require(result.outcome == LaunchOutcome::AbnormalExit && result.exit_code == 17,
+          "POSIX runner should retain a script exit code");
+
+  std::filesystem::permissions(
+      launcher,
+      std::filesystem::perms::owner_read |
+          std::filesystem::perms::owner_write);
+  result = adapter.launch(allowed(OnionSystem::GameBoy, rom));
+  require(result.outcome == LaunchOutcome::ProcessStartFailed,
+          "POSIX runner should report an executable permission failure");
+}
+#endif
+
 }  // namespace
 
 int main() {
@@ -205,6 +244,9 @@ int main() {
     test_gb_and_snes_contracts();
     test_rejections_do_not_start_process();
     test_launcher_and_process_outcomes();
+#ifndef _WIN32
+    test_posix_process_runner();
+#endif
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
     return 1;
