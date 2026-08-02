@@ -1,4 +1,5 @@
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/profile_image_crop_presentation.hpp"
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -23,6 +24,9 @@ namespace {
 using sprout::launcher::CropSelection;
 using sprout::launcher::NewProfile;
 using sprout::launcher::ProfileImageImporter;
+using sprout::launcher::ProfileImageCropEvent;
+using sprout::launcher::ProfileImageCropPresentation;
+using sprout::launcher::ProfileImageCropSession;
 using sprout::launcher::ProfileRepository;
 using sprout::launcher::ProfileRole;
 
@@ -276,6 +280,42 @@ void replacement_removes_only_the_prior_managed_generation() {
                  "managed path resolution should reject traversal");
 }
 
+void crop_session_is_bounded_and_presentation_imports() {
+  TemporaryDirectory directory;
+  ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+  create_parent(profiles);
+  const auto source = directory.path() / "source.png";
+  create_two_color_source(source, false);
+
+  ProfileImageCropSession session(source);
+  expect(session.preview_rgba().size() == 256U * 256U * 4U,
+         "crop preview should expose a 256-square RGBA frame");
+  for (int index = 0; index < 20; ++index) {
+    session.move(-0.1, 0.1);
+    session.adjust_zoom(0.25);
+  }
+  const auto bounded = session.selection();
+  expect(bounded.center_x == 0.0 && bounded.center_y == 1.0 && bounded.zoom == 4.0,
+         "crop controls should clamp to supported bounds");
+
+  ProfileImageImporter importer(directory.path() / "images", profiles);
+  ProfileImageCropPresentation cancelled(importer, "parent-sam", source);
+  expect(cancelled.handle(sprout::launcher::Action::Back) ==
+             ProfileImageCropEvent::Cancelled,
+         "back should cancel without importing");
+  expect(profiles.find_profile("parent-sam")->avatar_ref == "builtin:fox",
+         "cancel should preserve the built-in portrait");
+
+  ProfileImageCropPresentation accepted(importer, "parent-sam", source);
+  (void)accepted.handle(sprout::launcher::Action::ZoomIn);
+  (void)accepted.handle(sprout::launcher::Action::Left);
+  expect(accepted.handle(sprout::launcher::Action::Confirm) ==
+             ProfileImageCropEvent::Imported,
+         "confirm should import the visible crop");
+  expect(profiles.find_profile("parent-sam")->avatar_ref.starts_with("local:"),
+         "crop confirmation should persist a managed reference");
+}
+
 }  // namespace
 
 int main() {
@@ -288,6 +328,7 @@ int main() {
     honors_jpeg_exif_orientation_and_strips_metadata();
     rejects_bad_inputs_without_replacing_portrait();
     replacement_removes_only_the_prior_managed_generation();
+    crop_session_is_bounded_and_presentation_imports();
   } catch (const std::exception& error) {
     std::cerr << "profile image importer test failed: " << error.what() << '\n';
     SDL_Quit();

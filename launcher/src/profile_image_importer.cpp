@@ -397,6 +397,52 @@ void remove_old_asset(const std::filesystem::path& root, std::string_view refere
 
 }  // namespace
 
+struct ProfileImageCropSession::Impl {
+  Surface image;
+  CropSelection crop;
+};
+
+ProfileImageCropSession::ProfileImageCropSession(
+    const std::filesystem::path& source_path) {
+  const auto bytes = read_source(source_path);
+  Surface decoded = decode(bytes);
+  impl_ = std::make_unique<Impl>(
+      Impl{.image = apply_orientation(*decoded, exif_orientation(bytes)), .crop = {}});
+}
+
+ProfileImageCropSession::~ProfileImageCropSession() = default;
+ProfileImageCropSession::ProfileImageCropSession(ProfileImageCropSession&&) noexcept = default;
+ProfileImageCropSession& ProfileImageCropSession::operator=(
+    ProfileImageCropSession&&) noexcept = default;
+
+void ProfileImageCropSession::move(double horizontal, double vertical) noexcept {
+  impl_->crop.center_x = std::clamp(impl_->crop.center_x + horizontal, 0.0, 1.0);
+  impl_->crop.center_y = std::clamp(impl_->crop.center_y + vertical, 0.0, 1.0);
+}
+
+void ProfileImageCropSession::adjust_zoom(double delta) noexcept {
+  impl_->crop.zoom = std::clamp(impl_->crop.zoom + delta, 1.0, 4.0);
+}
+
+CropSelection ProfileImageCropSession::selection() const noexcept {
+  return impl_->crop;
+}
+
+std::vector<std::uint8_t> ProfileImageCropSession::preview_rgba() const {
+  const SDL_Rect crop = crop_rectangle(*impl_->image, impl_->crop);
+  Surface preview = scaled_crop(*impl_->image, crop, kPortraitSize);
+  SurfaceLock lock(*preview);
+  std::vector<std::uint8_t> pixels(
+      static_cast<std::size_t>(kPortraitSize * kPortraitSize * 4));
+  for (int row = 0; row < kPortraitSize; ++row) {
+    const auto* source = static_cast<const std::uint8_t*>(preview->pixels) +
+                         static_cast<std::size_t>(row * preview->pitch);
+    std::copy_n(source, kPortraitSize * 4,
+                pixels.begin() + static_cast<std::size_t>(row * kPortraitSize * 4));
+  }
+  return pixels;
+}
+
 ProfileImageImporter::ProfileImageImporter(std::filesystem::path managed_image_root,
                                            ProfileRepository& profiles)
     : root_(std::move(managed_image_root)), profiles_(profiles) {}
@@ -404,6 +450,13 @@ ProfileImageImporter::ProfileImageImporter(std::filesystem::path managed_image_r
 ManagedProfileImage ProfileImageImporter::import_for_profile(
     const std::string& profile_id, const std::filesystem::path& source_path,
     CropSelection crop) {
+  ProfileImageCropSession session(source_path);
+  session.impl_->crop = crop;
+  return import_for_profile(profile_id, session);
+}
+
+ManagedProfileImage ProfileImageImporter::import_for_profile(
+    const std::string& profile_id, const ProfileImageCropSession& session) {
   const auto profile = profiles_.find_profile(profile_id);
   if (!profile.has_value() || profile->lifecycle != ProfileLifecycle::Active) {
     throw std::invalid_argument("Profile image requires an active profile");
@@ -412,11 +465,8 @@ ManagedProfileImage ProfileImageImporter::import_for_profile(
     throw std::runtime_error("Profile revision is exhausted");
   }
 
-  const auto bytes = read_source(source_path);
-  Surface decoded = decode(bytes);
-  Surface oriented = apply_orientation(*decoded, exif_orientation(bytes));
-  const SDL_Rect crop_area = crop_rectangle(*oriented, crop);
-  Surface portrait = scaled_crop(*oriented, crop_area, kPortraitSize);
+  const SDL_Rect crop_area = crop_rectangle(*session.impl_->image, session.impl_->crop);
+  Surface portrait = scaled_crop(*session.impl_->image, crop_area, kPortraitSize);
   const SDL_Rect portrait_area{0, 0, kPortraitSize, kPortraitSize};
   Surface thumbnail = scaled_crop(*portrait, portrait_area, kThumbnailSize);
 
@@ -453,6 +503,16 @@ std::filesystem::path ProfileImageImporter::resolve_portrait(
 std::filesystem::path ProfileImageImporter::resolve_thumbnail(
     const std::string& avatar_ref) const {
   return resolve(avatar_ref, "thumbnail.png");
+}
+
+std::filesystem::path ProfileImageImporter::resolve_portrait_at(
+    const std::filesystem::path& managed_image_root,
+    const std::string& avatar_ref) {
+  if (!avatar_ref.starts_with("local:") ||
+      !safe_asset_id(std::string_view(avatar_ref).substr(6))) {
+    throw std::invalid_argument("Avatar reference is not a managed local image");
+  }
+  return managed_image_root / std::string_view(avatar_ref).substr(6) / "portrait.png";
 }
 
 std::filesystem::path ProfileImageImporter::resolve(

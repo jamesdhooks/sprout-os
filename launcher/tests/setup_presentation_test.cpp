@@ -112,6 +112,29 @@ void back_requests_exit_without_losing_progress() {
          "leaving should preserve the last completed setup step");
 }
 
+void requests_and_completes_available_parent_image_import() {
+  TemporaryDirectory directory;
+  ConfigurationStore configuration(directory.path() / "config");
+  ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+  SetupWizard wizard(configuration, profiles);
+  SetupPresentation presentation(wizard, true);
+  for (int index = 0; index < 6; ++index) {
+    (void)presentation.handle(Action::Confirm);
+  }
+  expect(presentation.step() == SetupStep::Avatars,
+         "custom image fixture should reach portrait setup");
+  expect(presentation.choices().size() == 2,
+         "available import should retain an explicit built-in fallback");
+  expect(presentation.handle(Action::Confirm) ==
+             SetupPresentationEvent::ImportParentImageRequested,
+         "first portrait choice should request the crop flow");
+  expect(presentation.step() == SetupStep::Avatars,
+         "requesting an import should not advance before activation");
+  presentation.complete_avatar_step();
+  expect(presentation.step() == SetupStep::Library,
+         "successful import should resume at the next setup step");
+}
+
 }  // namespace
 
 int main() {
@@ -119,6 +142,7 @@ int main() {
     renders_content_for_each_persisted_step();
     completes_the_desktop_setup_path();
     back_requests_exit_without_losing_progress();
+    requests_and_completes_available_parent_image_import();
   } catch (const std::exception& error) {
     std::cerr << "setup presentation test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

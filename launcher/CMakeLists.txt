@@ -52,6 +52,7 @@ endif()
 if(SPROUT_BUILD_DESKTOP)
   add_library(
     sprout_profile_images
+    src/profile_image_crop_presentation.cpp
     src/profile_image_importer.cpp
   )
   target_include_directories(sprout_profile_images PUBLIC include)
@@ -60,6 +61,7 @@ if(SPROUT_BUILD_DESKTOP)
     sprout_profile_images
     PRIVATE
       sprout_profile_store
+      sprout_launcher_core
       SDL2::SDL2-static
       SDL2_image
   )
@@ -77,7 +79,9 @@ if(SPROUT_BUILD_DESKTOP)
     PRIVATE
       sprout_launcher_core
       sprout_profile_store
+      sprout_profile_images
       sprout_setup
+      SDL2_image
       SDL2::SDL2main
       SDL2::SDL2-static
   )
