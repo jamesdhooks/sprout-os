@@ -20,6 +20,11 @@ add_library(
   src/setup_wizard.cpp
 )
 
+add_library(
+  sprout_parent_access
+  src/parent_access_store.cpp
+)
+
 target_include_directories(sprout_launcher_core PUBLIC include)
 target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
@@ -36,17 +41,32 @@ target_link_libraries(
     sprout_configuration
     sprout_profile_store
 )
+target_include_directories(sprout_parent_access PUBLIC include)
+target_compile_features(sprout_parent_access PUBLIC cxx_std_20)
+target_include_directories(
+  sprout_parent_access
+  SYSTEM PRIVATE "${argon2_SOURCE_DIR}/src/blake2"
+)
+target_link_libraries(
+  sprout_parent_access
+  PRIVATE sprout_argon2 sprout_sqlite
+)
+if(WIN32)
+  target_link_libraries(sprout_parent_access PRIVATE bcrypt)
+endif()
 
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(SPROUT_BUILD_DESKTOP)
@@ -126,6 +146,14 @@ if(BUILD_TESTING)
   target_compile_features(sprout-setup-presentation-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-setup-presentation-test PRIVATE sprout_setup)
   add_test(NAME setup-presentation COMMAND sprout-setup-presentation-test)
+
+  add_executable(sprout-parent-access-test tests/parent_access_store_test.cpp)
+  target_compile_features(sprout-parent-access-test PRIVATE cxx_std_20)
+  target_link_libraries(
+    sprout-parent-access-test
+    PRIVATE sprout_parent_access sprout_sqlite
+  )
+  add_test(NAME parent-access COMMAND sprout-parent-access-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)
