@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has an initial Windows desktop launcher preview. There is no supported release, profile persistence, Onion adapter, policy enforcement, or deployable SD-card image.
+Sprout currently has an initial Windows desktop launcher preview and a versioned local profile repository. There is no supported release, first-run setup, Onion adapter, policy enforcement, or deployable SD-card image.
 
 ## Tools
 
@@ -8,10 +8,10 @@ Current launcher development requires:
 
 - Git;
 - PowerShell 5.1 or later;
-- Visual Studio 2022 with the Desktop development with C++ workload, including CMake tools; and
-- network access during the first configure so CMake can fetch the pinned SDL2 source.
+- Visual Studio or Build Tools with the Desktop development with C++ workload, including CMake and Ninja; and
+- network access during the first configure so CMake can fetch the pinned SDL2 and SQLite sources.
 
-The launcher uses C++20 and SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`. Build output and fetched dependencies remain under the ignored `out/` directory.
+The launcher uses C++20, SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`, and the SQLite 3.53.4 amalgamation pinned by its published SHA3-256. Build output and fetched dependencies remain under the ignored `out/` directory.
 
 An Onion-compatible cross-compilation environment and device SDL backend are still unverified. They must be selected through the pinned Onion investigation rather than inferred from the desktop build.
 
@@ -49,7 +49,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-Only the Windows desktop configure/build/test/run commands above are currently implemented. Cross-compilation and deployment steps remain intended workflow.
+Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, and a headless SDL render smoke test. Cross-compilation and deployment steps remain intended workflow.
 
 ## Configuration and secrets
 

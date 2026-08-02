@@ -1,6 +1,6 @@
 # Profile Model
 
-Status: **provisional v0.1**. This is a domain contract for the launcher MVP, not a final database or wire schema.
+Status: **implemented persistence schema v1**. The broader profile contract remains provisional where noted.
 
 ## Fields
 
@@ -16,16 +16,24 @@ Status: **provisional v0.1**. This is a domain contract for the launcher MVP, no
 | `timePolicyRef` | References daily/session rules | Required for child profiles |
 | `preferences` | Theme, accessibility, presentation, and difficulty choices | Profile scoped; structure evolves by schema version |
 | `sync` | Optional synchronization identity and revision metadata | Disabled by default |
-| `lifecycle` | Controls visibility and retention | `active`, `archived`, or `pending-deletion` |
+| `lifecycle` | Controls visibility and retention | v1 persists `active` or `archived`; permanent-deletion workflow is deferred |
 | `createdAt` / `updatedAt` | Audit and conflict metadata | Required timestamps once persistence exists |
 
 PIN hashes, connector credentials, active grants, play history, favorites, recents, and save data are separate records. They must not be embedded in a portable profile definition by default.
+
+## Persistence schema v1
+
+The launcher implements profiles in a SQLite `profiles` table with database schema version 1. Each row stores the fields above except optional synchronization identity and conflict state, which have no current consumer. `localRevision` advances on lifecycle changes. Profile preferences are validated JSON but remain an empty object until a preference feature establishes concrete keys.
+
+Opening an empty version-zero database creates schema version 1 inside one transaction. A database with a newer version is rejected without modification. A failed migration rolls back its schema and version changes. There is no destructive migration or permanent-delete operation in v1.
+
+Built-in avatars use `builtin:<id>` references. Managed local images reserve the `local:<id>` namespace for the later image-import issue; image bytes and filesystem paths are not stored in the profile row.
 
 ## Invariants
 
 - A household must retain at least one active parent administrator.
 - Child profiles receive conservative content and time defaults.
-- Archive is reversible and does not delete saves, history, or images.
+- Archive is reversible and does not delete profile fields, saves, history, or images.
 - Permanent deletion requires a separate authenticated operation and an explicit retention decision.
 - Profile switching cannot expose another profile's policy, history, native saves, or connector data.
 - Emulator isolation is enabled only for paths and platforms proven compatible with Onion's lifecycle.
