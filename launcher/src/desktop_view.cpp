@@ -4,6 +4,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdint>
@@ -243,6 +244,63 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
     render_home(renderer, state);
   }
 
+  SDL_RenderPresent(renderer);
+}
+
+void render_library(SDL_Renderer* renderer,
+                    const LibraryPresentation& library) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+
+  draw_text(renderer, library.title(), 48, 32, 4, kText);
+  draw_text(renderer, "LOCAL ONION LIBRARY", 50, 76, 2, kMuted);
+
+  const auto entries = library.entries();
+  if (entries.empty()) {
+    const SDL_Rect panel{70, 150, 500, 180};
+    fill_rect(renderer, panel, kPanel);
+    draw_centered_text(renderer, library.empty_message(), kWidth / 2, 218, 2,
+                       kText);
+    draw_centered_text(renderer, "ADD SUPPORTED GAMES OR GO BACK", kWidth / 2,
+                       260, 1, kMuted);
+  } else {
+    constexpr std::size_t visible_count = 6;
+    const std::size_t first = library.focus_index() < visible_count
+                                  ? 0
+                                  : library.focus_index() - visible_count + 1;
+    const std::size_t last = std::min(entries.size(), first + visible_count);
+    for (std::size_t index = first; index < last; ++index) {
+      const auto& entry = entries[index];
+      const int row_number = static_cast<int>(index - first);
+      const SDL_Rect row{64, 112 + row_number * 48, 512, 38};
+      const bool focused = index == library.focus_index();
+      fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
+      if (focused) {
+        outline_rect(renderer, row, 3, kFocus);
+        draw_text(renderer, ">", 78, row.y + 12, 2, kFocus);
+      }
+      const std::string title = entry.item.title.size() > 30
+                                    ? entry.item.title.substr(0, 30)
+                                    : entry.item.title;
+      draw_text(renderer, title, 106, row.y + 12, 2,
+                entry.launch_allowed && entry.unavailable_reason.empty()
+                    ? kText
+                    : kMuted);
+      const auto contract = onion_system_contract(entry.item.system);
+      draw_text(renderer, contract.has_value() ? contract->id : "?", 500,
+                row.y + 12, 2, kMuted);
+      if (entry.favorite) {
+        draw_text(renderer, "*", 548, row.y + 12, 2, kFocus);
+      }
+    }
+  }
+
+  if (!library.notice().empty()) {
+    draw_centered_text(renderer, library.notice().substr(0, 68), kWidth / 2,
+                       410, 1, kFocus);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   A PLAY   B BACK", kWidth / 2, 450,
+                     1, kMuted);
   SDL_RenderPresent(renderer);
 }
 

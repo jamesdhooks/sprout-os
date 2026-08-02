@@ -29,6 +29,8 @@ add_library(
 
 add_library(
   sprout_onion_adapter
+  src/demo_library.cpp
+  src/library_presentation.cpp
   src/local_library.cpp
   src/onion_launch_adapter.cpp
 )
@@ -113,6 +115,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_profile_store
       sprout_profile_images
       sprout_parent_access
+      sprout_onion_adapter
       sprout_setup
       SDL2_image
       SDL2::SDL2main
@@ -195,6 +198,13 @@ if(BUILD_TESTING)
   target_compile_features(sprout-local-library-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-local-library-test PRIVATE sprout_onion_adapter)
   add_test(NAME local-library COMMAND sprout-local-library-test)
+
+  add_executable(sprout-library-presentation-test
+                 tests/library_presentation_test.cpp)
+  target_compile_features(sprout-library-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-library-presentation-test
+                        PRIVATE sprout_onion_adapter sprout_launcher_core)
+  add_test(NAME library-presentation COMMAND sprout-library-presentation-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)

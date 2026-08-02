@@ -139,6 +139,21 @@ void grant_expiry_returns_to_profile_selection() {
          "expired grant should leave parent mode before processing another action");
 }
 
+void subview_access_revalidates_parent_grant() {
+  Fixture fixture;
+  fixture.access.grant_until_end_of_day("secret:parent-primary", "2468",
+                                        kToday.utc_seconds, kToday.local_date);
+  (void)fixture.controller.handle(Action::Right, kToday);
+  (void)fixture.controller.handle(Action::Confirm, kToday);
+  expect(fixture.controller.ensure_active_profile_access(kToday),
+         "active parent subview should accept the current grant");
+
+  const AccessMoment tomorrow{2'000, "2026-08-03"};
+  expect(!fixture.controller.ensure_active_profile_access(tomorrow) &&
+             fixture.state.screen() == Screen::ProfileSelect,
+         "expired parent subview should fail closed before its next action");
+}
+
 }  // namespace
 
 int main() {
@@ -146,6 +161,7 @@ int main() {
     parent_selection_requires_pin_and_grants_access();
     sensitive_actions_reauthenticate_and_manual_lock_revokes();
     grant_expiry_returns_to_profile_selection();
+    subview_access_revalidates_parent_grant();
   } catch (const std::exception& error) {
     std::cerr << "parent access controller test failed: " << error.what() << '\n';
     return EXIT_FAILURE;
