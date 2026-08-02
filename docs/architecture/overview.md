@@ -19,7 +19,7 @@ Sprout Runtime (planned)       Optional Sprout Server (planned)
 Sprout Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
-The repository currently contains the portable launcher navigation state and a Windows SDL2 preview. Profile persistence, policy enforcement, Onion launch integration, and device rendering do not exist yet.
+The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a typed GB/SNES Onion launch adapter, and a Windows SDL2 preview. Child time-policy enforcement, GameSwitcher integration, hardware-validated Onion execution, and device rendering do not exist yet.
 
 ## Process responsibilities
 
@@ -36,6 +36,8 @@ The local device owns the authoritative offline state needed to launch, enforce 
 Sprout uses Onion's emulator configuration, RetroArch integration, save-state lifecycle, GameSwitcher, shortcuts, power handling, and device services where verified. All interaction passes through a narrow adapter. Onion-derived code remains isolated; the preferred order is reuse, wrap, narrow patch, then fork.
 
 MainUI is a separate compatibility concern and is not assumed to be replaceable from source. Recovery must preserve a path to stock Onion. Exact launch and safe-boot behavior remains subject to [source and hardware investigation](../research/onion-integration.md).
+
+The current adapter validates canonical ROM and launcher paths, maps only the pinned GB and SFC packages, and passes the ROM as a distinct process argument. Its [desktop contract](../specs/onion-launch-adapter.md) does not prove target-device launch, return, save, activity, or GameSwitcher behavior.
 
 ### Native runtime
 
