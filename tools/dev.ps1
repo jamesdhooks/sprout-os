@@ -1,6 +1,7 @@
 param(
     [ValidateSet("configure", "build", "test", "run")]
-    [string]$Action = "build"
+    [string]$Action = "build",
+    [string]$SdRoot
 )
 
 $ErrorActionPreference = "Stop"
@@ -103,7 +104,11 @@ try {
         if (-not (Test-Path -LiteralPath $executable)) {
             throw "Launcher executable was not found at $executable."
         }
-        & $executable --data-dir (Join-Path $repoRoot "out\preview-data")
+        $launcherArguments = @("--data-dir", (Join-Path $repoRoot "out\preview-data"))
+        if ($SdRoot) {
+            $launcherArguments += @("--sd-root", $SdRoot)
+        }
+        & $executable @launcherArguments
     }
 } finally {
     Pop-Location

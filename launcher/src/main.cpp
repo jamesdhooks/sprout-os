@@ -1,6 +1,8 @@
 #include "desktop_view.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
+#include "sprout/launcher/library_presentation.hpp"
+#include "sprout/launcher/local_library.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
 #include "sprout/launcher/parent_access_controller.hpp"
@@ -154,6 +156,27 @@ std::optional<std::filesystem::path> pending_profile_image(
   return std::nullopt;
 }
 
+std::vector<sprout::launcher::LibraryEntry> discovered_library(
+    const std::filesystem::path& sd_card_root) {
+  const auto scan =
+      sprout::launcher::LocalLibraryScanner(sd_card_root).discover();
+  for (const auto& warning : scan.warnings) {
+    std::cerr << "Library warning: " << warning << '\n';
+  }
+  std::vector<sprout::launcher::LibraryEntry> entries;
+  entries.reserve(scan.items.size());
+  for (auto item : scan.items) {
+    entries.push_back(sprout::launcher::LibraryEntry{
+        .item = std::move(item),
+        .favorite = false,
+        .recent_rank = std::nullopt,
+        .launch_allowed = true,
+        .unavailable_reason = {},
+    });
+  }
+  return entries;
+}
+
 int run_smoke_test(SDL_Renderer* renderer) {
   LauncherState state(sprout::launcher::make_demo_household());
   sprout::launcher::render_launcher(renderer, state);
@@ -247,6 +270,18 @@ int run_smoke_test(SDL_Renderer* renderer) {
   }
   LauncherState persisted(load_launcher_profiles(profiles));
   sprout::launcher::render_launcher(renderer, persisted, image_root);
+  sprout::launcher::LibraryPresentation library(
+      sprout::launcher::make_demo_library(),
+      sprout::launcher::LibrarySection::Recent);
+  sprout::launcher::render_library(renderer, library);
+  const auto launch_event = library.handle(Action::Confirm);
+  if (!launch_event.has_value() ||
+      launch_event->type !=
+          sprout::launcher::LibraryPresentationEventType::LaunchRequested ||
+      !launch_event->launch_target.has_value()) {
+    std::cerr << "Library smoke test did not emit a typed launch request\n";
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }
 
@@ -304,6 +339,7 @@ int main(int argc, char* argv[]) {
   const char* screenshot_path = nullptr;
   std::string_view screenshot_screen;
   std::optional<std::filesystem::path> data_root;
+  std::optional<std::filesystem::path> sd_card_root;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--smoke-test") {
@@ -317,6 +353,8 @@ int main(int argc, char* argv[]) {
       }
     } else if (argument == "--data-dir" && index + 1 < argc) {
       data_root = std::filesystem::path(argv[++index]);
+    } else if (argument == "--sd-root" && index + 1 < argc) {
+      sd_card_root = std::filesystem::path(argv[++index]);
     } else {
       std::cerr << "Unsupported or incomplete launcher argument: " << argument << '\n';
       return EXIT_FAILURE;
@@ -461,6 +499,28 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
+    if (screenshot_screen == "library-recent" ||
+        screenshot_screen == "library-favorites" ||
+        screenshot_screen == "library-all") {
+      auto section = sprout::launcher::LibrarySection::Recent;
+      if (screenshot_screen == "library-favorites") {
+        section = sprout::launcher::LibrarySection::Favorites;
+      } else if (screenshot_screen == "library-all") {
+        section = sprout::launcher::LibrarySection::All;
+      }
+      sprout::launcher::LibraryPresentation library(
+          sprout::launcher::make_demo_library(), section);
+      if (section == sprout::launcher::LibrarySection::All) {
+        (void)library.handle(Action::Up);
+        (void)library.handle(Action::Confirm);
+      }
+      sprout::launcher::render_library(renderer, library);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     LauncherState state(sprout::launcher::make_demo_household());
     if (screenshot_screen == "child") {
       (void)state.handle(Action::Confirm);
@@ -495,10 +555,15 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::ParentAccessStore> parent_access;
   std::unique_ptr<sprout::launcher::ParentPinPresentation> parent_pin;
   std::unique_ptr<sprout::launcher::ParentAccessController> access_controller;
+  std::unique_ptr<sprout::launcher::LibraryPresentation> library;
+  std::vector<sprout::launcher::LibraryEntry> library_entries;
   std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
   std::optional<LauncherState> state;
   try {
+    library_entries = sd_card_root.has_value()
+                          ? discovered_library(*sd_card_root)
+                          : sprout::launcher::make_demo_library();
     if (data_root.has_value()) {
       std::filesystem::create_directories(*data_root / "data");
       configuration = std::make_unique<sprout::launcher::ConfigurationStore>(
@@ -597,6 +662,29 @@ int main(int argc, char* argv[]) {
         return true;
       }
 
+      if (library != nullptr) {
+        if (!access_controller->ensure_active_profile_access(
+                current_access_time())) {
+          library.reset();
+          return true;
+        }
+        const auto library_event = library->handle(action);
+        if (!library_event.has_value()) {
+          return true;
+        }
+        if (library_event->type ==
+            sprout::launcher::LibraryPresentationEventType::BackRequested) {
+          library.reset();
+        } else if (library_event->type ==
+                       sprout::launcher::LibraryPresentationEventType::LaunchRequested &&
+                   library_event->launch_target.has_value()) {
+          std::cout << "preview launch request: "
+                    << library_event->launch_target->item_id << " ("
+                    << library_event->launch_target->rom_path.string() << ")\n";
+        }
+        return true;
+      }
+
       const auto session_event =
           access_controller->handle(action, current_access_time());
       if (!session_event.has_value()) {
@@ -605,6 +693,23 @@ int main(int argc, char* argv[]) {
       if (session_event->type ==
           sprout::launcher::ParentAccessEventType::ExitRequested) {
         return false;
+      }
+      const auto section = sprout::launcher::library_section_for_menu_target(
+          session_event->target);
+      if (section.has_value()) {
+        auto entries = library_entries;
+        const auto* active_profile = state->active_profile();
+        if (sd_card_root.has_value() && active_profile != nullptr &&
+            active_profile->role == sprout::launcher::ProfileRole::Child) {
+          for (auto& entry : entries) {
+            entry.launch_allowed = false;
+            entry.unavailable_reason =
+                "PARENT APPROVAL IS NOT CONFIGURED FOR THIS GAME";
+          }
+        }
+        library = std::make_unique<sprout::launcher::LibraryPresentation>(
+            std::move(entries), *section);
+        return true;
       }
       std::cout << "preview action: " << session_event->target << " ("
                 << session_event->profile_id << ")\n";
@@ -646,6 +751,8 @@ int main(int argc, char* argv[]) {
         sprout::launcher::render_profile_image_crop(renderer, *image_crop);
       } else if (setup != nullptr) {
         sprout::launcher::render_setup(renderer, *setup);
+      } else if (library != nullptr) {
+        sprout::launcher::render_library(renderer, *library);
       } else {
         sprout::launcher::render_launcher(
             renderer, *state,

@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, child time-policy enforcement, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, child time-policy enforcement, or deployable SD-card image.
 
 ## Tools
 
@@ -29,9 +29,17 @@ Run the interactive 640×480 preview:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
 ```
 
+By default, recent, favorite, and all-game views use sanitized in-memory fixtures. To inspect filenames on an explicitly selected development-card or fixture root without executing games:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run -SdRoot F:\path\to\development-card
+```
+
+The opt-in scan reads directory entries beneath `Roms/GB` and `Roms/SFC`; it does not open ROM contents or inspect archives. Discovered child items are unavailable until profile allowlists are implemented. Parent selection emits a typed preview request to the console, and the Windows preview never executes Onion shell scripts.
+
 Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to save setup progress and exit or to go back from the launcher. SDL-compatible controllers use the D-pad, A, and B. The same directional controls operate the PIN keypad; PIN digits are masked. During portrait cropping, Q/E or the controller shoulder buttons zoom out/in.
 
-The development command stores sanitized preview configuration, profiles, and managed portraits under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. To exercise image import during first-run setup, place one BMP, JPEG, or PNG at `out/preview-data/imports/profile-image.<extension>` before reaching the portrait step. This explicit staging folder is the only source location the preview checks; source paths are not retained. The preview does not read ROMs, device data, credentials, or live household data.
+The development command stores sanitized preview configuration, profiles, and managed portraits under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. To exercise image import during first-run setup, place one BMP, JPEG, or PNG at `out/preview-data/imports/profile-image.<extension>` before reaching the portrait step. This explicit staging folder is the only image source location the preview checks; source paths are not retained. Unless `-SdRoot` is explicitly supplied, the preview does not read ROMs, device data, credentials, or live household data.
 
 ## Development cards
 
@@ -51,7 +59,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, the typed GB/SNES Onion launch contract, and a headless SDL render traversal. Cross-compilation and deployment steps remain intended workflow.
+Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. Cross-compilation and deployment steps remain intended workflow.
 
 ## Configuration and secrets
 

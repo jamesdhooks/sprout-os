@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sprout/launcher/launcher_state.hpp"
+#include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
 #include "sprout/launcher/parent_pin_presentation.hpp"
 #include "sprout/launcher/setup_presentation.hpp"
@@ -18,5 +19,7 @@ void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop);
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin);
+void render_library(SDL_Renderer* renderer,
+                    const LibraryPresentation& library);
 
 }  // namespace sprout::launcher

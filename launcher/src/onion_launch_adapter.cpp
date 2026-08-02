@@ -1,6 +1,7 @@
 #include "sprout/launcher/onion_launch_adapter.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cctype>
 #include <system_error>
@@ -15,30 +16,6 @@ extern char** environ;
 
 namespace sprout::launcher {
 namespace {
-
-struct SystemContract {
-  std::filesystem::path rom_directory;
-  std::filesystem::path launcher;
-  std::vector<std::string> extensions;
-};
-
-std::optional<SystemContract> contract_for(OnionSystem system) {
-  switch (system) {
-    case OnionSystem::GameBoy:
-      return SystemContract{
-          .rom_directory = "Roms/GB",
-          .launcher = "Emu/GB/launch.sh",
-          .extensions = {".bin", ".dmg", ".gb", ".gbc", ".zip", ".7z"},
-      };
-    case OnionSystem::SuperNintendo:
-      return SystemContract{
-          .rom_directory = "Roms/SFC",
-          .launcher = "Emu/SFC/launch.sh",
-          .extensions = {".sfc", ".smc", ".fig", ".bs", ".st", ".zip", ".7z"},
-      };
-  }
-  return std::nullopt;
-}
 
 std::string lowercase(std::string value) {
   std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
@@ -71,6 +48,30 @@ LaunchResult result(const EmulatedLaunchTarget& target, LaunchOutcome outcome,
 }
 
 }  // namespace
+
+std::optional<OnionSystemContract> onion_system_contract(OnionSystem system) {
+  static constexpr std::array<std::string_view, 6> game_boy_extensions{
+      ".bin", ".dmg", ".gb", ".gbc", ".zip", ".7z"};
+  static constexpr std::array<std::string_view, 7> snes_extensions{
+      ".sfc", ".smc", ".fig", ".bs", ".st", ".zip", ".7z"};
+  switch (system) {
+    case OnionSystem::GameBoy:
+      return OnionSystemContract{
+          .id = "GB",
+          .rom_directory = "Roms/GB",
+          .launcher = "Emu/GB/launch.sh",
+          .extensions = game_boy_extensions,
+      };
+    case OnionSystem::SuperNintendo:
+      return OnionSystemContract{
+          .id = "SFC",
+          .rom_directory = "Roms/SFC",
+          .launcher = "Emu/SFC/launch.sh",
+          .extensions = snes_extensions,
+      };
+  }
+  return std::nullopt;
+}
 
 ProcessResult OnionLaunchProcess::run(
     const std::filesystem::path& executable,
@@ -156,7 +157,7 @@ LaunchResult OnionLaunchAdapter::launch(
                   "The library item does not contain a valid local ROM target");
   }
 
-  const auto contract = contract_for(target.system);
+  const auto contract = onion_system_contract(target.system);
   if (!contract.has_value()) {
     return result(target, LaunchOutcome::InvalidTarget,
                   "The Onion system is not supported by this adapter version");

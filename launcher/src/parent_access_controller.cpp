@@ -34,15 +34,23 @@ const ParentPinPresentation& ParentAccessController::pin_prompt() const {
   return *pin_;
 }
 
+bool ParentAccessController::ensure_active_profile_access(
+    const AccessMoment& now) {
+  if (state_.screen() != Screen::ParentHome || !credential_ref_.has_value() ||
+      access_store_->is_unlocked(now.utc_seconds, now.local_date)) {
+    return true;
+  }
+  (void)state_.handle(Action::Back);
+  return false;
+}
+
 std::optional<ParentAccessEvent> ParentAccessController::handle(
     Action action, const AccessMoment& now) {
   if (pin_ != nullptr) {
     return handle_pin(action, now);
   }
 
-  if (state_.screen() == Screen::ParentHome && credential_ref_.has_value() &&
-      !access_store_->is_unlocked(now.utc_seconds, now.local_date)) {
-    (void)state_.handle(Action::Back);
+  if (!ensure_active_profile_access(now)) {
     return std::nullopt;
   }
 
