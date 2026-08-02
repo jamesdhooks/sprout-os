@@ -15,6 +15,7 @@ enum class SetupPresentationEvent {
   Completed,
   ExitRequested,
   ImportParentImageRequested,
+  ConfigureParentPinRequested,
 };
 
 class SetupPresentation {
@@ -32,6 +33,7 @@ class SetupPresentation {
   [[nodiscard]] std::optional<SetupPresentationEvent> handle(Action action);
   void complete_avatar_step();
   void report_avatar_error(std::string message);
+  void complete_parent_pin_step(std::string credential_ref);
 
  private:
   void refresh_content();

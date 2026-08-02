@@ -15,12 +15,13 @@ constexpr std::array<std::string_view, 5> kChildMenu{
     "Profile Select",
 };
 
-constexpr std::array<std::string_view, 6> kParentMenu{
+constexpr std::array<std::string_view, 7> kParentMenu{
     "Continue",
     "Favorites",
     "All Games",
     "Family Dashboard",
     "Onion Tools",
+    "Lock Parent Access",
     "Profile Select",
 };
 

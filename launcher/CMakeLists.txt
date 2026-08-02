@@ -22,7 +22,9 @@ add_library(
 
 add_library(
   sprout_parent_access
+  src/parent_access_controller.cpp
   src/parent_access_store.cpp
+  src/parent_pin_presentation.cpp
 )
 
 target_include_directories(sprout_launcher_core PUBLIC include)
@@ -49,7 +51,7 @@ target_include_directories(
 )
 target_link_libraries(
   sprout_parent_access
-  PRIVATE sprout_argon2 sprout_sqlite
+  PRIVATE sprout_argon2 sprout_sqlite sprout_launcher_core
 )
 if(WIN32)
   target_link_libraries(sprout_parent_access PRIVATE bcrypt)
@@ -100,6 +102,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_launcher_core
       sprout_profile_store
       sprout_profile_images
+      sprout_parent_access
       sprout_setup
       SDL2_image
       SDL2::SDL2main
@@ -154,6 +157,22 @@ if(BUILD_TESTING)
     PRIVATE sprout_parent_access sprout_sqlite
   )
   add_test(NAME parent-access COMMAND sprout-parent-access-test)
+
+  add_executable(sprout-parent-pin-presentation-test
+                 tests/parent_pin_presentation_test.cpp)
+  target_compile_features(sprout-parent-pin-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-parent-pin-presentation-test
+                        PRIVATE sprout_parent_access)
+  add_test(NAME parent-pin-presentation
+           COMMAND sprout-parent-pin-presentation-test)
+
+  add_executable(sprout-parent-access-controller-test
+                 tests/parent_access_controller_test.cpp)
+  target_compile_features(sprout-parent-access-controller-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-parent-access-controller-test
+                        PRIVATE sprout_parent_access)
+  add_test(NAME parent-access-controller
+           COMMAND sprout-parent-access-controller-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)

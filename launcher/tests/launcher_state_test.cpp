@@ -51,7 +51,9 @@ void parent_profile_opens_parent_home() {
   expect(event.has_value(), "parent selection should emit an event");
   expect(event->profile_id == "parent-preview", "parent fixture ID should be preserved");
   expect(state.screen() == Screen::ParentHome, "parent should open parent home");
-  expect(state.menu_items().size() == 6, "parent home should expose its focused preview menu");
+  expect(state.menu_items().size() == 7, "parent home should expose its focused preview menu");
+  expect(state.menu_items()[5] == "Lock Parent Access",
+         "parent home should expose explicit manual lock");
 }
 
 void home_navigation_and_lifecycle_are_explicit() {
