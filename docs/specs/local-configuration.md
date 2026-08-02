@@ -1,6 +1,6 @@
 # Local Configuration Schema
 
-Status: **implemented schema v1 core**. The desktop first-run presentation is still in progress.
+Status: **implemented schema v1 and desktop setup preview**.
 
 ## Boundary
 
@@ -39,3 +39,5 @@ Parsing is strict: required types, duplicate keys, unknown keys, invalid UTF-8, 
 The persisted sequence is welcome, locale, network/offline, first parent, optional parent PIN reference, optional child, avatars, library, child defaults, connectors, review, and complete. Only first-parent creation is mandatory. All other steps can be skipped, and completion is valid without network access or external services.
 
 Profile creation is idempotent across interruption: if a matching profile row exists before its step is advanced, resume accepts it; a conflicting row with the same ID fails without advancing.
+
+The current 640×480 presentation provides offline locale choices, two built-in parent portraits, an optional built-in child profile with conservative policy references, and save-and-exit at every screen. It transitions directly to the persisted profile selector after review. Free-form names, custom image import/cropping, Wi-Fi, secure PIN creation, library discovery, and connectors remain separate unfinished milestone work; the UI labels those steps honestly and does not create placeholder data.

@@ -8,5 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Resumable offline first-run setup with atomic versioned configuration, last-known-good recovery, built-in parent/child profiles, and a 640×480 desktop presentation.
 - Versioned SQLite profile persistence with parent/child validation, reversible archive and restore, last-active-parent protection, and migration rollback tests.
 - Initial 640×480 desktop launcher preview with deterministic parent/child fixtures, action-level keyboard and controller input, and navigation/render smoke tests.
