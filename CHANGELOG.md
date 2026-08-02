@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Argon2id parent PIN storage and authenticated reboot-persistent end-of-day grants with manual revocation and clock-rollback checks.
 - Local parent-profile image import with controller-driven cropping, versioned managed PNG variants, metadata removal, safe replacement, and persisted portrait rendering in the desktop preview.
 - Resumable offline first-run setup with atomic versioned configuration, last-known-good recovery, built-in parent/child profiles, and a 640×480 desktop presentation.
 - Versioned SQLite profile persistence with parent/child validation, reversible archive and restore, last-active-parent protection, and migration rollback tests.

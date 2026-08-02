@@ -11,7 +11,7 @@ Current launcher development requires:
 - Visual Studio or Build Tools with the Desktop development with C++ workload, including CMake and Ninja; and
 - network access during the first configure so CMake can fetch the pinned SDL2 and SQLite sources.
 
-The launcher uses C++20, SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`, SDL2_image 2.8.8 pinned to commit `c1bf2245b0ba63a25afe2f8574d305feca25af77`, the SQLite 3.53.4 amalgamation pinned by its published SHA3-256, and yyjson 0.12.0 pinned to commit `7871d321ff4cd8068c1f777c97975dc2fb640ab3`. Build output and fetched dependencies remain under the ignored `out/` directory.
+The launcher uses C++20, SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`, SDL2_image 2.8.8 pinned to commit `c1bf2245b0ba63a25afe2f8574d305feca25af77`, the SQLite 3.53.4 amalgamation pinned by its published SHA3-256, yyjson 0.12.0 pinned to commit `7871d321ff4cd8068c1f777c97975dc2fb640ab3`, and the official Argon2 reference release `20190702` pinned to commit `62358ba2123abd17fccf2a108a301d4b52c01a7c`. Build output and fetched dependencies remain under the ignored `out/` directory.
 
 An Onion-compatible cross-compilation environment and device SDL backend are still unverified. They must be selected through the pinned Onion investigation rather than inferred from the desktop build.
 
