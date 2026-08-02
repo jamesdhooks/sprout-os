@@ -1,6 +1,6 @@
 # Profile Image Pipeline
 
-Status: **implemented import core; crop presentation in progress**.
+Status: **implemented for the Windows desktop preview; Onion target verification pending**.
 
 ## Boundary
 
@@ -25,3 +25,9 @@ Each import writes a new profile-revision generation beneath managed image stora
 After a successful profile update, the prior managed generation is removed only when its reference has the expected safe identifier and its directory contains regular `portrait.png` and `thumbnail.png` files only. Unknown files, links, and malformed references stop cleanup rather than broadening it. Managed files request owner read/write permissions; physical SD-card access remains outside the parental-control security boundary.
 
 The source image is not preserved in v1. Backup/export and orphan recovery require their own concrete consumer before changing retention behavior.
+
+## Setup presentation
+
+First-run setup checks only the data directory's `imports/` folder for `profile-image.png`, `profile-image.jpg`, `profile-image.jpeg`, or `profile-image.bmp`, in that order. If one exists, the portrait step offers either an explicit parent-image import or the built-in portrait. The staged source path is never persisted.
+
+The crop screen decodes and orients the source once, then supports D-pad or arrow-key positioning and bounded zoom with the controller shoulder buttons or Q/E. Confirm activates the rendered crop; Back cancels without changing the profile. A missing or invalid staged image returns a visible error at the portrait step. Managed portraits are resolved from their validated `local:` reference and rendered in the profile selector, with the built-in initial used as a safe fallback when the file cannot be loaded.

@@ -29,7 +29,9 @@ Run the interactive 640×480 preview:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
 ```
 
-Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to save setup progress and exit or to go back from the launcher. SDL-compatible controllers use the D-pad, A, and B. The development command stores sanitized preview configuration and profiles under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. It does not read ROMs, device data, credentials, or live household data.
+Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to save setup progress and exit or to go back from the launcher. SDL-compatible controllers use the D-pad, A, and B. During portrait cropping, Q/E or the controller shoulder buttons zoom out/in.
+
+The development command stores sanitized preview configuration, profiles, and managed portraits under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. To exercise image import during first-run setup, place one BMP, JPEG, or PNG at `out/preview-data/imports/profile-image.<extension>` before reaching the portrait step. This explicit staging folder is the only source location the preview checks; source paths are not retained. The preview does not read ROMs, device data, credentials, or live household data.
 
 ## Development cards
 
@@ -49,7 +51,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, and a headless SDL render traversal into the persisted profile selector. Cross-compilation and deployment steps remain intended workflow.
+Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, validated image decoding/cropping/activation, and a headless SDL render traversal into the persisted profile selector. Cross-compilation and deployment steps remain intended workflow.
 
 ## Configuration and secrets
 
