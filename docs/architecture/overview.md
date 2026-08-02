@@ -19,7 +19,7 @@ Sprout Runtime (planned)       Optional Sprout Server (planned)
 Sprout Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
-The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a typed GB/SNES Onion launch adapter, and a Windows SDL2 preview. Child time-policy enforcement, GameSwitcher integration, hardware-validated Onion execution, and device rendering do not exist yet.
+The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Child time-policy enforcement, persisted recent/favorite activity, GameSwitcher integration, hardware-validated Onion execution, and device rendering do not exist yet.
 
 ## Process responsibilities
 

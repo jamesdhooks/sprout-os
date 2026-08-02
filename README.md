@@ -2,7 +2,7 @@
 
 Sprout is an open-source, family-oriented gaming platform for retro handhelds and small computers. It aims to provide family profiles, parental controls, an Onion-compatible emulation foundation, and a portable native-game runtime without making basic use depend on a server.
 
-> **Status: early development.** This repository contains the project foundation and a Windows desktop launcher preview with resumable offline setup and versioned local profiles. These host implementations are not a device build.
+> **Status: early development.** This repository contains the project foundation and a Windows desktop launcher preview with resumable offline setup, versioned local profiles, and local GB/SNES library views. These host implementations are not a device build.
 
 ## Principles
 

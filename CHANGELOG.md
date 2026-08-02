@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Deterministic local Onion GB/SNES discovery plus controller-driven recent, favorite, and all-game views with fail-closed unavailable states.
 - A typed Onion GB/SNES launch adapter with canonical path, policy, extension, launcher, and structured process-outcome validation, plus desktop contract tests.
 - Controller-based parent PIN setup and entry, Argon2id storage, authenticated reboot-persistent end-of-day grants, sensitive-action reauthentication, manual lock, and clock-rollback checks.
 - Local parent-profile image import with controller-driven cropping, versioned managed PNG variants, metadata removal, safe replacement, and persisted portrait rendering in the desktop preview.
