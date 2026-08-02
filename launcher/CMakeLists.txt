@@ -27,6 +27,11 @@ add_library(
   src/parent_pin_presentation.cpp
 )
 
+add_library(
+  sprout_onion_adapter
+  src/onion_launch_adapter.cpp
+)
+
 target_include_directories(sprout_launcher_core PUBLIC include)
 target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
@@ -56,6 +61,8 @@ target_link_libraries(
 if(WIN32)
   target_link_libraries(sprout_parent_access PRIVATE bcrypt)
 endif()
+target_include_directories(sprout_onion_adapter PUBLIC include)
+target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
 
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
@@ -63,12 +70,14 @@ if(MSVC)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(SPROUT_BUILD_DESKTOP)
@@ -173,6 +182,13 @@ if(BUILD_TESTING)
                         PRIVATE sprout_parent_access)
   add_test(NAME parent-access-controller
            COMMAND sprout-parent-access-controller-test)
+
+  add_executable(sprout-onion-launch-adapter-test
+                 tests/onion_launch_adapter_test.cpp)
+  target_compile_features(sprout-onion-launch-adapter-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-onion-launch-adapter-test
+                        PRIVATE sprout_onion_adapter)
+  add_test(NAME onion-launch-adapter COMMAND sprout-onion-launch-adapter-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)
