@@ -1,12 +1,22 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
+#include "sprout/launcher/profile_repository.hpp"
+#include "sprout/launcher/setup_presentation.hpp"
+#include "sprout/launcher/setup_wizard.hpp"
 
 #include <SDL.h>
 
+#include <algorithm>
+#include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -14,6 +24,27 @@ using sprout::launcher::Action;
 using sprout::launcher::EventType;
 using sprout::launcher::LauncherEvent;
 using sprout::launcher::LauncherState;
+
+class TemporaryDirectory {
+ public:
+  explicit TemporaryDirectory(std::string_view purpose) {
+    const auto suffix =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    path_ = std::filesystem::temp_directory_path() /
+            ("sprout-" + std::string(purpose) + "-" + std::to_string(suffix));
+    std::filesystem::create_directories(path_);
+  }
+
+  ~TemporaryDirectory() {
+    std::error_code ignored;
+    std::filesystem::remove_all(path_, ignored);
+  }
+
+  const std::filesystem::path& path() const noexcept { return path_; }
+
+ private:
+  std::filesystem::path path_;
+};
 
 std::optional<Action> keyboard_action(SDL_Keycode key) {
   switch (key) {
@@ -86,6 +117,9 @@ SDL_Renderer* create_renderer(SDL_Window* window) {
   return renderer;
 }
 
+std::vector<sprout::launcher::Profile> load_launcher_profiles(
+    const sprout::launcher::ProfileRepository& repository);
+
 int run_smoke_test(SDL_Renderer* renderer) {
   LauncherState state(sprout::launcher::make_demo_household());
   sprout::launcher::render_launcher(renderer, state);
@@ -95,7 +129,48 @@ int run_smoke_test(SDL_Renderer* renderer) {
   (void)state.handle(Action::Right);
   (void)state.handle(Action::Confirm);
   sprout::launcher::render_launcher(renderer, state);
+
+  TemporaryDirectory directory("desktop-smoke");
+  std::filesystem::create_directories(directory.path() / "data");
+  sprout::launcher::ConfigurationStore configuration(directory.path() / "config");
+  sprout::launcher::ProfileRepository profiles(directory.path() / "data" /
+                                                "profiles.sqlite3");
+  sprout::launcher::SetupWizard wizard(configuration, profiles);
+  sprout::launcher::SetupPresentation setup(wizard);
+  while (setup.step() != sprout::launcher::SetupStep::Complete) {
+    sprout::launcher::render_setup(renderer, setup);
+    (void)setup.handle(Action::Confirm);
+    if (!setup.error_message().empty()) {
+      std::cerr << "Setup smoke test failed: " << setup.error_message() << '\n';
+      return EXIT_FAILURE;
+    }
+  }
+  LauncherState persisted(load_launcher_profiles(profiles));
+  sprout::launcher::render_launcher(renderer, persisted);
   return EXIT_SUCCESS;
+}
+
+std::vector<sprout::launcher::Profile> load_launcher_profiles(
+    const sprout::launcher::ProfileRepository& repository) {
+  std::vector<sprout::launcher::Profile> profiles;
+  for (const auto& stored : repository.list_profiles(false)) {
+    profiles.push_back(sprout::launcher::Profile{
+        .id = stored.id,
+        .display_name = stored.display_name,
+        .role = stored.role,
+        .accent_rgb = stored.role == sprout::launcher::ProfileRole::Child
+                          ? 0x70B77EU
+                          : 0x8E7DBEU,
+    });
+  }
+  std::stable_sort(profiles.begin(), profiles.end(), [](const auto& left, const auto& right) {
+    return left.role == sprout::launcher::ProfileRole::Child &&
+           right.role == sprout::launcher::ProfileRole::Parent;
+  });
+  if (profiles.empty()) {
+    throw std::runtime_error("Completed setup has no active profiles");
+  }
+  return profiles;
 }
 
 int save_screenshot(SDL_Renderer* renderer, const char* path) {
@@ -123,8 +198,29 @@ int save_screenshot(SDL_Renderer* renderer, const char* path) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  const bool smoke_test = argc > 1 && std::string_view(argv[1]) == "--smoke-test";
-  const bool screenshot = argc > 2 && std::string_view(argv[1]) == "--screenshot";
+  bool smoke_test = false;
+  bool screenshot = false;
+  const char* screenshot_path = nullptr;
+  std::string_view screenshot_screen;
+  std::optional<std::filesystem::path> data_root;
+  for (int index = 1; index < argc; ++index) {
+    const std::string_view argument(argv[index]);
+    if (argument == "--smoke-test") {
+      smoke_test = true;
+    } else if (argument == "--screenshot" && index + 1 < argc) {
+      screenshot = true;
+      screenshot_path = argv[++index];
+      if (index + 1 < argc &&
+          !std::string_view(argv[index + 1]).starts_with("--")) {
+        screenshot_screen = argv[++index];
+      }
+    } else if (argument == "--data-dir" && index + 1 < argc) {
+      data_root = std::filesystem::path(argv[++index]);
+    } else {
+      std::cerr << "Unsupported or incomplete launcher argument: " << argument << '\n';
+      return EXIT_FAILURE;
+    }
+  }
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
     std::cerr << "SDL initialization failed: " << SDL_GetError() << '\n';
@@ -160,15 +256,53 @@ int main(int argc, char* argv[]) {
   }
 
   if (screenshot) {
+    if (screenshot_screen.starts_with("setup")) {
+      TemporaryDirectory directory("setup-screenshot");
+      sprout::launcher::ConfigurationStore configuration(directory.path() / "config");
+      sprout::launcher::ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+      sprout::launcher::SetupWizard wizard(configuration, profiles);
+      sprout::launcher::SetupPresentation setup(wizard);
+      auto target = sprout::launcher::SetupStep::Welcome;
+      if (screenshot_screen == "setup-parent") {
+        target = sprout::launcher::SetupStep::Parent;
+      } else if (screenshot_screen == "setup-child") {
+        target = sprout::launcher::SetupStep::Child;
+      } else if (screenshot_screen == "setup-review") {
+        target = sprout::launcher::SetupStep::Review;
+      } else if (screenshot_screen != "setup") {
+        std::cerr << "Unsupported setup screenshot: " << screenshot_screen << '\n';
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+      }
+      while (setup.step() != target) {
+        (void)setup.handle(Action::Confirm);
+        if (!setup.error_message().empty() ||
+            setup.step() == sprout::launcher::SetupStep::Complete) {
+          std::cerr << "Could not reach requested setup screenshot step\n";
+          SDL_DestroyRenderer(renderer);
+          SDL_DestroyWindow(window);
+          SDL_Quit();
+          return EXIT_FAILURE;
+        }
+      }
+      sprout::launcher::render_setup(renderer, setup);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     LauncherState state(sprout::launcher::make_demo_household());
-    if (argc > 3 && std::string_view(argv[3]) == "child") {
+    if (screenshot_screen == "child") {
       (void)state.handle(Action::Confirm);
-    } else if (argc > 3 && std::string_view(argv[3]) == "parent") {
+    } else if (screenshot_screen == "parent") {
       (void)state.handle(Action::Right);
       (void)state.handle(Action::Confirm);
     }
     sprout::launcher::render_launcher(renderer, state);
-    const int result = save_screenshot(renderer, argv[2]);
+    const int result = save_screenshot(renderer, screenshot_path);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -185,9 +319,58 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  LauncherState state(sprout::launcher::make_demo_household());
+  std::unique_ptr<sprout::launcher::ConfigurationStore> configuration;
+  std::unique_ptr<sprout::launcher::ProfileRepository> profiles;
+  std::unique_ptr<sprout::launcher::SetupWizard> wizard;
+  std::unique_ptr<sprout::launcher::SetupPresentation> setup;
+  std::optional<LauncherState> state;
+  try {
+    if (data_root.has_value()) {
+      std::filesystem::create_directories(*data_root / "data");
+      configuration = std::make_unique<sprout::launcher::ConfigurationStore>(
+          *data_root / "config");
+      profiles = std::make_unique<sprout::launcher::ProfileRepository>(
+          *data_root / "data" / "profiles.sqlite3");
+      wizard = std::make_unique<sprout::launcher::SetupWizard>(*configuration, *profiles);
+      if (wizard->current_step() == sprout::launcher::SetupStep::Complete) {
+        state.emplace(load_launcher_profiles(*profiles));
+      } else {
+        setup = std::make_unique<sprout::launcher::SetupPresentation>(*wizard);
+      }
+    } else {
+      state.emplace(sprout::launcher::make_demo_household());
+    }
+  } catch (const std::exception& error) {
+    std::cerr << "Launcher data could not be opened: " << error.what() << '\n';
+    if (controller != nullptr) {
+      SDL_GameControllerClose(controller);
+    }
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return EXIT_FAILURE;
+  }
   bool running = true;
   bool dirty = true;
+  const auto handle_session_action = [&](Action action) {
+    try {
+      if (setup != nullptr) {
+        const auto setup_event = setup->handle(action);
+        if (setup_event == sprout::launcher::SetupPresentationEvent::ExitRequested) {
+          return false;
+        }
+        if (setup_event == sprout::launcher::SetupPresentationEvent::Completed) {
+          state.emplace(load_launcher_profiles(*profiles));
+          setup.reset();
+        }
+        return true;
+      }
+      return apply_action(*state, action);
+    } catch (const std::exception& error) {
+      std::cerr << "Launcher session failed safely: " << error.what() << '\n';
+      return false;
+    }
+  };
 
   while (running) {
     SDL_Event event{};
@@ -197,20 +380,24 @@ int main(int argc, char* argv[]) {
       } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
         const auto action = keyboard_action(event.key.keysym.sym);
         if (action.has_value()) {
-          running = apply_action(state, *action);
+          running = handle_session_action(*action);
           dirty = true;
         }
       } else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
         const auto action = controller_action(event.cbutton.button);
         if (action.has_value()) {
-          running = apply_action(state, *action);
+          running = handle_session_action(*action);
           dirty = true;
         }
       }
     }
 
     if (dirty) {
-      sprout::launcher::render_launcher(renderer, state);
+      if (setup != nullptr) {
+        sprout::launcher::render_setup(renderer, *setup);
+      } else {
+        sprout::launcher::render_launcher(renderer, *state);
+      }
       dirty = false;
     }
   }

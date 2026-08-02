@@ -16,6 +16,7 @@ add_library(
 
 add_library(
   sprout_setup
+  src/setup_presentation.cpp
   src/setup_wizard.cpp
 )
 
@@ -61,6 +62,8 @@ if(SPROUT_BUILD_DESKTOP)
     sprout-launcher
     PRIVATE
       sprout_launcher_core
+      sprout_profile_store
+      sprout_setup
       SDL2::SDL2main
       SDL2::SDL2-static
   )
@@ -98,6 +101,11 @@ if(BUILD_TESTING)
   target_compile_features(sprout-setup-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-setup-test PRIVATE sprout_setup)
   add_test(NAME setup-wizard COMMAND sprout-setup-test)
+
+  add_executable(sprout-setup-presentation-test tests/setup_presentation_test.cpp)
+  target_compile_features(sprout-setup-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-setup-presentation-test PRIVATE sprout_setup)
+  add_test(NAME setup-presentation COMMAND sprout-setup-presentation-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_test(NAME launcher-desktop-smoke COMMAND sprout-launcher --smoke-test)
