@@ -67,6 +67,28 @@ endif()
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
 
+if(SPROUT_BUILD_ONION)
+  add_executable(sprout-onion-check src/onion_check.cpp)
+  target_compile_features(sprout-onion-check PRIVATE cxx_std_20)
+  target_link_libraries(
+    sprout-onion-check
+    PRIVATE
+      sprout_configuration
+      sprout_launcher_core
+      sprout_onion_adapter
+      sprout_parent_access
+      sprout_profile_store
+      stdc++fs
+  )
+  target_link_options(sprout-onion-check PRIVATE -static-libgcc -static-libstdc++)
+  add_custom_command(
+    TARGET sprout-onion-check
+    POST_BUILD
+    COMMAND "${CMAKE_STRIP}" "$<TARGET_FILE:sprout-onion-check>"
+    VERBATIM
+  )
+endif()
+
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
@@ -74,6 +96,9 @@ if(MSVC)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
+  if(SPROUT_BUILD_ONION)
+    target_compile_options(sprout-onion-check PRIVATE /W4 /permissive-)
+  endif()
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
@@ -81,6 +106,9 @@ else()
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
+  if(SPROUT_BUILD_ONION)
+    target_compile_options(sprout-onion-check PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
 endif()
 
 if(SPROUT_BUILD_DESKTOP)

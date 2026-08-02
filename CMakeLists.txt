@@ -4,8 +4,10 @@ project(Sprout LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)
+find_package(Threads REQUIRED)
 
 option(SPROUT_BUILD_DESKTOP "Build the SDL desktop launcher preview" ON)
+option(SPROUT_BUILD_ONION "Build Onion target diagnostics" OFF)
 
 FetchContent_Declare(
   SQLite3
@@ -18,6 +20,10 @@ FetchContent_MakeAvailable(SQLite3)
 
 add_library(sprout_sqlite STATIC "${sqlite3_SOURCE_DIR}/sqlite3.c")
 target_include_directories(sprout_sqlite PUBLIC "${sqlite3_SOURCE_DIR}")
+target_link_libraries(sprout_sqlite PUBLIC Threads::Threads)
+if(SPROUT_BUILD_ONION)
+  target_link_libraries(sprout_sqlite PUBLIC pthread)
+endif()
 target_compile_definitions(
   sprout_sqlite
   PRIVATE

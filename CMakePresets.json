@@ -15,6 +15,19 @@
         "BUILD_TESTING": "ON",
         "SPROUT_BUILD_DESKTOP": "ON"
       }
+    },
+    {
+      "name": "onion-arm",
+      "displayName": "Pinned Onion ARM target",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/out/build/onion-arm",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/onion-miyoo.cmake",
+      "cacheVariables": {
+        "BUILD_TESTING": "OFF",
+        "CMAKE_BUILD_TYPE": "Release",
+        "SPROUT_BUILD_DESKTOP": "OFF",
+        "SPROUT_BUILD_ONION": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -22,6 +35,10 @@
       "name": "windows-debug",
       "configurePreset": "windows-x64",
       "configuration": "Debug"
+    },
+    {
+      "name": "onion-release",
+      "configurePreset": "onion-arm"
     }
   ],
   "testPresets": [
