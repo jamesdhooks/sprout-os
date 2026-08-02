@@ -19,6 +19,7 @@ struct Profile {
   std::string display_name;
   ProfileRole role;
   std::uint32_t accent_rgb;
+  std::string avatar_ref;
 };
 
 enum class Screen {
@@ -34,6 +35,8 @@ enum class Action {
   Right,
   Confirm,
   Back,
+  ZoomIn,
+  ZoomOut,
 };
 
 enum class EventType {

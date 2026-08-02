@@ -136,16 +136,19 @@ constexpr std::string_view kProfileColumns =
     "content_policy_ref, time_policy_ref, preferences_json, lifecycle, "
     "local_revision, created_at, updated_at";
 
+void validate_avatar_ref(std::string_view avatar_ref) {
+  if (!avatar_ref.starts_with("builtin:") && !avatar_ref.starts_with("local:")) {
+    throw std::invalid_argument("Avatar reference must use builtin: or local:");
+  }
+}
+
 void validate_profile(const NewProfile& profile) {
   if (profile.id.empty() || profile.display_name.empty() ||
       profile.avatar_ref.empty() || profile.save_namespace.empty()) {
     throw std::invalid_argument(
         "Profile ID, display name, avatar, and save namespace are required");
   }
-  if (!profile.avatar_ref.starts_with("builtin:") &&
-      !profile.avatar_ref.starts_with("local:")) {
-    throw std::invalid_argument("Avatar reference must use builtin: or local:");
-  }
+  validate_avatar_ref(profile.avatar_ref);
   if (profile.role == ProfileRole::Child &&
       (!profile.content_policy_ref.has_value() ||
        !profile.time_policy_ref.has_value())) {
@@ -315,6 +318,25 @@ void ProfileRepository::create_profile(const NewProfile& profile) {
   bind_text(statement.get(), 9, profile.preferences_json);
   if (sqlite3_step(statement.get()) != SQLITE_DONE) {
     throw std::runtime_error(sqlite3_errmsg(impl_->database()));
+  }
+}
+
+void ProfileRepository::set_avatar_ref(const std::string& id,
+                                       const std::string& avatar_ref) {
+  validate_avatar_ref(avatar_ref);
+  Statement statement(impl_->database(), R"sql(
+    UPDATE profiles
+    SET avatar_ref = ?, local_revision = local_revision + 1,
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    WHERE id = ?
+  )sql");
+  bind_text(statement.get(), 1, avatar_ref);
+  bind_text(statement.get(), 2, id);
+  if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+    throw std::runtime_error(sqlite3_errmsg(impl_->database()));
+  }
+  if (sqlite3_changes(impl_->database()) == 0) {
+    throw std::invalid_argument("Profile does not exist");
   }
 }
 

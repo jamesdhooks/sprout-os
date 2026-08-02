@@ -14,11 +14,13 @@ namespace sprout::launcher {
 enum class SetupPresentationEvent {
   Completed,
   ExitRequested,
+  ImportParentImageRequested,
 };
 
 class SetupPresentation {
  public:
-  explicit SetupPresentation(SetupWizard& wizard);
+  explicit SetupPresentation(SetupWizard& wizard,
+                             bool custom_image_available = false);
 
   [[nodiscard]] SetupStep step() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
@@ -28,6 +30,8 @@ class SetupPresentation {
   [[nodiscard]] const std::string& error_message() const noexcept;
 
   [[nodiscard]] std::optional<SetupPresentationEvent> handle(Action action);
+  void complete_avatar_step();
+  void report_avatar_error(std::string message);
 
  private:
   void refresh_content();
@@ -35,6 +39,7 @@ class SetupPresentation {
   void confirm();
 
   SetupWizard& wizard_;
+  bool custom_image_available_{false};
   std::size_t focus_index_{0};
   std::string_view title_;
   std::string_view description_;

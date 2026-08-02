@@ -206,6 +206,22 @@ void rejects_invalid_profile_values() {
          "failed profile writes should not leave partial rows");
 }
 
+void updates_only_managed_avatar_references() {
+  TemporaryDatabase database;
+  ProfileRepository profiles(database.path());
+  profiles.create_profile(parent());
+  profiles.set_avatar_ref("parent-sam", "local:portrait-2");
+  const auto updated = profiles.find_profile("parent-sam");
+  expect(updated->avatar_ref == "local:portrait-2",
+         "managed avatar reference should be persisted");
+  expect(updated->local_revision == 2,
+         "avatar update should advance the profile revision");
+  expect_failure([&] { profiles.set_avatar_ref("parent-sam", "C:\\private.jpg"); },
+                 "raw source path should not be accepted as an avatar reference");
+  expect_failure([&] { profiles.set_avatar_ref("missing", "local:portrait"); },
+                 "avatar update should reject a missing profile");
+}
+
 void rejects_newer_database_versions_without_mutation() {
   TemporaryDatabase database;
   with_raw_database(database.path(), [](sqlite3* raw) {
@@ -271,6 +287,7 @@ int main() {
     archives_and_restores_without_deleting();
     protects_the_last_active_parent();
     rejects_invalid_profile_values();
+    updates_only_managed_avatar_references();
     rejects_newer_database_versions_without_mutation();
     rolls_back_failed_migration();
     schema_excludes_sensitive_profile_data();

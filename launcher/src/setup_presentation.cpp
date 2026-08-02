@@ -1,10 +1,12 @@
 #include "sprout/launcher/setup_presentation.hpp"
 
 #include <stdexcept>
+#include <utility>
 
 namespace sprout::launcher {
 
-SetupPresentation::SetupPresentation(SetupWizard& wizard) : wizard_(wizard) {
+SetupPresentation::SetupPresentation(SetupWizard& wizard, bool custom_image_available)
+    : wizard_(wizard), custom_image_available_(custom_image_available) {
   refresh_content();
 }
 
@@ -44,6 +46,9 @@ std::optional<SetupPresentationEvent> SetupPresentation::handle(Action action) {
 
   error_message_.clear();
   try {
+    if (step() == SetupStep::Avatars && custom_image_available_ && focus_index_ == 0) {
+      return SetupPresentationEvent::ImportParentImageRequested;
+    }
     confirm();
     focus_index_ = 0;
     refresh_content();
@@ -54,6 +59,23 @@ std::optional<SetupPresentationEvent> SetupPresentation::handle(Action action) {
     error_message_ = error.what();
   }
   return std::nullopt;
+}
+
+void SetupPresentation::complete_avatar_step() {
+  if (step() != SetupStep::Avatars) {
+    throw std::logic_error("Profile image can only complete the portrait setup step");
+  }
+  wizard_.skip_current_step();
+  focus_index_ = 0;
+  error_message_.clear();
+  refresh_content();
+}
+
+void SetupPresentation::report_avatar_error(std::string message) {
+  if (step() != SetupStep::Avatars) {
+    throw std::logic_error("Profile image errors require the portrait setup step");
+  }
+  error_message_ = std::move(message);
 }
 
 void SetupPresentation::refresh_content() {
@@ -91,8 +113,11 @@ void SetupPresentation::refresh_content() {
       return;
     case SetupStep::Avatars:
       title_ = "PROFILE PORTRAITS";
-      description_ = "BUILT-IN PORTRAITS ARE READY";
-      choices_ = {"CONTINUE"};
+      description_ = custom_image_available_ ? "CUSTOMIZE THE PARENT PORTRAIT"
+                                             : "BUILT-IN PORTRAITS ARE READY";
+      choices_ = custom_image_available_
+                     ? std::vector<std::string_view>{"IMPORT FOR PARENT", "KEEP BUILT IN"}
+                     : std::vector<std::string_view>{"CONTINUE"};
       return;
     case SetupStep::Library:
       title_ = "GAME LIBRARY";

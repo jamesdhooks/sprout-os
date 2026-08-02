@@ -1,10 +1,13 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/profile_image_importer.hpp"
 
 #include <SDL.h>
+#include <SDL_image.h>
 
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <exception>
 #include <string>
 #include <string_view>
 
@@ -134,7 +137,13 @@ Color color_from_rgb(std::uint32_t rgb) {
   };
 }
 
-void render_profile_select(SDL_Renderer* renderer, const LauncherState& state) {
+std::string path_as_utf8(const std::filesystem::path& path) {
+  const auto encoded = path.generic_u8string();
+  return {reinterpret_cast<const char*>(encoded.data()), encoded.size()};
+}
+
+void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
+                           const std::filesystem::path& managed_image_root) {
   draw_centered_text(renderer, "SPROUT", kWidth / 2, 34, 5, kText);
   draw_centered_text(renderer, "WHO IS PLAYING?", kWidth / 2, 82, 2, kMuted);
 
@@ -156,8 +165,25 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state) {
 
     const SDL_Rect avatar{x + 55, 151, 120, 120};
     fill_rect(renderer, avatar, color_from_rgb(profile.accent_rgb));
-    const std::string initial(1, profile.display_name.front());
-    draw_centered_text(renderer, initial, x + card_width / 2, 175, 8, kText);
+    bool rendered_portrait = false;
+    if (!managed_image_root.empty() && profile.avatar_ref.starts_with("local:")) {
+      try {
+        const auto path = ProfileImageImporter::resolve_portrait_at(
+            managed_image_root, profile.avatar_ref);
+        const auto encoded = path_as_utf8(path);
+        SDL_Texture* texture = IMG_LoadTexture(renderer, encoded.c_str());
+        if (texture != nullptr) {
+          SDL_RenderCopy(renderer, texture, nullptr, &avatar);
+          SDL_DestroyTexture(texture);
+          rendered_portrait = true;
+        }
+      } catch (const std::exception&) {
+      }
+    }
+    if (!rendered_portrait) {
+      const std::string initial(1, profile.display_name.front());
+      draw_centered_text(renderer, initial, x + card_width / 2, 175, 8, kText);
+    }
 
     draw_centered_text(renderer, profile.display_name, x + card_width / 2, 300, 3, kText);
     draw_centered_text(renderer,
@@ -201,16 +227,48 @@ int setup_step_number(SetupStep step) {
 
 }  // namespace
 
-void render_launcher(SDL_Renderer* renderer, const LauncherState& state) {
+void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
+                     const std::filesystem::path& managed_image_root) {
   set_color(renderer, kBackground);
   SDL_RenderClear(renderer);
 
   if (state.screen() == Screen::ProfileSelect) {
-    render_profile_select(renderer, state);
+    render_profile_select(renderer, state, managed_image_root);
   } else {
     render_home(renderer, state);
   }
 
+  SDL_RenderPresent(renderer);
+}
+
+void render_profile_image_crop(SDL_Renderer* renderer,
+                               const ProfileImageCropPresentation& crop) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+  draw_centered_text(renderer, "CROP PARENT PORTRAIT", kWidth / 2, 34, 3, kText);
+  draw_centered_text(renderer, "MOVE THE PHOTO INSIDE THE SQUARE", kWidth / 2, 76, 1,
+                     kMuted);
+
+  const auto pixels = crop.preview_rgba();
+  SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
+                                           SDL_TEXTUREACCESS_STATIC, 256, 256);
+  if (texture != nullptr) {
+    SDL_UpdateTexture(texture, nullptr, pixels.data(), 256 * 4);
+    const SDL_Rect destination{192, 110, 256, 256};
+    SDL_RenderCopy(renderer, texture, nullptr, &destination);
+    SDL_DestroyTexture(texture);
+    outline_rect(renderer, destination, 4, kFocus);
+  }
+
+  const int zoom_percent = static_cast<int>(crop.selection().zoom * 100.0);
+  draw_centered_text(renderer, "ZOOM " + std::to_string(zoom_percent) + "%",
+                     kWidth / 2, 386, 2, kText);
+  if (!crop.error_message().empty()) {
+    draw_centered_text(renderer, crop.error_message().substr(0, 68), kWidth / 2, 414, 1,
+                       kFocus);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   L R ZOOM   A USE   B CANCEL",
+                     kWidth / 2, 450, 1, kMuted);
   SDL_RenderPresent(renderer);
 }
 

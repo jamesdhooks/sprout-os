@@ -63,6 +63,7 @@ class ProfileRepository {
       const std::string& id) const;
 
   void create_profile(const NewProfile& profile);
+  void set_avatar_ref(const std::string& id, const std::string& avatar_ref);
   void archive_profile(const std::string& id);
   void restore_profile(const std::string& id);
 

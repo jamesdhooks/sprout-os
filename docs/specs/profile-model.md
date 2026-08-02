@@ -27,7 +27,7 @@ The launcher implements profiles in a SQLite `profiles` table with database sche
 
 Opening an empty version-zero database creates schema version 1 inside one transaction. A database with a newer version is rejected without modification. A failed migration rolls back its schema and version changes. There is no destructive migration or permanent-delete operation in v1.
 
-Built-in avatars use `builtin:<id>` references. Managed local images reserve the `local:<id>` namespace for the later image-import issue; image bytes and filesystem paths are not stored in the profile row.
+Built-in avatars use `builtin:<id>` references. The implemented import core uses revisioned `local:<id>` references for managed PNG variants; image bytes and source filesystem paths are not stored in the profile row. See the [profile image pipeline](profile-images.md).
 
 ## Invariants
 
