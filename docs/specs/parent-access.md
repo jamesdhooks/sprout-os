@@ -1,6 +1,6 @@
 # Parent Access
 
-Status: **credential and persistent-grant core implemented; launcher presentation pending**.
+Status: **implemented for the Windows desktop preview; Onion timing and storage validation pending**.
 
 ## Stored boundary
 
@@ -27,6 +27,8 @@ This policy cannot prove that the wall clock is correct after a powered-off devi
 
 ## Sensitive actions
 
-An active grant permits ordinary parent-mode navigation. Changing the PIN, disabling parental controls, deleting profiles, clearing usage history, exporting secrets, or changing recovery policy must call PIN verification again. The presentation and action authorization layer remain part of issue 8 and must not infer reauthentication from parent-profile selection alone.
+An active grant permits ordinary parent-mode navigation. The current launcher requires fresh PIN verification before its Family Dashboard and Onion Tools placeholders and exposes a dedicated manual-lock action that revokes the grant before returning to profile selection. Parent-profile selection alone never authorizes these targets.
+
+Changing the PIN, disabling parental controls, deleting profiles, clearing usage history, exporting secrets, or changing recovery policy must use the same reauthentication boundary when those actions gain concrete implementations.
 
 See [ADR 0008](../decisions/0008-parent-credential-cryptography.md) for the cryptographic dependency and work-factor decision.

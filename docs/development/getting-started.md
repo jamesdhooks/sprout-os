@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, and a versioned local profile repository. There is no supported release, Onion adapter, policy enforcement, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, and device-local parent access. There is no supported release, Onion adapter, child time-policy enforcement, or deployable SD-card image.
 
 ## Tools
 
@@ -29,7 +29,7 @@ Run the interactive 640×480 preview:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
 ```
 
-Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to save setup progress and exit or to go back from the launcher. SDL-compatible controllers use the D-pad, A, and B. During portrait cropping, Q/E or the controller shoulder buttons zoom out/in.
+Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to save setup progress and exit or to go back from the launcher. SDL-compatible controllers use the D-pad, A, and B. The same directional controls operate the PIN keypad; PIN digits are masked. During portrait cropping, Q/E or the controller shoulder buttons zoom out/in.
 
 The development command stores sanitized preview configuration, profiles, and managed portraits under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. To exercise image import during first-run setup, place one BMP, JPEG, or PNG at `out/preview-data/imports/profile-image.<extension>` before reaching the portrait step. This explicit staging folder is the only source location the preview checks; source paths are not retained. The preview does not read ROMs, device data, credentials, or live household data.
 
@@ -51,7 +51,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, validated image decoding/cropping/activation, and a headless SDL render traversal into the persisted profile selector. Cross-compilation and deployment steps remain intended workflow.
+Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, and a headless SDL render traversal. Cross-compilation and deployment steps remain intended workflow.
 
 ## Configuration and secrets
 
