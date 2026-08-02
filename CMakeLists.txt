@@ -27,6 +27,20 @@ target_compile_definitions(
     SQLITE_THREADSAFE=1
 )
 
+FetchContent_Declare(
+  yyjson
+  GIT_REPOSITORY https://github.com/ibireme/yyjson.git
+  GIT_TAG 7871d321ff4cd8068c1f777c97975dc2fb640ab3
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(yyjson)
+target_compile_definitions(
+  yyjson
+  PRIVATE
+    YYJSON_DISABLE_FAST_FP_CONV=1
+    YYJSON_DISABLE_NON_STANDARD=1
+)
+
 if(SPROUT_BUILD_DESKTOP)
   set(SDL_SHARED OFF CACHE BOOL "" FORCE)
   set(SDL_STATIC ON CACHE BOOL "" FORCE)

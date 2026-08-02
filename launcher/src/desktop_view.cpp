@@ -195,6 +195,10 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
                      kMuted);
 }
 
+int setup_step_number(SetupStep step) {
+  return step == SetupStep::Complete ? 11 : static_cast<int>(step) + 1;
+}
+
 }  // namespace
 
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state) {
@@ -207,6 +211,42 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state) {
     render_home(renderer, state);
   }
 
+  SDL_RenderPresent(renderer);
+}
+
+void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+
+  draw_centered_text(renderer, "SPROUT", kWidth / 2, 30, 4, kText);
+  const std::string progress = "STEP " + std::to_string(setup_step_number(setup.step())) +
+                               " OF 11";
+  draw_centered_text(renderer, progress, kWidth / 2, 72, 2, kMuted);
+
+  const SDL_Rect panel{54, 112, 532, 276};
+  fill_rect(renderer, panel, kPanel);
+  outline_rect(renderer, panel, 2, kPanelFocused);
+  draw_centered_text(renderer, setup.title(), kWidth / 2, 144, 3, kText);
+  draw_centered_text(renderer, setup.description(), kWidth / 2, 192, 1, kMuted);
+
+  const auto choices = setup.choices();
+  for (std::size_t index = 0; index < choices.size(); ++index) {
+    const SDL_Rect choice{124, 246 + static_cast<int>(index) * 58, 392, 44};
+    fill_rect(renderer, choice,
+              index == setup.focus_index() ? kPanelFocused : kBackground);
+    if (index == setup.focus_index()) {
+      outline_rect(renderer, choice, 3, kFocus);
+      draw_text(renderer, ">", 142, choice.y + 13, 2, kFocus);
+    }
+    draw_text(renderer, choices[index], 174, choice.y + 13, 2, kText);
+  }
+
+  if (!setup.error_message().empty()) {
+    const std::string error = setup.error_message().substr(0, 68);
+    draw_centered_text(renderer, error, kWidth / 2, 402, 1, kFocus);
+  }
+  draw_centered_text(renderer, "ARROWS CHOOSE   A CONTINUE   B SAVE AND EXIT",
+                     kWidth / 2, 444, 1, kMuted);
   SDL_RenderPresent(renderer);
 }
 

@@ -103,7 +103,7 @@ try {
         if (-not (Test-Path -LiteralPath $executable)) {
             throw "Launcher executable was not found at $executable."
         }
-        & $executable
+        & $executable --data-dir (Join-Path $repoRoot "out\preview-data")
     }
 } finally {
     Pop-Location

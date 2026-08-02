@@ -9,18 +9,44 @@ add_library(
   src/profile_repository.cpp
 )
 
+add_library(
+  sprout_configuration
+  src/local_configuration.cpp
+)
+
+add_library(
+  sprout_setup
+  src/setup_presentation.cpp
+  src/setup_wizard.cpp
+)
+
 target_include_directories(sprout_launcher_core PUBLIC include)
 target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
 target_compile_features(sprout_profile_store PUBLIC cxx_std_20)
 target_link_libraries(sprout_profile_store PRIVATE sprout_sqlite)
+target_include_directories(sprout_configuration PUBLIC include)
+target_compile_features(sprout_configuration PUBLIC cxx_std_20)
+target_link_libraries(sprout_configuration PRIVATE yyjson)
+target_include_directories(sprout_setup PUBLIC include)
+target_compile_features(sprout_setup PUBLIC cxx_std_20)
+target_link_libraries(
+  sprout_setup
+  PRIVATE
+    sprout_configuration
+    sprout_profile_store
+)
 
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(SPROUT_BUILD_DESKTOP)
@@ -36,6 +62,8 @@ if(SPROUT_BUILD_DESKTOP)
     sprout-launcher
     PRIVATE
       sprout_launcher_core
+      sprout_profile_store
+      sprout_setup
       SDL2::SDL2main
       SDL2::SDL2-static
   )
@@ -63,6 +91,21 @@ if(BUILD_TESTING)
       sprout_sqlite
   )
   add_test(NAME profile-store COMMAND sprout-profile-store-test)
+
+  add_executable(sprout-configuration-test tests/local_configuration_test.cpp)
+  target_compile_features(sprout-configuration-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-configuration-test PRIVATE sprout_configuration)
+  add_test(NAME local-configuration COMMAND sprout-configuration-test)
+
+  add_executable(sprout-setup-test tests/setup_wizard_test.cpp)
+  target_compile_features(sprout-setup-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-setup-test PRIVATE sprout_setup)
+  add_test(NAME setup-wizard COMMAND sprout-setup-test)
+
+  add_executable(sprout-setup-presentation-test tests/setup_presentation_test.cpp)
+  target_compile_features(sprout-setup-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-setup-presentation-test PRIVATE sprout_setup)
+  add_test(NAME setup-presentation COMMAND sprout-setup-presentation-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_test(NAME launcher-desktop-smoke COMMAND sprout-launcher --smoke-test)
