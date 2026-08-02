@@ -4,13 +4,23 @@ add_library(
   src/launcher_state.cpp
 )
 
+add_library(
+  sprout_profile_store
+  src/profile_repository.cpp
+)
+
 target_include_directories(sprout_launcher_core PUBLIC include)
 target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
+target_include_directories(sprout_profile_store PUBLIC include)
+target_compile_features(sprout_profile_store PUBLIC cxx_std_20)
+target_link_libraries(sprout_profile_store PRIVATE sprout_sqlite)
 
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if(SPROUT_BUILD_DESKTOP)
@@ -43,6 +53,16 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-launcher-state-test PRIVATE sprout_launcher_core)
 
   add_test(NAME launcher-state COMMAND sprout-launcher-state-test)
+
+  add_executable(sprout-profile-store-test tests/profile_repository_test.cpp)
+  target_compile_features(sprout-profile-store-test PRIVATE cxx_std_20)
+  target_link_libraries(
+    sprout-profile-store-test
+    PRIVATE
+      sprout_profile_store
+      sprout_sqlite
+  )
+  add_test(NAME profile-store COMMAND sprout-profile-store-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_test(NAME launcher-desktop-smoke COMMAND sprout-launcher --smoke-test)
