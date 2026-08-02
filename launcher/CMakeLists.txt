@@ -50,6 +50,20 @@ else()
 endif()
 
 if(SPROUT_BUILD_DESKTOP)
+  add_library(
+    sprout_profile_images
+    src/profile_image_importer.cpp
+  )
+  target_include_directories(sprout_profile_images PUBLIC include)
+  target_compile_features(sprout_profile_images PUBLIC cxx_std_20)
+  target_link_libraries(
+    sprout_profile_images
+    PRIVATE
+      sprout_profile_store
+      SDL2::SDL2-static
+      SDL2_image
+  )
+
   add_executable(
     sprout-launcher
     src/desktop_view.cpp
@@ -69,8 +83,10 @@ if(SPROUT_BUILD_DESKTOP)
   )
 
   if(MSVC)
+    target_compile_options(sprout_profile_images PRIVATE /W4 /permissive-)
     target_compile_options(sprout-launcher PRIVATE /W4 /permissive-)
   else()
+    target_compile_options(sprout_profile_images PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(sprout-launcher PRIVATE -Wall -Wextra -Wpedantic)
   endif()
 endif()
@@ -108,6 +124,17 @@ if(BUILD_TESTING)
   add_test(NAME setup-presentation COMMAND sprout-setup-presentation-test)
 
   if(SPROUT_BUILD_DESKTOP)
+    add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)
+    target_compile_features(sprout-profile-image-test PRIVATE cxx_std_20)
+    target_link_libraries(
+      sprout-profile-image-test
+      PRIVATE
+        sprout_profile_images
+        SDL2::SDL2-static
+        SDL2_image
+    )
+    add_test(NAME profile-image COMMAND sprout-profile-image-test)
+
     add_test(NAME launcher-desktop-smoke COMMAND sprout-launcher --smoke-test)
     set_tests_properties(
       launcher-desktop-smoke
