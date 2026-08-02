@@ -1,10 +1,35 @@
 # Getting Started
 
-Sprout currently has documentation only. There is no dependency manifest, build system, executable, test command, supported release, or deployable SD-card image.
+Sprout currently has an initial Windows desktop launcher preview. There is no supported release, profile persistence, Onion adapter, policy enforcement, or deployable SD-card image.
 
 ## Tools
 
-Current documentation work requires Git and a UTF-8 Markdown editor. Future launcher work is expected to require a Windows or Linux development host, an Onion-compatible cross-compilation toolchain, SDL development libraries, and secure file transfer to the device. Exact versions and commands must come from the pinned Onion investigation and an accepted implementation issue.
+Current launcher development requires:
+
+- Git;
+- PowerShell 5.1 or later;
+- Visual Studio 2022 with the Desktop development with C++ workload, including CMake tools; and
+- network access during the first configure so CMake can fetch the pinned SDL2 source.
+
+The launcher uses C++20 and SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`. Build output and fetched dependencies remain under the ignored `out/` directory.
+
+An Onion-compatible cross-compilation environment and device SDL backend are still unverified. They must be selected through the pinned Onion investigation rather than inferred from the desktop build.
+
+## Windows desktop preview
+
+Configure, build, and run both test targets:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test
+```
+
+Run the interactive 640×480 preview:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
+```
+
+Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X to go back. SDL-compatible controllers use the D-pad, A, and B. The preview uses deterministic local fixtures and does not read ROMs, device data, credentials, or live household data.
 
 ## Development cards
 
@@ -17,14 +42,14 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 
 ## Intended development loop
 
-1. Reproduce behavior in a 640×480 desktop preview where possible.
+1. Reproduce behavior in the 640×480 desktop preview where possible.
 2. Run deterministic unit and integration checks on the host.
 3. Cross-compile with the verified Onion-compatible toolchain.
 4. Deploy only the changed component to the development card.
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-This is an intended workflow, not a current command reference.
+Only the Windows desktop configure/build/test/run commands above are currently implemented. Cross-compilation and deployment steps remain intended workflow.
 
 ## Configuration and secrets
 

@@ -2,7 +2,7 @@
 
 Sprout is an open-source, family-oriented gaming platform for retro handhelds and small computers. It aims to provide family profiles, parental controls, an Onion-compatible emulation foundation, and a portable native-game runtime without making basic use depend on a server.
 
-> **Status: early development.** This repository currently contains the project foundation and design specifications. There is no runnable Sprout build yet.
+> **Status: early development.** This repository contains the project foundation and an initial Windows desktop launcher preview. The preview validates navigation and presentation only; it is not a device build.
 
 ## Principles
 
@@ -29,15 +29,24 @@ The initial milestone is the **Sprout Family Launcher MVP**: a development-card 
 ## Repository layout
 
 ```text
+launcher/   Portable launcher state and the SDL2 desktop preview
 docs/       Architecture, specifications, research, and roadmap
+tools/      Focused development entry points
 .github/    Contribution templates
 ```
 
-Product directories will be added only when implementation begins. Empty launcher, runtime, server, and connector skeletons are intentionally absent.
+Runtime, server, package, and connector directories remain intentionally absent until a concrete milestone needs them.
 
 ## Development
 
-Start with the [getting-started guide](docs/development/getting-started.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/). There is currently no build command or executable target.
+Start with the [getting-started guide](docs/development/getting-started.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
+
+On Windows with Visual Studio 2022 C++ tools:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
+```
 
 The long-form product direction is preserved in the [platform blueprint](docs/reference/Sprout_Platform_Design_and_Technical_Blueprint.md). The concise documents under `docs/` define the navigable working foundation.
 

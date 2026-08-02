@@ -33,6 +33,12 @@ For material architecture changes, open a focused proposal describing the immedi
 
 Changes must include the narrowest relevant tests and the exact commands and outcomes in the pull request. Distinguish unit, integration, desktop, and physical-hardware verification. A desktop simulation is not evidence of Miyoo behavior.
 
+For the current Windows desktop launcher slice, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test
+```
+
 Reviewers should check for scope expansion, duplicate abstractions, unused code, hidden server dependencies, unsafe migrations, missing rollback behavior, profile-data leakage, parental-control bypasses, inaccurate documentation, and files without a concrete consumer.
 
 Update user or developer documentation whenever behavior, configuration, migration, or compatibility changes. Use current, planned, and exploratory language precisely.
