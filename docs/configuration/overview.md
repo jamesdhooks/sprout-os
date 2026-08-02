@@ -38,6 +38,8 @@ SQLite is intended for transactional profile, activity, grant, and index state. 
 
 Configuration is validated before activation, written atomically, and snapshotted. Repeated startup failure or invalid configuration must offer last-known-good rollback, connector isolation, launcher-only reset, and stock-Onion recovery without deleting saves.
 
+The implemented schema-v1 core persists setup progress and household/device/profile locale overrides with strict validation, atomic activation, stale-writer protection, and last-known-good restore. See the [local configuration specification](../specs/local-configuration.md). Desktop setup presentation, connector isolation, launcher reset, and boot-failure recovery remain planned.
+
 ## Backup and restore
 
 - **Household export:** profiles, policies, library metadata, connector definitions without secrets, preferences, and favorites.
