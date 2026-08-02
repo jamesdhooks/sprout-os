@@ -40,7 +40,7 @@ std::size_t LauncherState::focus_index() const noexcept {
   return screen_ == Screen::ProfileSelect ? profile_focus_ : menu_focus_;
 }
 
-std::span<const Profile> LauncherState::profiles() const noexcept {
+ReadOnlyView<Profile> LauncherState::profiles() const noexcept {
   return profiles_;
 }
 
@@ -51,7 +51,7 @@ const Profile* LauncherState::active_profile() const noexcept {
   return &profiles_[*active_profile_index_];
 }
 
-std::span<const std::string_view> LauncherState::menu_items() const noexcept {
+ReadOnlyView<std::string_view> LauncherState::menu_items() const noexcept {
   if (screen_ == Screen::ChildHome) {
     return kChildMenu;
   }
@@ -72,7 +72,11 @@ std::optional<LauncherEvent> LauncherState::handle(Action action) {
       return std::nullopt;
     }
     if (action == Action::Back) {
-      return LauncherEvent{.type = EventType::ExitRequested};
+      return LauncherEvent{
+          .type = EventType::ExitRequested,
+          .profile_id = {},
+          .target = {},
+      };
     }
     if (action != Action::Confirm) {
       return std::nullopt;
@@ -86,6 +90,7 @@ std::optional<LauncherEvent> LauncherState::handle(Action action) {
     return LauncherEvent{
         .type = EventType::ProfileActivated,
         .profile_id = profile.id,
+        .target = {},
     };
   }
 
@@ -106,6 +111,7 @@ std::optional<LauncherEvent> LauncherState::handle(Action action) {
     return LauncherEvent{
         .type = EventType::ReturnedToProfiles,
         .profile_id = profile_id,
+        .target = {},
     };
   }
   if (action != Action::Confirm) {

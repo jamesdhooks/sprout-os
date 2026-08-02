@@ -3,7 +3,8 @@
 #include "sprout/launcher/launcher_state.hpp"
 
 #include <optional>
-#include <span>
+#include "sprout/launcher/read_only_view.hpp"
+
 #include <string>
 #include <string_view>
 
@@ -32,7 +33,7 @@ class ParentPinPresentation {
   [[nodiscard]] std::string_view description() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] std::size_t entered_digits() const noexcept;
-  [[nodiscard]] std::span<const std::string_view> choices() const noexcept;
+  [[nodiscard]] ReadOnlyView<std::string_view> choices() const noexcept;
   [[nodiscard]] const std::string& error_message() const noexcept;
   [[nodiscard]] std::optional<ParentPinEvent> handle(Action action);
   [[nodiscard]] std::string take_pin();

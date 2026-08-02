@@ -2,7 +2,8 @@
 
 #include <filesystem>
 #include <optional>
-#include <span>
+#include "sprout/launcher/read_only_view.hpp"
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -18,7 +19,7 @@ struct OnionSystemContract {
   std::string_view id;
   std::filesystem::path rom_directory;
   std::filesystem::path launcher;
-  std::span<const std::string_view> extensions;
+  ReadOnlyView<std::string_view> extensions;
 };
 
 [[nodiscard]] std::optional<OnionSystemContract> onion_system_contract(

@@ -1,4 +1,5 @@
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -364,7 +365,7 @@ void remove_new_asset(const std::filesystem::path& directory) {
 }
 
 void remove_old_asset(const std::filesystem::path& root, std::string_view reference) {
-  if (!reference.starts_with("local:")) {
+  if (!starts_with(reference, "local:")) {
     return;
   }
   const std::string_view id = reference.substr(6);
@@ -508,7 +509,7 @@ std::filesystem::path ProfileImageImporter::resolve_thumbnail(
 std::filesystem::path ProfileImageImporter::resolve_portrait_at(
     const std::filesystem::path& managed_image_root,
     const std::string& avatar_ref) {
-  if (!avatar_ref.starts_with("local:") ||
+  if (!starts_with(avatar_ref, "local:") ||
       !safe_asset_id(std::string_view(avatar_ref).substr(6))) {
     throw std::invalid_argument("Avatar reference is not a managed local image");
   }
@@ -517,7 +518,7 @@ std::filesystem::path ProfileImageImporter::resolve_portrait_at(
 
 std::filesystem::path ProfileImageImporter::resolve(
     const std::string& avatar_ref, const char* filename) const {
-  if (!avatar_ref.starts_with("local:") ||
+  if (!starts_with(avatar_ref, "local:") ||
       !safe_asset_id(std::string_view(avatar_ref).substr(6))) {
     throw std::invalid_argument("Avatar reference is not a managed local image");
   }

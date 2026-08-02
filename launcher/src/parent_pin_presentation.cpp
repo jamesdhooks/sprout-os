@@ -52,7 +52,7 @@ std::size_t ParentPinPresentation::entered_digits() const noexcept {
   return pin_.size();
 }
 
-std::span<const std::string_view> ParentPinPresentation::choices() const noexcept {
+ReadOnlyView<std::string_view> ParentPinPresentation::choices() const noexcept {
   return kChoices;
 }
 

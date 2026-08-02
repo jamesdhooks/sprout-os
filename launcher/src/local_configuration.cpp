@@ -1,4 +1,5 @@
 #include "sprout/launcher/local_configuration.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <yyjson.h>
 
@@ -164,7 +165,8 @@ void validate_keys(yyjson_val* object,
   yyjson_obj_iter iterator = yyjson_obj_iter_with(object);
   while (yyjson_val* key = yyjson_obj_iter_next(&iterator)) {
     const std::string name = yyjson_get_str(key);
-    if (!allowed_keys.contains(name) || !observed.insert(name).second) {
+    if (allowed_keys.find(name) == allowed_keys.end() ||
+        !observed.insert(name).second) {
       throw std::runtime_error("Configuration contains an unknown or duplicate field");
     }
   }
@@ -249,6 +251,7 @@ LocalConfiguration parse(std::string_view encoded) {
         .offline_setup = yyjson_get_bool(offline),
         .household_locale = read_locale(required(household, "locale")),
         .device_locale = read_locale(required(device, "locale")),
+        .profile_locales = {},
         .parent_credential_ref = read_optional_string(root, "parentCredentialRef"),
     };
 
@@ -389,7 +392,7 @@ void validate_configuration(const LocalConfiguration& configuration) {
     validate_locale(locale);
   }
   if (configuration.parent_credential_ref.has_value() &&
-      !configuration.parent_credential_ref->starts_with("secret:")) {
+      !starts_with(*configuration.parent_credential_ref, "secret:")) {
     throw std::invalid_argument("Parent credential must be an opaque secret: reference");
   }
 }

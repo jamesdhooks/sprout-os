@@ -4,7 +4,8 @@
 #include "sprout/launcher/setup_wizard.hpp"
 
 #include <optional>
-#include <span>
+#include "sprout/launcher/read_only_view.hpp"
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -27,7 +28,7 @@ class SetupPresentation {
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] std::string_view title() const noexcept;
   [[nodiscard]] std::string_view description() const noexcept;
-  [[nodiscard]] std::span<const std::string_view> choices() const noexcept;
+  [[nodiscard]] ReadOnlyView<std::string_view> choices() const noexcept;
   [[nodiscard]] const std::string& error_message() const noexcept;
 
   [[nodiscard]] std::optional<SetupPresentationEvent> handle(Action action);

@@ -69,7 +69,7 @@ std::size_t LibraryPresentation::focus_index() const noexcept {
   return focus_index_;
 }
 
-std::span<const LibraryEntry> LibraryPresentation::entries() const noexcept {
+ReadOnlyView<LibraryEntry> LibraryPresentation::entries() const noexcept {
   return entries_;
 }
 

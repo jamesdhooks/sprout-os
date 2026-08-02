@@ -2,9 +2,9 @@
 
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/local_library.hpp"
+#include "sprout/launcher/read_only_view.hpp"
 
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -50,7 +50,7 @@ class LibraryPresentation {
   [[nodiscard]] std::string_view title() const noexcept;
   [[nodiscard]] std::string_view empty_message() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
-  [[nodiscard]] std::span<const LibraryEntry> entries() const noexcept;
+  [[nodiscard]] ReadOnlyView<LibraryEntry> entries() const noexcept;
   [[nodiscard]] std::string_view notice() const noexcept;
   [[nodiscard]] std::optional<LibraryPresentationEvent> handle(Action action);
 

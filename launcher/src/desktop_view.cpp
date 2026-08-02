@@ -1,5 +1,6 @@
 #include "desktop_view.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -168,7 +169,8 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
     const SDL_Rect avatar{x + 55, 151, 120, 120};
     fill_rect(renderer, avatar, color_from_rgb(profile.accent_rgb));
     bool rendered_portrait = false;
-    if (!managed_image_root.empty() && profile.avatar_ref.starts_with("local:")) {
+    if (!managed_image_root.empty() &&
+        starts_with(profile.avatar_ref, "local:")) {
       try {
         const auto path = ProfileImageImporter::resolve_portrait_at(
             managed_image_root, profile.avatar_ref);

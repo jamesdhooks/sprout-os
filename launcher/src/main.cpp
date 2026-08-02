@@ -11,6 +11,7 @@
 #include "sprout/launcher/profile_image_importer.hpp"
 #include "sprout/launcher/setup_presentation.hpp"
 #include "sprout/launcher/setup_wizard.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <SDL.h>
 
@@ -348,7 +349,7 @@ int main(int argc, char* argv[]) {
       screenshot = true;
       screenshot_path = argv[++index];
       if (index + 1 < argc &&
-          !std::string_view(argv[index + 1]).starts_with("--")) {
+          !sprout::launcher::starts_with(argv[index + 1], "--")) {
         screenshot_screen = argv[++index];
       }
     } else if (argument == "--data-dir" && index + 1 < argc) {
@@ -453,7 +454,7 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen.starts_with("setup")) {
+    if (sprout::launcher::starts_with(screenshot_screen, "setup")) {
       TemporaryDirectory directory("setup-screenshot");
       sprout::launcher::ConfigurationStore configuration(directory.path() / "config");
       sprout::launcher::ProfileRepository profiles(directory.path() / "profiles.sqlite3");

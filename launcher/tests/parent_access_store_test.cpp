@@ -1,4 +1,5 @@
 #include "sprout/launcher/parent_access_store.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <sqlite3.h>
 
@@ -78,7 +79,8 @@ void pin_hashes_and_verifies_without_plaintext_storage() {
          "credential should have a stored encoded hash");
   const std::string encoded(
       reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)));
-  expect(encoded.starts_with("$argon2id$") && encoded.find("2468") == std::string::npos,
+  expect(sprout::launcher::starts_with(encoded, "$argon2id$") &&
+             encoded.find("2468") == std::string::npos,
          "credential should store only a self-describing Argon2id hash");
   sqlite3_finalize(statement);
   sqlite3_close(database);
@@ -157,6 +159,10 @@ void pin_replacement_revokes_and_newer_schema_is_rejected() {
            "PIN replacement should activate only the new hash");
     expect_failure([&] { (void)access.is_unlocked(1'100, "2026-02-30"); },
                    "invalid calendar dates should be rejected");
+    expect_failure([&] { (void)access.is_unlocked(1'100, "2025-02-29"); },
+                   "non-leap February 29 should be rejected");
+    expect(!access.is_unlocked(1'100, "2024-02-29"),
+           "valid leap dates should be accepted before grant comparison");
   }
 
   sqlite3* database = nullptr;
