@@ -2,7 +2,7 @@
 
 Sprout is an open-source, family-oriented gaming platform for retro handhelds and small computers. It aims to provide family profiles, parental controls, an Onion-compatible emulation foundation, and a portable native-game runtime without making basic use depend on a server.
 
-> **Status: early development.** This repository contains the project foundation and an initial Windows desktop launcher preview. The preview validates navigation and presentation only; it is not a device build.
+> **Status: early development.** This repository contains the project foundation, an initial Windows desktop launcher preview, and versioned local profile persistence. These host implementations are not a device build.
 
 ## Principles
 
@@ -41,7 +41,7 @@ Runtime, server, package, and connector directories remain intentionally absent 
 
 Start with the [getting-started guide](docs/development/getting-started.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
 
-On Windows with Visual Studio 2022 C++ tools:
+On Windows with Visual Studio C++ tools:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test

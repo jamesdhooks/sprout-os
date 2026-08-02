@@ -1,11 +1,31 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(Sprout LANGUAGES CXX)
+project(Sprout LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)
 
 option(SPROUT_BUILD_DESKTOP "Build the SDL desktop launcher preview" ON)
+
+FetchContent_Declare(
+  SQLite3
+  URL https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip
+  URL_HASH SHA3_256=628a44cfe82c66aed1ccbbe85a562d2e33ebe64b3288981ed76285612227934e
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  SOURCE_SUBDIR cmake-not-provided
+)
+FetchContent_MakeAvailable(SQLite3)
+
+add_library(sprout_sqlite STATIC "${sqlite3_SOURCE_DIR}/sqlite3.c")
+target_include_directories(sprout_sqlite PUBLIC "${sqlite3_SOURCE_DIR}")
+target_compile_definitions(
+  sprout_sqlite
+  PRIVATE
+    SQLITE_DEFAULT_FOREIGN_KEYS=1
+    SQLITE_DQS=0
+    SQLITE_OMIT_LOAD_EXTENSION
+    SQLITE_THREADSAFE=1
+)
 
 if(SPROUT_BUILD_DESKTOP)
   set(SDL_SHARED OFF CACHE BOOL "" FORCE)
