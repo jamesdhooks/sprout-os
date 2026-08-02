@@ -27,3 +27,5 @@ Security-sensitive design requirements include:
 Network integrations are optional. Core profile selection, local parental controls, launch policy, and recovery must not fail open when a server or connector is unavailable.
 
 Physical safe mode is a recovery boundary, not a parental-control security boundary. Device loss, malicious SD-card modification, and compromised host computers remain outside the initial threat model.
+
+The implemented parent-access core uses self-describing Argon2id hashes and authenticated device-local grant records. Its selected cost and `/dev/urandom` path still require Onion hardware validation. The grant authentication key is stored on the same device, so it detects casual database tampering but is not protection against the physical-access attacker excluded above.

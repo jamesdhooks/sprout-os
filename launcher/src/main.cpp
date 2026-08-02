@@ -2,6 +2,9 @@
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/profile_repository.hpp"
+#include "sprout/launcher/parent_access_store.hpp"
+#include "sprout/launcher/parent_access_controller.hpp"
+#include "sprout/launcher/parent_pin_presentation.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
 #include "sprout/launcher/setup_presentation.hpp"
@@ -10,8 +13,10 @@
 #include <SDL.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -23,8 +28,6 @@
 namespace {
 
 using sprout::launcher::Action;
-using sprout::launcher::EventType;
-using sprout::launcher::LauncherEvent;
 using sprout::launcher::LauncherState;
 
 class TemporaryDirectory {
@@ -102,20 +105,27 @@ std::optional<Action> controller_action(std::uint8_t button) {
   }
 }
 
-bool apply_action(LauncherState& state, Action action) {
-  const auto event = state.handle(action);
-  if (!event.has_value()) {
-    return true;
+sprout::launcher::AccessMoment current_access_time() {
+  const std::time_t now = std::time(nullptr);
+  if (now < 0) {
+    throw std::runtime_error("System clock is unavailable");
   }
-
-  if (event->type == EventType::ExitRequested) {
-    return false;
+  std::tm local{};
+#ifdef _WIN32
+  if (localtime_s(&local, &now) != 0) {
+#else
+  if (localtime_r(&now, &local) == nullptr) {
+#endif
+    throw std::runtime_error("Local calendar date is unavailable");
   }
-
-  if (event->type == EventType::MenuItemInvoked) {
-    std::cout << "preview action: " << event->target << " (" << event->profile_id << ")\n";
+  std::array<char, 11> date{};
+  if (std::strftime(date.data(), date.size(), "%Y-%m-%d", &local) != 10) {
+    throw std::runtime_error("Local calendar date could not be formatted");
   }
-  return true;
+  return sprout::launcher::AccessMoment{
+      .utc_seconds = static_cast<std::int64_t>(now),
+      .local_date = date.data(),
+  };
 }
 
 SDL_Renderer* create_renderer(SDL_Window* window) {
@@ -178,10 +188,26 @@ int run_smoke_test(SDL_Renderer* renderer) {
   sprout::launcher::SetupPresentation setup(wizard, true);
   const auto image_root = directory.path() / "data" / "profile-images";
   sprout::launcher::ProfileImageImporter importer(image_root, profiles);
+  sprout::launcher::ParentAccessStore parent_access(
+      directory.path() / "data" / "security.sqlite3",
+      directory.path() / "secrets" / "device-access.key");
   bool imported_portrait = false;
+  bool configured_pin = false;
   while (setup.step() != sprout::launcher::SetupStep::Complete) {
     sprout::launcher::render_setup(renderer, setup);
-    if (setup.step() == sprout::launcher::SetupStep::Avatars) {
+    if (setup.step() == sprout::launcher::SetupStep::ParentPin) {
+      const auto event = setup.handle(Action::Confirm);
+      if (event != sprout::launcher::SetupPresentationEvent::ConfigureParentPinRequested) {
+        std::cerr << "Setup smoke test did not request parent PIN creation\n";
+        return EXIT_FAILURE;
+      }
+      sprout::launcher::ParentPinPresentation pin(
+          sprout::launcher::ParentPinMode::Create);
+      sprout::launcher::render_parent_pin(renderer, pin);
+      parent_access.set_pin("secret:parent-primary", "2468");
+      setup.complete_parent_pin_step("secret:parent-primary");
+      configured_pin = true;
+    } else if (setup.step() == sprout::launcher::SetupStep::Avatars) {
       const auto event = setup.handle(Action::Confirm);
       if (event != sprout::launcher::SetupPresentationEvent::ImportParentImageRequested) {
         std::cerr << "Setup smoke test did not request the staged profile image\n";
@@ -207,8 +233,16 @@ int run_smoke_test(SDL_Renderer* renderer) {
       return EXIT_FAILURE;
     }
   }
-  if (!imported_portrait) {
-    std::cerr << "Setup smoke test skipped the profile image flow\n";
+  if (!imported_portrait || !configured_pin) {
+    std::cerr << "Setup smoke test skipped a required profile or PIN flow\n";
+    return EXIT_FAILURE;
+  }
+  const auto access_time = current_access_time();
+  parent_access.grant_until_end_of_day("secret:parent-primary", "2468",
+                                       access_time.utc_seconds,
+                                       access_time.local_date);
+  if (!parent_access.is_unlocked(access_time.utc_seconds, access_time.local_date)) {
+    std::cerr << "Setup smoke test could not restore parent access\n";
     return EXIT_FAILURE;
   }
   LauncherState persisted(load_launcher_profiles(profiles));
@@ -323,6 +357,21 @@ int main(int argc, char* argv[]) {
   }
 
   if (screenshot) {
+    if (screenshot_screen == "pin-create" || screenshot_screen == "pin-auth") {
+      sprout::launcher::ParentPinPresentation pin(
+          screenshot_screen == "pin-create"
+              ? sprout::launcher::ParentPinMode::Create
+              : sprout::launcher::ParentPinMode::Authenticate);
+      (void)pin.handle(Action::Confirm);
+      (void)pin.handle(Action::Right);
+      (void)pin.handle(Action::Confirm);
+      sprout::launcher::render_parent_pin(renderer, pin);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     if (screenshot_screen == "crop" || screenshot_screen == "profile-image") {
       if (!data_root.has_value()) {
         std::cerr << "Profile image screenshots require --data-dir with an imports folder\n";
@@ -376,6 +425,8 @@ int main(int argc, char* argv[]) {
       auto target = sprout::launcher::SetupStep::Welcome;
       if (screenshot_screen == "setup-parent") {
         target = sprout::launcher::SetupStep::Parent;
+      } else if (screenshot_screen == "setup-pin") {
+        target = sprout::launcher::SetupStep::ParentPin;
       } else if (screenshot_screen == "setup-child") {
         target = sprout::launcher::SetupStep::Child;
       } else if (screenshot_screen == "setup-review") {
@@ -390,6 +441,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
       }
       while (setup.step() != target) {
+        if (setup.step() == sprout::launcher::SetupStep::ParentPin) {
+          (void)setup.handle(Action::Right);
+        }
         (void)setup.handle(Action::Confirm);
         if (!setup.error_message().empty() ||
             setup.step() == sprout::launcher::SetupStep::Complete) {
@@ -438,6 +492,10 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::SetupPresentation> setup;
   std::unique_ptr<sprout::launcher::ProfileImageImporter> image_importer;
   std::unique_ptr<sprout::launcher::ProfileImageCropPresentation> image_crop;
+  std::unique_ptr<sprout::launcher::ParentAccessStore> parent_access;
+  std::unique_ptr<sprout::launcher::ParentPinPresentation> parent_pin;
+  std::unique_ptr<sprout::launcher::ParentAccessController> access_controller;
+  std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
   std::optional<LauncherState> state;
   try {
@@ -449,8 +507,12 @@ int main(int argc, char* argv[]) {
           *data_root / "data" / "profiles.sqlite3");
       image_importer = std::make_unique<sprout::launcher::ProfileImageImporter>(
           *data_root / "data" / "profile-images", *profiles);
+      parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
+          *data_root / "data" / "security.sqlite3",
+          *data_root / "secrets" / "device-access.key");
       image_source = pending_profile_image(*data_root);
       wizard = std::make_unique<sprout::launcher::SetupWizard>(*configuration, *profiles);
+      parent_credential_ref = wizard->configuration().parent_credential_ref;
       if (wizard->current_step() == sprout::launcher::SetupStep::Complete) {
         state.emplace(load_launcher_profiles(*profiles));
       } else {
@@ -459,6 +521,11 @@ int main(int argc, char* argv[]) {
       }
     } else {
       state.emplace(sprout::launcher::make_demo_household());
+    }
+    if (state.has_value()) {
+      access_controller =
+          std::make_unique<sprout::launcher::ParentAccessController>(
+              *state, parent_access.get(), parent_credential_ref);
     }
   } catch (const std::exception& error) {
     std::cerr << "Launcher data could not be opened: " << error.what() << '\n';
@@ -474,6 +541,24 @@ int main(int argc, char* argv[]) {
   bool dirty = true;
   const auto handle_session_action = [&](Action action) {
     try {
+      if (parent_pin != nullptr) {
+        const auto pin_event = parent_pin->handle(action);
+        if (pin_event == sprout::launcher::ParentPinEvent::Cancelled) {
+          parent_pin.reset();
+          return true;
+        }
+        if (pin_event != sprout::launcher::ParentPinEvent::Submitted) {
+          return true;
+        }
+
+        std::string pin = parent_pin->take_pin();
+        constexpr std::string_view kCredentialRef = "secret:parent-primary";
+        parent_access->set_pin(std::string(kCredentialRef), std::move(pin));
+        parent_credential_ref = kCredentialRef;
+        setup->complete_parent_pin_step(std::string(kCredentialRef));
+        parent_pin.reset();
+        return true;
+      }
       if (image_crop != nullptr) {
         const auto crop_event = image_crop->handle(action);
         if (crop_event == sprout::launcher::ProfileImageCropEvent::Cancelled) {
@@ -490,8 +575,16 @@ int main(int argc, char* argv[]) {
           return false;
         }
         if (setup_event == sprout::launcher::SetupPresentationEvent::Completed) {
+          parent_credential_ref = wizard->configuration().parent_credential_ref;
           state.emplace(load_launcher_profiles(*profiles));
+          access_controller =
+              std::make_unique<sprout::launcher::ParentAccessController>(
+                  *state, parent_access.get(), parent_credential_ref);
           setup.reset();
+        } else if (setup_event ==
+                   sprout::launcher::SetupPresentationEvent::ConfigureParentPinRequested) {
+          parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+              sprout::launcher::ParentPinMode::Create);
         } else if (setup_event ==
                    sprout::launcher::SetupPresentationEvent::ImportParentImageRequested) {
           try {
@@ -503,7 +596,19 @@ int main(int argc, char* argv[]) {
         }
         return true;
       }
-      return apply_action(*state, action);
+
+      const auto session_event =
+          access_controller->handle(action, current_access_time());
+      if (!session_event.has_value()) {
+        return true;
+      }
+      if (session_event->type ==
+          sprout::launcher::ParentAccessEventType::ExitRequested) {
+        return false;
+      }
+      std::cout << "preview action: " << session_event->target << " ("
+                << session_event->profile_id << ")\n";
+      return true;
     } catch (const std::exception& error) {
       std::cerr << "Launcher session failed safely: " << error.what() << '\n';
       return false;
@@ -531,7 +636,13 @@ int main(int argc, char* argv[]) {
     }
 
     if (dirty) {
-      if (image_crop != nullptr) {
+      if (parent_pin != nullptr) {
+        sprout::launcher::render_parent_pin(renderer, *parent_pin);
+      } else if (access_controller != nullptr &&
+                 access_controller->has_pin_prompt()) {
+        sprout::launcher::render_parent_pin(renderer,
+                                            access_controller->pin_prompt());
+      } else if (image_crop != nullptr) {
         sprout::launcher::render_profile_image_crop(renderer, *image_crop);
       } else if (setup != nullptr) {
         sprout::launcher::render_setup(renderer, *setup);

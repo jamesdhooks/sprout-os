@@ -49,6 +49,9 @@ std::optional<SetupPresentationEvent> SetupPresentation::handle(Action action) {
     if (step() == SetupStep::Avatars && custom_image_available_ && focus_index_ == 0) {
       return SetupPresentationEvent::ImportParentImageRequested;
     }
+    if (step() == SetupStep::ParentPin && focus_index_ == 0) {
+      return SetupPresentationEvent::ConfigureParentPinRequested;
+    }
     confirm();
     focus_index_ = 0;
     refresh_content();
@@ -78,6 +81,16 @@ void SetupPresentation::report_avatar_error(std::string message) {
   error_message_ = std::move(message);
 }
 
+void SetupPresentation::complete_parent_pin_step(std::string credential_ref) {
+  if (step() != SetupStep::ParentPin) {
+    throw std::logic_error("Parent PIN can only complete its setup step");
+  }
+  wizard_.set_parent_credential_ref(std::move(credential_ref));
+  focus_index_ = 0;
+  error_message_.clear();
+  refresh_content();
+}
+
 void SetupPresentation::refresh_content() {
   choices_.clear();
   switch (step()) {
@@ -103,8 +116,8 @@ void SetupPresentation::refresh_content() {
       return;
     case SetupStep::ParentPin:
       title_ = "PARENT PIN";
-      description_ = "YOU CAN ADD A SECURE PIN AFTER SETUP";
-      choices_ = {"SKIP FOR NOW"};
+      description_ = "PROTECT PARENT MODE OFFLINE";
+      choices_ = {"SET PIN", "SKIP FOR NOW"};
       return;
     case SetupStep::Child:
       title_ = "ADD A CHILD";
@@ -181,7 +194,11 @@ void SetupPresentation::confirm() {
       });
       return;
     case SetupStep::ParentPin:
-      wizard_.skip_current_step();
+      if (focus_index_ == 1) {
+        wizard_.skip_current_step();
+        return;
+      }
+      throw std::logic_error("Parent PIN setup requires the PIN presentation");
       return;
     case SetupStep::Child:
       if (focus_index_ == 1) {

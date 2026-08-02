@@ -81,7 +81,8 @@ void completes_the_desktop_setup_path() {
   (void)fixture.presentation.handle(Action::Confirm);  // Offline
   (void)fixture.presentation.handle(Action::Right);    // Owl parent
   (void)fixture.presentation.handle(Action::Confirm);  // Parent
-  (void)fixture.presentation.handle(Action::Confirm);  // Skip PIN
+  (void)fixture.presentation.handle(Action::Right);    // Skip PIN
+  (void)fixture.presentation.handle(Action::Confirm);
   (void)fixture.presentation.handle(Action::Confirm);  // Add child
   (void)fixture.presentation.handle(Action::Confirm);  // Avatars
   (void)fixture.presentation.handle(Action::Confirm);  // Library
@@ -118,9 +119,13 @@ void requests_and_completes_available_parent_image_import() {
   ProfileRepository profiles(directory.path() / "profiles.sqlite3");
   SetupWizard wizard(configuration, profiles);
   SetupPresentation presentation(wizard, true);
-  for (int index = 0; index < 6; ++index) {
-    (void)presentation.handle(Action::Confirm);
-  }
+  (void)presentation.handle(Action::Confirm);  // Welcome
+  (void)presentation.handle(Action::Confirm);  // Locale
+  (void)presentation.handle(Action::Confirm);  // Network
+  (void)presentation.handle(Action::Confirm);  // Parent
+  (void)presentation.handle(Action::Right);    // Skip PIN
+  (void)presentation.handle(Action::Confirm);
+  (void)presentation.handle(Action::Confirm);  // Child
   expect(presentation.step() == SetupStep::Avatars,
          "custom image fixture should reach portrait setup");
   expect(presentation.choices().size() == 2,
@@ -135,6 +140,24 @@ void requests_and_completes_available_parent_image_import() {
          "successful import should resume at the next setup step");
 }
 
+void requests_and_completes_parent_pin_setup() {
+  SetupFixture fixture;
+  (void)fixture.presentation.handle(Action::Confirm);  // Welcome
+  (void)fixture.presentation.handle(Action::Confirm);  // Locale
+  (void)fixture.presentation.handle(Action::Confirm);  // Network
+  (void)fixture.presentation.handle(Action::Confirm);  // Parent
+  expect(fixture.presentation.step() == SetupStep::ParentPin,
+         "parent creation should reach PIN setup");
+  expect(fixture.presentation.handle(Action::Confirm) ==
+             SetupPresentationEvent::ConfigureParentPinRequested,
+         "set PIN should open the secure keypad without advancing");
+  fixture.presentation.complete_parent_pin_step("secret:parent-primary");
+  expect(fixture.presentation.step() == SetupStep::Child &&
+             fixture.wizard.configuration().parent_credential_ref ==
+                 "secret:parent-primary",
+         "successful PIN creation should persist only its credential reference");
+}
+
 }  // namespace
 
 int main() {
@@ -143,6 +166,7 @@ int main() {
     completes_the_desktop_setup_path();
     back_requests_exit_without_losing_progress();
     requests_and_completes_available_parent_image_import();
+    requests_and_completes_parent_pin_setup();
   } catch (const std::exception& error) {
     std::cerr << "setup presentation test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

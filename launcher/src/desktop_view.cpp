@@ -95,6 +95,7 @@ std::array<std::uint8_t, 7> glyph(char raw_character) {
     case '-': return {0, 0, 0, 31, 0, 0, 0};
     case ':': return {0, 4, 4, 0, 4, 4, 0};
     case '>': return {16, 8, 4, 2, 4, 8, 16};
+    case '*': return {0, 21, 14, 31, 14, 21, 0};
     default: return {0, 0, 0, 0, 0, 0, 0};
   }
 }
@@ -206,14 +207,18 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
             56, 78, 2, color_from_rgb(profile->accent_rgb));
 
   const auto items = state.menu_items();
+  const int row_start = items.size() > 6 ? 108 : 118;
+  const int row_gap = items.size() > 6 ? 43 : 49;
+  const int row_height = items.size() > 6 ? 35 : 39;
   for (std::size_t index = 0; index < items.size(); ++index) {
-    const SDL_Rect row{88, 118 + static_cast<int>(index) * 49, 464, 39};
+    const SDL_Rect row{88, row_start + static_cast<int>(index) * row_gap, 464,
+                       row_height};
     fill_rect(renderer, row, index == state.focus_index() ? kPanelFocused : kPanel);
     if (index == state.focus_index()) {
       outline_rect(renderer, row, 3, kFocus);
-      draw_text(renderer, ">", 104, row.y + 10, 2, kFocus);
+      draw_text(renderer, ">", 104, row.y + (row_height - 14) / 2, 2, kFocus);
     }
-    draw_text(renderer, items[index], 132, row.y + 10, 2, kText);
+    draw_text(renderer, items[index], 132, row.y + (row_height - 14) / 2, 2, kText);
   }
 
   draw_centered_text(renderer, "PREVIEW DATA ONLY", kWidth / 2, 424, 2, kMuted);
@@ -269,6 +274,43 @@ void render_profile_image_crop(SDL_Renderer* renderer,
   }
   draw_centered_text(renderer, "ARROWS MOVE   L R ZOOM   A USE   B CANCEL",
                      kWidth / 2, 450, 1, kMuted);
+  SDL_RenderPresent(renderer);
+}
+
+void render_parent_pin(SDL_Renderer* renderer,
+                       const ParentPinPresentation& pin) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+  draw_centered_text(renderer, pin.title(), kWidth / 2, 28, 3, kText);
+  draw_centered_text(renderer, pin.description(), kWidth / 2, 64, 1, kMuted);
+
+  const SDL_Rect pin_field{196, 88, 248, 48};
+  fill_rect(renderer, pin_field, kPanel);
+  outline_rect(renderer, pin_field, 2, kPanelFocused);
+  const std::string masked(pin.entered_digits(), '*');
+  draw_centered_text(renderer, masked.empty() ? "-" : masked, kWidth / 2, 101, 3,
+                     kText);
+
+  const auto choices = pin.choices();
+  for (std::size_t index = 0; index < choices.size(); ++index) {
+    const int column = static_cast<int>(index % 3);
+    const int row = static_cast<int>(index / 3);
+    const SDL_Rect key{170 + column * 105, 158 + row * 58, 90, 44};
+    fill_rect(renderer, key,
+              index == pin.focus_index() ? kPanelFocused : kPanel);
+    if (index == pin.focus_index()) {
+      outline_rect(renderer, key, 3, kFocus);
+    }
+    draw_centered_text(renderer, choices[index], key.x + key.w / 2, key.y + 13,
+                       choices[index].size() > 2 ? 1 : 2, kText);
+  }
+
+  if (!pin.error_message().empty()) {
+    draw_centered_text(renderer, pin.error_message().substr(0, 60), kWidth / 2, 406, 1,
+                       kFocus);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   A SELECT   B CANCEL", kWidth / 2, 450, 1,
+                     kMuted);
   SDL_RenderPresent(renderer);
 }
 

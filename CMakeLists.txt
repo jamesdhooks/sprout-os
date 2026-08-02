@@ -28,6 +28,29 @@ target_compile_definitions(
 )
 
 FetchContent_Declare(
+  Argon2
+  GIT_REPOSITORY https://github.com/P-H-C/phc-winner-argon2.git
+  GIT_TAG 62358ba2123abd17fccf2a108a301d4b52c01a7c
+  GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(Argon2)
+
+add_library(
+  sprout_argon2 STATIC
+  "${argon2_SOURCE_DIR}/src/argon2.c"
+  "${argon2_SOURCE_DIR}/src/core.c"
+  "${argon2_SOURCE_DIR}/src/encoding.c"
+  "${argon2_SOURCE_DIR}/src/ref.c"
+  "${argon2_SOURCE_DIR}/src/blake2/blake2b.c"
+)
+target_include_directories(
+  sprout_argon2
+  PUBLIC "${argon2_SOURCE_DIR}/include"
+  PRIVATE "${argon2_SOURCE_DIR}/src" "${argon2_SOURCE_DIR}/src/blake2"
+)
+target_compile_definitions(sprout_argon2 PRIVATE ARGON2_NO_THREADS)
+
+FetchContent_Declare(
   yyjson
   GIT_REPOSITORY https://github.com/ibireme/yyjson.git
   GIT_TAG 7871d321ff4cd8068c1f777c97975dc2fb640ab3
