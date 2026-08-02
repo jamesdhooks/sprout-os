@@ -4,7 +4,7 @@ Sprout currently has a Windows desktop launcher preview, resumable offline first
 
 ## Tools
 
-Current launcher development requires:
+Desktop launcher development requires:
 
 - Git;
 - PowerShell 5.1 or later;
@@ -13,7 +13,7 @@ Current launcher development requires:
 
 The launcher uses C++20, SDL2 `release-2.32.10` pinned to commit `5d249570393f7a37e037abf22cd6012a4cc56a71`, SDL2_image 2.8.8 pinned to commit `c1bf2245b0ba63a25afe2f8574d305feca25af77`, the SQLite 3.53.4 amalgamation pinned by its published SHA3-256, yyjson 0.12.0 pinned to commit `7871d321ff4cd8068c1f777c97975dc2fb640ab3`, and the official Argon2 reference release `20190702` pinned to commit `62358ba2123abd17fccf2a108a301d4b52c01a7c`. Build output and fetched dependencies remain under the ignored `out/` directory.
 
-An Onion-compatible cross-compilation environment and device SDL backend are still unverified. They must be selected through the pinned Onion investigation rather than inferred from the desktop build.
+The ARM diagnostic cross-build additionally requires Docker with Linux AMD64 container support. It pins the Onion-derived compiler image and a verified CMake archive; see [ADR 0009](../decisions/0009-pinned-onion-toolchain.md). The device SDL backend remains unselected.
 
 ## Windows desktop preview
 
@@ -41,6 +41,16 @@ Use arrow keys or WASD to move, Enter/Space/Z to select, and Escape/Backspace/X 
 
 The development command stores sanitized preview configuration, profiles, and managed portraits under the ignored `out/preview-data/` directory, so closing and reopening demonstrates resume. To exercise image import during first-run setup, place one BMP, JPEG, or PNG at `out/preview-data/imports/profile-image.<extension>` before reaching the portrait step. This explicit staging folder is the only image source location the preview checks; source paths are not retained. Unless `-SdRoot` is explicitly supplied, the preview does not read ROMs, device data, credentials, or live household data.
 
+## Pinned Onion ARM diagnostic
+
+Configure and build the command-line device diagnostic:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action build
+```
+
+This produces `out/build/onion-arm/launcher/sprout-onion-check`. It verifies that portable launcher storage, parent-access, library, and typed launch-request code compiles and links against Onion's ARM sysroot. It does not provide a device renderer, install a startup launcher, or execute a game. Follow the [development-card device check](onion-device-check.md) before running it on hardware.
+
 ## Development cards
 
 Maintain two physically separate SD cards:
@@ -54,12 +64,12 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 
 1. Reproduce behavior in the 640×480 desktop preview where possible.
 2. Run deterministic unit and integration checks on the host.
-3. Cross-compile with the verified Onion-compatible toolchain.
+3. Cross-compile with the pinned Onion-compatible toolchain.
 4. Deploy only the changed component to the development card.
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-Only the Windows desktop configure/build/test/run commands above are currently implemented. The test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. Cross-compilation and deployment steps remain intended workflow.
+The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
 
 ## Configuration and secrets
 
