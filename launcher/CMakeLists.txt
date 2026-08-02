@@ -29,6 +29,7 @@ add_library(
 
 add_library(
   sprout_onion_adapter
+  src/local_library.cpp
   src/onion_launch_adapter.cpp
 )
 
@@ -189,6 +190,11 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-onion-launch-adapter-test
                         PRIVATE sprout_onion_adapter)
   add_test(NAME onion-launch-adapter COMMAND sprout-onion-launch-adapter-test)
+
+  add_executable(sprout-local-library-test tests/local_library_test.cpp)
+  target_compile_features(sprout-local-library-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-local-library-test PRIVATE sprout_onion_adapter)
+  add_test(NAME local-library COMMAND sprout-local-library-test)
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)

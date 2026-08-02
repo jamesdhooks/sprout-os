@@ -2,7 +2,9 @@
 
 #include <filesystem>
 #include <optional>
+#include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace sprout::launcher {
@@ -11,6 +13,16 @@ enum class OnionSystem {
   GameBoy,
   SuperNintendo,
 };
+
+struct OnionSystemContract {
+  std::string_view id;
+  std::filesystem::path rom_directory;
+  std::filesystem::path launcher;
+  std::span<const std::string_view> extensions;
+};
+
+[[nodiscard]] std::optional<OnionSystemContract> onion_system_contract(
+    OnionSystem system);
 
 struct EmulatedLaunchTarget {
   std::string item_id;
