@@ -19,7 +19,7 @@ Sprout Runtime (planned)       Optional Sprout Server (planned)
 Sprout Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
-No executable component currently exists in this repository.
+The repository currently contains the portable launcher navigation state and a Windows SDL2 preview. Profile persistence, policy enforcement, Onion launch integration, and device rendering do not exist yet.
 
 ## Process responsibilities
 
