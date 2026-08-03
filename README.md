@@ -39,7 +39,7 @@ Runtime, server, package, and connector directories remain intentionally absent 
 
 ## Development
 
-Start with the [getting-started guide](docs/development/getting-started.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
+Start with the [getting-started guide](docs/development/getting-started.md), [MVP evidence checklist](docs/development/mvp-evidence.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
 
 On Windows with Visual Studio C++ tools:
 
