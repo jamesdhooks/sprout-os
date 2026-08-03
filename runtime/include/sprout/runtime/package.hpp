@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sprout/runtime/assets.hpp"
+
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -24,6 +26,7 @@ struct PackageManifest {
   int logical_height{};
   PackageAudience audience{PackageAudience::Parent};
   std::vector<std::string> capabilities;
+  AssetCatalogue assets;
 };
 
 PackageManifest load_package(const std::filesystem::path& package_root);

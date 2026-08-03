@@ -1,6 +1,6 @@
 # Runtime Engine Systems
 
-Status: **Proposed v2 slices with v1 implementation noted**
+Status: **Asset renderer implemented; remaining reusable slices in progress**
 
 The runtime should become a compact reusable engine without becoming a catalogue of game-specific helpers. A shared module is justified when it crosses a platform/security boundary or has at least two concrete game consumers. Until then, keep the logic in the game or offline tool where it can be changed cheaply.
 
@@ -36,6 +36,11 @@ The runtime retains a frame-local command buffer and platform backends consume i
 
 Packages reference asset IDs declared in their manifest. They cannot open paths or upload arbitrary runtime textures. Automated tests can inspect commands without creating an SDL window.
 
+The implemented v1 renderer loads strict package-local atlas manifests,
+resolves fixed-tick animations, accepts general sprite/animation batches and
+compact byte-indexed tilemaps, and coalesces same-atlas command runs into one
+indexed SDL geometry submission. See [Runtime Assets v1](../specs/runtime-assets-v1.md).
+
 ## Package code reuse
 
 Shared Lua modules are loaded by the runtime from reviewed engine resources and exposed under a versioned namespace such as `sprout.engine.v2`. Packages do not copy those files and do not gain general filesystem-backed `require`, `load`, or `dofile` access.
@@ -64,7 +69,7 @@ Modules are added incrementally. The C++ host implements only operations that ne
 ## Planned implementation slices
 
 1. Extract session state flow, input edges, shared text, and deterministic RNG streams while keeping the current Snake behavior passing.
-2. Add asset manifests, sprite/tile/text commands, package content reads, and versioned checkpoints for Mouse Maze.
+2. Add asset manifests and sprite/tile commands for Mouse Maze. **Asset and render portion complete; text, content reads, and checkpoints remain.**
 3. Add grid/occupancy primitives and campaign progress used by Maze and Blocks & Buttons.
 4. Add tool-side solver metadata and runtime deadlock-result consumption for Blocks & Buttons.
 5. Migrate Snake to the shared engine, add daily seeds, speed curves, assets, and full save/restore.

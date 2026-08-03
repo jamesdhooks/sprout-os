@@ -2,7 +2,9 @@
 #include "sprout/runtime/session.hpp"
 
 #include <SDL.h>
+#include <SDL_image.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -10,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -83,14 +86,132 @@ void print_events(sprout::runtime::Session& session) {
   }
 }
 
-void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session) {
+class TextureStore {
+ public:
+  TextureStore(SDL_Renderer* renderer,
+               const sprout::runtime::AssetCatalogue& assets)
+      : renderer_(renderer), assets_(assets), textures_(assets.atlases.size()) {}
+
+  ~TextureStore() {
+    reset();
+  }
+
+  TextureStore(const TextureStore&) = delete;
+  TextureStore& operator=(const TextureStore&) = delete;
+
+  void reset() {
+    for (SDL_Texture*& texture : textures_) {
+      SDL_DestroyTexture(texture);
+      texture = nullptr;
+    }
+  }
+
+  SDL_Texture* get(std::size_t index) {
+    if (index >= textures_.size()) {
+      throw std::runtime_error("Draw command references an unknown atlas");
+    }
+    if (textures_[index] != nullptr) return textures_[index];
+    const auto& atlas = assets_.atlases[index];
+    textures_[index] = IMG_LoadTexture(renderer_, atlas.image.string().c_str());
+    if (textures_[index] == nullptr) {
+      throw std::runtime_error("Could not load sprite atlas " + atlas.id + ": " +
+                               IMG_GetError());
+    }
+    int width = 0;
+    int height = 0;
+    if (SDL_QueryTexture(textures_[index], nullptr, nullptr, &width, &height) != 0 ||
+        width != atlas.width || height != atlas.height) {
+      throw std::runtime_error("Sprite atlas dimensions do not match manifest: " +
+                               atlas.id);
+    }
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+    SDL_SetTextureScaleMode(textures_[index], SDL_ScaleModeNearest);
+#endif
+    SDL_SetTextureBlendMode(textures_[index], SDL_BLENDMODE_BLEND);
+    return textures_[index];
+  }
+
+  const sprout::runtime::TextureAtlas& atlas(std::size_t index) const {
+    if (index >= assets_.atlases.size()) {
+      throw std::runtime_error("Draw command references an unknown atlas");
+    }
+    return assets_.atlases[index];
+  }
+
+ private:
+  SDL_Renderer* renderer_{};
+  const sprout::runtime::AssetCatalogue& assets_;
+  std::vector<SDL_Texture*> textures_;
+};
+
+struct GeometryBuffers {
+  GeometryBuffers() {
+    vertices.reserve(4096 * 4);
+    indices.reserve(4096 * 6);
+  }
+
+  std::vector<SDL_Vertex> vertices;
+  std::vector<int> indices;
+};
+
+void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
+                TextureStore& textures, GeometryBuffers& geometry) {
   SDL_SetRenderDrawColor(renderer, 20, 24, 28, 255);
   SDL_RenderClear(renderer);
-  for (const auto& rectangle : session.render()) {
-    SDL_Rect target{rectangle.x, rectangle.y, rectangle.width, rectangle.height};
-    SDL_SetRenderDrawColor(renderer, rectangle.red, rectangle.green, rectangle.blue,
-                           rectangle.alpha);
-    SDL_RenderFillRect(renderer, &target);
+  const auto& commands = session.render();
+  std::size_t command_index = 0;
+  while (command_index < commands.size()) {
+    const auto& command = commands[command_index];
+    if (command.type == sprout::runtime::DrawCommandType::Rectangle) {
+      const auto& rectangle = command.rectangle;
+      SDL_Rect target{rectangle.x, rectangle.y, rectangle.width, rectangle.height};
+      SDL_SetRenderDrawColor(renderer, rectangle.red, rectangle.green,
+                             rectangle.blue, rectangle.alpha);
+      SDL_RenderFillRect(renderer, &target);
+      ++command_index;
+      continue;
+    }
+
+    const std::size_t atlas_index = command.sprite.atlas;
+    SDL_Texture* texture = textures.get(atlas_index);
+    const auto& atlas = textures.atlas(atlas_index);
+    geometry.vertices.clear();
+    geometry.indices.clear();
+    while (command_index < commands.size() &&
+           commands[command_index].type ==
+               sprout::runtime::DrawCommandType::Sprite &&
+           commands[command_index].sprite.atlas == atlas_index) {
+      const auto& sprite = commands[command_index].sprite;
+      float u0 = static_cast<float>(sprite.source_x) / atlas.width;
+      float v0 = static_cast<float>(sprite.source_y) / atlas.height;
+      float u1 = static_cast<float>(sprite.source_x + sprite.source_width) /
+                 atlas.width;
+      float v1 = static_cast<float>(sprite.source_y + sprite.source_height) /
+                 atlas.height;
+      if (sprite.flip_x) std::swap(u0, u1);
+      if (sprite.flip_y) std::swap(v0, v1);
+      const float x0 = static_cast<float>(sprite.x);
+      const float y0 = static_cast<float>(sprite.y);
+      const float x1 = static_cast<float>(sprite.x + sprite.width);
+      const float y1 = static_cast<float>(sprite.y + sprite.height);
+      const SDL_Color color{sprite.red, sprite.green, sprite.blue, sprite.alpha};
+      const int base = static_cast<int>(geometry.vertices.size());
+      geometry.vertices.push_back({{x0, y0}, color, {u0, v0}});
+      geometry.vertices.push_back({{x1, y0}, color, {u1, v0}});
+      geometry.vertices.push_back({{x1, y1}, color, {u1, v1}});
+      geometry.vertices.push_back({{x0, y1}, color, {u0, v1}});
+      geometry.indices.insert(geometry.indices.end(),
+                              {base, base + 1, base + 2,
+                               base, base + 2, base + 3});
+      ++command_index;
+    }
+    if (SDL_RenderGeometry(renderer, texture, geometry.vertices.data(),
+                           static_cast<int>(geometry.vertices.size()),
+                           geometry.indices.data(),
+                           static_cast<int>(geometry.indices.size())) != 0) {
+      throw std::runtime_error(std::string("Could not draw sprite batch: ") +
+                               SDL_GetError());
+    }
   }
   SDL_RenderPresent(renderer);
 }
@@ -144,6 +265,10 @@ int main(int count, char** values) {
       throw std::runtime_error(std::string("SDL initialization failed: ") +
                                SDL_GetError());
     }
+    if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) == 0) {
+      throw std::runtime_error(std::string("PNG decoder initialization failed: ") +
+                               IMG_GetError());
+    }
     const auto window_flags = arguments.capture.empty()
                                   ? SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
                                   : SDL_WINDOW_HIDDEN;
@@ -160,13 +285,17 @@ int main(int count, char** values) {
     }
     SDL_RenderSetLogicalSize(renderer, package.logical_width,
                              package.logical_height);
-    draw_frame(renderer, session);
+    TextureStore textures(renderer, package.assets);
+    GeometryBuffers geometry;
+    draw_frame(renderer, session, textures, geometry);
     if (!arguments.capture.empty()) {
       capture_frame(renderer, arguments.capture);
       session.stop();
       print_events(session);
+      textures.reset();
       SDL_DestroyRenderer(renderer);
       SDL_DestroyWindow(window);
+      IMG_Quit();
       SDL_Quit();
       return 0;
     }
@@ -209,7 +338,7 @@ int main(int count, char** values) {
         accumulator = std::chrono::steady_clock::duration::zero();
       }
 
-      draw_frame(renderer, session);
+      draw_frame(renderer, session, textures, geometry);
       print_events(session);
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -217,14 +346,17 @@ int main(int count, char** values) {
     session.stop();
     print_events(session);
     if (controller != nullptr) SDL_GameControllerClose(controller);
+    textures.reset();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
     return 0;
   } catch (const std::exception& error) {
     if (controller != nullptr) SDL_GameControllerClose(controller);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    IMG_Quit();
     SDL_Quit();
     std::cerr << "sprout-runtime: " << error.what() << '\n';
     return 1;

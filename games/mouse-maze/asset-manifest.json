@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "original-procedural-pixel-art",
+    "license": "GPL-3.0-or-later",
+    "generator": "tools/generate-arcade-assets.py",
+    "palette": "sprout-arcade-1"
+  },
+  "atlases": [
+    {"id": "main", "image": "assets/sprites.png", "size": [128, 64]}
+  ],
+  "sprites": [
+    {"id": "maze.floor", "atlas": "main", "rect": [0, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "maze.wall", "atlas": "main", "rect": [16, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "cheese.0", "atlas": "main", "rect": [32, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "cheese.1", "atlas": "main", "rect": [48, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.down.0", "atlas": "main", "rect": [0, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.down.1", "atlas": "main", "rect": [16, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.up.0", "atlas": "main", "rect": [32, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.up.1", "atlas": "main", "rect": [48, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.left.0", "atlas": "main", "rect": [64, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.left.1", "atlas": "main", "rect": [80, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.right.0", "atlas": "main", "rect": [96, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "mouse.right.1", "atlas": "main", "rect": [112, 16, 16, 16], "pivot": [0, 0]}
+  ],
+  "animations": [
+    {"id": "cheese.sparkle", "loop": true, "frames": [
+      {"sprite": "cheese.0", "ticks": 30}, {"sprite": "cheese.1", "ticks": 10}
+    ]},
+    {"id": "mouse.walk.down", "loop": true, "frames": [
+      {"sprite": "mouse.down.0", "ticks": 8}, {"sprite": "mouse.down.1", "ticks": 8}
+    ]},
+    {"id": "mouse.walk.up", "loop": true, "frames": [
+      {"sprite": "mouse.up.0", "ticks": 8}, {"sprite": "mouse.up.1", "ticks": 8}
+    ]},
+    {"id": "mouse.walk.left", "loop": true, "frames": [
+      {"sprite": "mouse.left.0", "ticks": 8}, {"sprite": "mouse.left.1", "ticks": 8}
+    ]},
+    {"id": "mouse.walk.right", "loop": true, "frames": [
+      {"sprite": "mouse.right.0", "ticks": 8}, {"sprite": "mouse.right.1", "ticks": 8}
+    ]}
+  ],
+  "tileSets": [
+    {"id": "maze.tiles", "tileSize": [16, 16], "sprites": ["maze.floor", "maze.wall"]}
+  ]
+}

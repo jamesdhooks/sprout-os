@@ -86,7 +86,9 @@ int main() {
     first.step({.primary = true});
     const std::string first_snapshot = first.snapshot();
     const auto& drawing = first.render();
-    check(drawing.size() == 1 && drawing.front().x == 10,
+    check(drawing.size() == 1 &&
+              drawing.front().type == sprout::runtime::DrawCommandType::Rectangle &&
+              drawing.front().rectangle.x == 10,
           "render command was not captured");
     auto changed = first.drain_events();
     check(changed.size() == 1 && changed.front().type == "AchievementUnlocked",
@@ -124,6 +126,41 @@ int main() {
     check(snake_first.snapshot() == snake_second.snapshot(),
           "Snake was not deterministic for identical input");
     check(!snake_first.render().empty(), "Snake did not render any content");
+
+    const auto mouse_path =
+        std::filesystem::path(SPROUT_SOURCE_DIR) / "games" / "mouse-maze";
+    const auto mouse_package = sprout::runtime::load_package(mouse_path);
+    check(mouse_package.assets.atlases.size() == 1 &&
+              mouse_package.assets.sprites.size() == 12 &&
+              mouse_package.assets.animations.size() == 5 &&
+              mouse_package.assets.tile_sets.size() == 1,
+          "Mouse Maze asset catalogue was not loaded");
+    sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
+    mouse.start();
+    const auto initial_mouse_drawing = mouse.render();
+    check(initial_mouse_drawing.size() > 160 &&
+              initial_mouse_drawing.back().type ==
+                  sprout::runtime::DrawCommandType::Sprite,
+          "Mouse Maze did not submit its tilemap and animated sprite");
+    const int initial_mouse_frame = initial_mouse_drawing.back().sprite.source_x;
+    for (int tick = 0; tick < 8; ++tick) mouse.step({});
+    check(mouse.render().back().sprite.source_x != initial_mouse_frame,
+          "engine animation did not advance from the fixed session tick");
+
+    const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
+                             "blocks-buttons";
+    const auto blocks_package = sprout::runtime::load_package(blocks_path);
+    check(blocks_package.assets.atlases.size() == 1 &&
+              blocks_package.assets.sprites.size() == 15 &&
+              blocks_package.assets.animations.size() == 4,
+          "Blocks & Buttons asset catalogue was not loaded");
+    sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
+    blocks.start();
+    const auto& blocks_drawing = blocks.render();
+    check(blocks_drawing.size() > 80 &&
+              blocks_drawing.back().type ==
+                  sprout::runtime::DrawCommandType::Sprite,
+          "Blocks & Buttons did not submit its sprite scene");
 
     write(package_path / "game.lua", R"(
 function init()

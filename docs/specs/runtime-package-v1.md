@@ -11,6 +11,8 @@ The reusable engine direction and planned lifecycle evolution are documented und
 ```text
 manifest.json
 game.lua
+asset-manifest.json   optional
+assets/               optional runtime PNG atlases
 LICENSE
 ```
 
@@ -26,6 +28,7 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `version` | `MAJOR.MINOR.PATCH` |
 | `runtimeVersion` | Integer `1` |
 | `entrypoint` | Relative `.lua` file contained by the package root |
+| `assetManifest` | Optional relative `.json` asset manifest contained by the package root |
 | `audience` | `family` for child-visible packages or `parent` for parent-only packages |
 | `logicalResolution` | Width 64–640 and height 64–480 |
 | `capabilities` | Unique subset of `events` and `local-storage` |
@@ -49,6 +52,10 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 | --- | --- |
 | `sprout.random(maximum)` | Returns a deterministic integer from 1 through `maximum` |
 | `sprout.rect(x, y, width, height, r, g, b, a?)` | Submits an in-bounds rectangle on the logical surface |
+| `sprout.sprite(...)` | Submits one declared atlas frame |
+| `sprout.animate(...)` | Resolves a declared animation from the fixed session tick |
+| `sprout.sprite_batch(items)` | Submits many sprite or animation records in one host call |
+| `sprout.tilemap(...)` | Submits compact byte-indexed tiles from a declared tile set |
 | `sprout.emit(type, value?)` | Emits `AchievementUnlocked` or `LevelCompleted` when `events` is declared |
 | `sprout.storage_get(key, fallback?)` | Reads a package integer from local storage |
 | `sprout.storage_set(key, value)` | Atomically writes a package integer when `local-storage` is declared |
@@ -56,6 +63,9 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 Storage keys are bounded ASCII identifiers. The launcher gives the runtime a profile-specific storage root, and the runtime adds the package ID, producing `<launcher-data>/native-games/<profile-id>/<package-id>/storage.json`. Direct runtime development commands use their explicitly supplied storage root and remain separate from launcher profile data.
 
 The runtime, not package code, emits `GameStarted` and `GameExited`. Packages cannot forge policy, time, recommendation, or parent-control events.
+
+The complete manifest, bounds, deterministic animation, and backend batching
+contract is [Runtime Assets v1](runtime-assets-v1.md).
 
 ## Execution boundary
 

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "original-procedural-pixel-art",
+    "license": "GPL-3.0-or-later",
+    "generator": "tools/generate-arcade-assets.py",
+    "palette": "sprout-arcade-1"
+  },
+  "atlases": [
+    {"id": "main", "image": "assets/sprites.png", "size": [128, 64]}
+  ],
+  "sprites": [
+    {"id": "room.floor", "atlas": "main", "rect": [0, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "room.wall", "atlas": "main", "rect": [16, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "button.up", "atlas": "main", "rect": [32, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "button.down", "atlas": "main", "rect": [48, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "crate", "atlas": "main", "rect": [64, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "crate.on-button", "atlas": "main", "rect": [80, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "retry", "atlas": "main", "rect": [96, 0, 16, 16], "pivot": [0, 0]},
+    {"id": "player.down.0", "atlas": "main", "rect": [0, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.down.1", "atlas": "main", "rect": [16, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.up.0", "atlas": "main", "rect": [32, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.up.1", "atlas": "main", "rect": [48, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.left.0", "atlas": "main", "rect": [64, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.left.1", "atlas": "main", "rect": [80, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.right.0", "atlas": "main", "rect": [96, 16, 16, 16], "pivot": [0, 0]},
+    {"id": "player.right.1", "atlas": "main", "rect": [112, 16, 16, 16], "pivot": [0, 0]}
+  ],
+  "animations": [
+    {"id": "player.walk.down", "loop": true, "frames": [
+      {"sprite": "player.down.0", "ticks": 8}, {"sprite": "player.down.1", "ticks": 8}
+    ]},
+    {"id": "player.walk.up", "loop": true, "frames": [
+      {"sprite": "player.up.0", "ticks": 8}, {"sprite": "player.up.1", "ticks": 8}
+    ]},
+    {"id": "player.walk.left", "loop": true, "frames": [
+      {"sprite": "player.left.0", "ticks": 8}, {"sprite": "player.left.1", "ticks": 8}
+    ]},
+    {"id": "player.walk.right", "loop": true, "frames": [
+      {"sprite": "player.right.0", "ticks": 8}, {"sprite": "player.right.1", "ticks": 8}
+    ]}
+  ],
+  "tileSets": [
+    {"id": "room.tiles", "tileSize": [16, 16], "sprites": ["room.floor", "room.wall"]}
+  ]
+}

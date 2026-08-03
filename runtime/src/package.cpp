@@ -113,7 +113,7 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     validate_keys(manifest,
                   {"schemaVersion", "id", "title", "version", "runtimeVersion",
                    "entrypoint", "logicalResolution", "audience",
-                   "capabilities"});
+                   "capabilities", "assetManifest"});
 
     PackageManifest package{
         .schema_version = read_version(manifest, "schemaVersion"),
@@ -190,6 +190,22 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
                                  name);
       }
       package.capabilities.push_back(name);
+    }
+
+    if (yyjson_obj_get(manifest, "assetManifest") != nullptr) {
+      const std::filesystem::path relative = read_text(manifest, "assetManifest");
+      if (relative.is_absolute() || relative.extension() != ".json") {
+        throw std::runtime_error(
+            "Package assetManifest should be a relative JSON file");
+      }
+      const auto asset_manifest =
+          std::filesystem::canonical(root / relative, path_error);
+      if (path_error || !std::filesystem::is_regular_file(asset_manifest) ||
+          !is_within(root, asset_manifest)) {
+        throw std::runtime_error(
+            "Package asset manifest escapes or is missing from its root");
+      }
+      package.assets = load_assets(root, asset_manifest);
     }
 
     yyjson_doc_free(document);

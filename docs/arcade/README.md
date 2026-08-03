@@ -1,10 +1,16 @@
 # Sprout Arcade
 
-Status: **First collection planning and Windows engine development**
+Status: **First collection prototypes and Windows engine development**
 
 Sprout Arcade is the native-game collection for Sprout. The first collection is a deliberately small set of readable D-pad-and-button games that work offline, use deterministic content, respect family profiles, and share a portable runtime instead of shipping bespoke executables.
 
-The current implementation proves one local Windows package, Sprout Snake, through the launcher and runtime. Windows is the only verified game target. Linux, browser, Raspberry Pi, Miyoo, Onion, suspend behavior, and performance remain future validation tracks.
+The current implementation includes three discoverable local packages. Sprout
+Snake proves the original lifecycle kernel; Mouse Maze and Blocks & Buttons add
+playable first rooms, reproducible pixel-art atlases, fixed-tick animation,
+compact tilemaps, and general same-atlas sprite batching. These remain
+prototypes rather than their required 1,000-level campaigns. Windows is the
+only verified game target. Linux, browser, Raspberry Pi, Miyoo, Onion, suspend
+behavior, and device performance remain future validation tracks.
 
 ## Collection principles
 
