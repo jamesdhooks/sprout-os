@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, child time-policy enforcement, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, a persisted daily child-time decision core, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution or policy lifecycle, or deployable SD-card image.
 
 ## Tools
 
@@ -69,7 +69,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
+The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, persisted daily-time accounting and decisions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
 
 ## Configuration and secrets
 

@@ -21,6 +21,8 @@ Status: **implemented persistence schema v1**. The broader profile contract rema
 
 PIN hashes, connector credentials, active grants, play history, favorites, recents, and save data are separate records. They must not be embedded in a portable profile definition by default.
 
+Daily allowance and usage are likewise separate profile-scoped records. The implemented boundary is described in the [daily time-policy specification](daily-time-policy.md).
+
 ## Persistence schema v1
 
 The launcher implements profiles in a SQLite `profiles` table with database schema version 1. Each row stores the fields above except optional synchronization identity and conflict state, which have no current consumer. `localRevision` advances on lifecycle changes. Profile preferences are validated JSON but remain an empty object until a preference feature establishes concrete keys.

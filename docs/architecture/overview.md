@@ -19,13 +19,13 @@ Sprout Runtime (planned)       Optional Sprout Server (planned)
 Sprout Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
-The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Child time-policy enforcement, persisted recent/favorite activity, GameSwitcher integration, hardware-validated Onion execution, and device rendering do not exist yet.
+The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a persisted daily child-time decision core, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Persisted recent/favorite activity, GameSwitcher and policy-lifecycle integration, hardware-validated Onion execution, and device rendering do not exist yet.
 
 ## Process responsibilities
 
 The launcher owns visible navigation, profile selection, library presentation, parent authentication, and setup. Early implementations may keep profile, policy, catalogue, and journal responsibilities in one process plus a narrow policy supervisor. Separate daemons require a demonstrated lifecycle or isolation need.
 
-The policy boundary must observe launches and resumes outside the launcher. It accounts for active use with monotonic time and returns expired sessions through the normal save-and-exit path.
+The policy boundary must observe launches and resumes outside the launcher. The implemented core accounts for explicit active intervals with monotonic time, persists daily usage and warnings, blocks expired starts, and requests normal save-and-exit. Hardware work must still connect verified Onion pause, resume, suspend, and return events to that boundary.
 
 The local device owns the authoritative offline state needed to launch, enforce policy, recover, and operate profiles. An optional server may synchronize journals, deliver authenticated grants, host packages, or compute recommendations; it cannot be required for basic device operation.
 

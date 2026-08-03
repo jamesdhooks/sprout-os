@@ -20,4 +20,6 @@ Every persisted event is expected to carry an event ID, schema version, event na
 
 Events are appendable offline and may be synchronized later. Consumers must tolerate duplicates by event ID, unknown newer event types, delayed delivery, and device wall-clock uncertainty. Active-time calculations use monotonic time locally; wall-clock timestamps support ordering and display but are not trusted alone for policy enforcement.
 
+The implemented [daily time-policy core](daily-time-policy.md) consumes equivalent local lifecycle calls but does not yet persist this event vocabulary. A verified Onion lifecycle adapter must establish when `GameStarted`, `GamePaused`, `GameResumed`, and `GameExited` are true before those events become an authoritative journal.
+
 Payload schemas, retention periods, journal compaction, and synchronization conflict handling remain unresolved until an implemented local journal requires them.
