@@ -26,6 +26,8 @@
 #include <io.h>
 #include <windows.h>
 #else
+#include <fcntl.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
@@ -579,14 +581,23 @@ void write_new_file(const std::filesystem::path& path,
                  contents.size());
 }
 
-#ifdef _WIN32
 void activate_new_file(const std::filesystem::path& pending,
                        const std::filesystem::path& destination) {
+#ifdef _WIN32
   if (!MoveFileExW(pending.c_str(), destination.c_str(), MOVEFILE_WRITE_THROUGH)) {
     throw std::runtime_error("Could not activate profile archive file");
   }
-}
+#else
+#ifndef RENAME_NOREPLACE
+#define RENAME_NOREPLACE (1U << 0U)
 #endif
+  if (syscall(SYS_renameat2, AT_FDCWD, pending.c_str(), AT_FDCWD,
+              destination.c_str(), RENAME_NOREPLACE) != 0) {
+    throw std::runtime_error(
+        "Could not atomically activate new profile archive file");
+  }
+#endif
+}
 
 void write_archive(const std::filesystem::path& destination,
                    std::string_view contents) {
@@ -602,7 +613,6 @@ void write_archive(const std::filesystem::path& destination,
     throw std::invalid_argument(
         "Profile archive parent must exist and destination must be new");
   }
-#ifdef _WIN32
   std::filesystem::path pending = destination;
   pending += ".pending";
   if (std::filesystem::exists(pending, error)) {
@@ -615,9 +625,6 @@ void write_archive(const std::filesystem::path& destination,
     std::filesystem::remove(pending, error);
     throw;
   }
-#else
-  write_new_file(destination, contents);
-#endif
 }
 
 std::string restored_asset_id(std::string_view profile_id,

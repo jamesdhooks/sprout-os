@@ -35,7 +35,7 @@ The current caps are 8 MiB per archive, 6 MiB decoded payload, 1 MiB portrait, a
 
 ## Export and restore behavior
 
-Export accepts only an explicit new `.sprout-profile` path in an existing directory and never overwrites an archive. Windows writes and synchronizes a sibling pending file before no-replace activation. The Onion/POSIX path creates the destination exclusively and synchronizes it directly because a portable rename would be allowed to replace an existing file; an interrupted partial file fails strict restore validation. The desktop flow uses `exports/profile-<hex-profile-id>.sprout-profile` so profile IDs cannot become paths.
+Export accepts only an explicit new `.sprout-profile` path in an existing directory. It writes and synchronizes an exclusively created sibling pending file, then uses the platform's atomic no-replace rename (`MoveFileExW` or Linux `renameat2(RENAME_NOREPLACE)`). It never overwrites an archive and removes the pending file when activation fails. Target-kernel and SD-filesystem support for the Linux operation remains part of device validation. The desktop flow uses `exports/profile-<hex-profile-id>.sprout-profile` so profile IDs cannot become paths.
 
 Restore first validates the complete archive and checks for an existing profile ID, save namespace, daily-policy row, or managed-image generation. A conflict changes nothing. For a valid new profile, restore writes any image generation, then the unused policy row, and creates the profile last; pre-profile failures are compensated. Restored image paths are derived locally from the profile ID and archive checksum, never from an archive-supplied path.
 
