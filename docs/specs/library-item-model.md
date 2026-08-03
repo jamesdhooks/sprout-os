@@ -1,6 +1,6 @@
 # Library Item Model
 
-Status: **emulated-game v1 subset implemented; broader model provisional**. The model describes launchable catalogue entries without requiring every content type to be implemented.
+Status: **emulated-game and local native-game v1 subsets implemented; broader model provisional**. The model describes launchable catalogue entries without requiring every content type to be implemented.
 
 ```text
 LibraryItem
@@ -27,7 +27,7 @@ LibraryItem
 ## Item-specific targets
 
 - **EmulatedGame:** ROM reference, Onion system identifier, and verified Onion launch definition.
-- **NativeGame:** signed package identity and runtime compatibility.
+- **NativeGame:** local package identity, runtime compatibility, audience, and a fixed Sprout Runtime target. Signing is deferred.
 - **MediaApplication:** application or connector-backed media entry point with declared capabilities.
 - **UtilityApplication:** allowlisted local application target and administrative classification.
 - **ContentCollection:** stable ordered or query-backed references to other items; it is not directly executable.
@@ -41,6 +41,12 @@ The local scanner currently discovers regular files beneath the pinned Onion `Ro
 Version 1 item identity is `onion:<system>:<percent-encoded-relative-path>`. This is stable across repeated scans of the same layout and avoids exposing an executable command. Moving or renaming a ROM changes the identity; content-based reconciliation remains unresolved.
 
 The controller presentation filters concrete entries into recent, favorite, and all-game views and emits an `EmulatedLaunchTarget` only for an allowed selection. The desktop preview uses sanitized in-memory recent/favorite metadata. Discovered child items fail closed until an explicit profile allowlist exists; parent selections can emit typed preview requests but Windows does not execute Onion scripts.
+
+## Implemented local native-game subset
+
+The Sprout Arcade scanner reads direct child directories beneath an explicitly configured local package root. It applies the strict runtime manifest parser, skips invalid packages with warnings, rejects every package sharing a duplicate identity, and returns deterministic title order. Version 1 library identity is `arcade:<package-id>`.
+
+The Arcade view emits a typed `NativeLaunchTarget` containing the canonical package root, stable item ID, active profile ID, runtime seed, and evaluated launch permission. `audience: family` permits child visibility; `audience: parent` fails closed for child profiles. At launch, the adapter reloads the package, checks that its identity is unchanged, creates profile-isolated storage, and invokes only the configured Sprout Runtime executable with structured arguments. The launcher blocks while the game owns the screen, then restores its window and pauses the child-time session when the process returns. Live enforcement while a native game is running remains part of the policy-lifecycle milestone.
 
 ## Policy behavior
 

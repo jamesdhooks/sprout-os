@@ -61,6 +61,23 @@ add_library(
   src/onion_launch_adapter.cpp
 )
 
+add_library(sprout_launch_process src/launch_process.cpp)
+
+if(SPROUT_BUILD_RUNTIME)
+  add_library(
+    sprout_native_games
+    src/native_launch_adapter.cpp
+    src/native_library.cpp
+  )
+  target_include_directories(sprout_native_games PUBLIC include)
+  target_compile_features(sprout_native_games PUBLIC cxx_std_20)
+  target_link_libraries(
+    sprout_native_games
+    PUBLIC sprout_launch_process
+    PRIVATE sprout_runtime_package
+  )
+endif()
+
 target_include_directories(sprout_launcher_core PUBLIC include)
 target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
@@ -122,6 +139,9 @@ target_link_libraries(
 )
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
+target_link_libraries(sprout_onion_adapter PUBLIC sprout_launch_process)
+target_include_directories(sprout_launch_process PUBLIC include)
+target_compile_features(sprout_launch_process PUBLIC cxx_std_20)
 
 if(SPROUT_BUILD_ONION)
   add_executable(sprout-onion-check src/onion_check.cpp)
@@ -160,6 +180,10 @@ if(MSVC)
   target_compile_options(sprout_recovery PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_launch_process PRIVATE /W4 /permissive-)
+  if(SPROUT_BUILD_RUNTIME)
+    target_compile_options(sprout_native_games PRIVATE /W4 /permissive-)
+  endif()
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE /W4 /permissive-)
   endif()
@@ -175,6 +199,10 @@ else()
   target_compile_options(sprout_recovery PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_launch_process PRIVATE -Wall -Wextra -Wpedantic)
+  if(SPROUT_BUILD_RUNTIME)
+    target_compile_options(sprout_native_games PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE -Wall -Wextra -Wpedantic)
   endif()
@@ -215,6 +243,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_parent_access
       sprout_profile_archive
       sprout_onion_adapter
+      sprout_native_games
       sprout_setup
       sprout_recovery
       sprout_startup_health
@@ -360,6 +389,21 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-library-presentation-test
                         PRIVATE sprout_onion_adapter sprout_launcher_core)
   add_test(NAME library-presentation COMMAND sprout-library-presentation-test)
+
+  if(SPROUT_BUILD_RUNTIME)
+    add_executable(sprout-native-library-test tests/native_library_test.cpp)
+    target_compile_features(sprout-native-library-test PRIVATE cxx_std_20)
+    target_link_libraries(sprout-native-library-test PRIVATE sprout_native_games)
+    add_test(NAME native-library COMMAND sprout-native-library-test)
+
+    add_executable(sprout-native-launch-adapter-test
+                   tests/native_launch_adapter_test.cpp)
+    target_compile_features(sprout-native-launch-adapter-test PRIVATE cxx_std_20)
+    target_link_libraries(sprout-native-launch-adapter-test
+                          PRIVATE sprout_native_games)
+    add_test(NAME native-launch-adapter
+             COMMAND sprout-native-launch-adapter-test)
+  endif()
 
   if(SPROUT_BUILD_DESKTOP)
     add_executable(sprout-profile-image-test tests/profile_image_importer_test.cpp)

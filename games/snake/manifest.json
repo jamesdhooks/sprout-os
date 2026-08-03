@@ -6,5 +6,6 @@
   "runtimeVersion": 1,
   "entrypoint": "game.lua",
   "logicalResolution": [320, 240],
+  "audience": "family",
   "capabilities": ["events", "local-storage"]
 }

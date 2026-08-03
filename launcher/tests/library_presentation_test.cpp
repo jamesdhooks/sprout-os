@@ -15,6 +15,7 @@ using sprout::launcher::LibraryEntry;
 using sprout::launcher::LibraryPresentation;
 using sprout::launcher::LibraryPresentationEventType;
 using sprout::launcher::LibrarySection;
+using sprout::launcher::NativeLaunchTarget;
 using sprout::launcher::OnionSystem;
 
 void require(bool condition, const std::string& message) {
@@ -27,13 +28,16 @@ LibraryEntry entry(std::string id, std::string title, OnionSystem system,
                    bool favorite, std::optional<std::size_t> recent_rank,
                    bool allowed = true) {
   return LibraryEntry{
-      .item = EmulatedLibraryItem{
-          .schema_version = EmulatedLibraryItem::kSchemaVersion,
-          .id = std::move(id),
-          .title = std::move(title),
+      .id = id,
+      .title = std::move(title),
+      .platform_label = system == OnionSystem::GameBoy ? "GB" : "SFC",
+      .launch_target = sprout::launcher::EmulatedLaunchTarget{
+          .item_id = std::move(id),
           .system = system,
           .rom_path = std::filesystem::temp_directory_path() / "fixture.rom",
+          .launch_allowed = allowed,
       },
+      .child_visible = false,
       .favorite = favorite,
       .recent_rank = recent_rank,
       .launch_allowed = allowed,
@@ -61,13 +65,18 @@ void menu_targets_map_to_sections() {
           "child and parent all-game labels should share the all section");
   require(!library_section_for_menu_target("Onion Tools").has_value(),
           "unrelated menu targets must not open the library");
+  require(library_section_for_menu_target("Sprout Arcade") ==
+              LibrarySection::Arcade,
+          "Sprout Arcade should open the native-game section");
 }
 
 void demo_library_is_sanitized_and_useful() {
   const auto demo = sprout::launcher::make_demo_library();
   require(demo.size() == 5, "demo library should remain small and deterministic");
-  require(sprout::launcher::starts_with(demo[0].item.id, "preview:") &&
-              demo[0].item.rom_path.is_absolute(),
+  const auto& target = std::get<sprout::launcher::EmulatedLaunchTarget>(
+      demo[0].launch_target);
+  require(sprout::launcher::starts_with(demo[0].id, "preview:") &&
+              target.rom_path.is_absolute(),
           "demo entries should be clearly synthetic typed targets");
 }
 
@@ -75,19 +84,39 @@ void filters_and_recent_order_are_deterministic() {
   LibraryPresentation recent(entries(), LibrarySection::Recent);
   require(recent.entries().size() == 2,
           "recent section should contain ranked entries only");
-  require(recent.entries()[0].item.id == "game-b" &&
-              recent.entries()[1].item.id == "game-a",
+  require(recent.entries()[0].id == "game-b" &&
+              recent.entries()[1].id == "game-a",
           "recent section should sort by explicit rank");
 
   LibraryPresentation favorites(entries(), LibrarySection::Favorites);
   require(favorites.entries().size() == 2,
           "favorites section should contain favorite entries only");
-  require(favorites.entries()[0].item.id == "game-b" &&
-              favorites.entries()[1].item.id == "game-c",
+  require(favorites.entries()[0].id == "game-b" &&
+              favorites.entries()[1].id == "game-c",
           "favorites should preserve catalogue order");
 
   LibraryPresentation all(entries(), LibrarySection::All);
   require(all.entries().size() == 3, "all section should retain every entry");
+
+  auto native_entries = entries();
+  native_entries.push_back(LibraryEntry{
+      .id = "arcade:sprout.snake",
+      .title = "Sprout Snake",
+      .platform_label = "ARCADE",
+      .launch_target = NativeLaunchTarget{
+          .item_id = "arcade:sprout.snake",
+          .package_root = std::filesystem::temp_directory_path() / "snake",
+          .profile_id = "child-alex",
+          .seed = 7,
+          .launch_allowed = true,
+      },
+      .child_visible = true,
+      .launch_allowed = true,
+  });
+  LibraryPresentation arcade(std::move(native_entries), LibrarySection::Arcade);
+  require(arcade.entries().size() == 1 &&
+              arcade.entries()[0].id == "arcade:sprout.snake",
+          "Arcade should contain only native launch targets");
 }
 
 void navigation_launch_and_unavailable_are_explicit() {
@@ -108,9 +137,11 @@ void navigation_launch_and_unavailable_are_explicit() {
               event->type == LibraryPresentationEventType::LaunchRequested &&
               event->launch_target.has_value(),
           "allowed item should emit a typed launch request");
-  require(event->launch_target->item_id == "game-a" &&
-              event->launch_target->system == OnionSystem::GameBoy &&
-              event->launch_target->launch_allowed,
+  const auto& launch = std::get<sprout::launcher::EmulatedLaunchTarget>(
+      *event->launch_target);
+  require(launch.item_id == "game-a" &&
+              launch.system == OnionSystem::GameBoy &&
+              launch.launch_allowed,
           "launch request should retain identity, system, and permission");
 
   event = library.handle(Action::Back);

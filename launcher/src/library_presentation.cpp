@@ -16,6 +16,9 @@ std::optional<LibrarySection> library_section_for_menu_target(
   if (target == "See All" || target == "All Games") {
     return LibrarySection::All;
   }
+  if (target == "Sprout Arcade") {
+    return LibrarySection::Arcade;
+  }
   return std::nullopt;
 }
 
@@ -25,6 +28,8 @@ LibraryPresentation::LibraryPresentation(std::vector<LibraryEntry> entries,
   for (auto& entry : entries) {
     const bool included =
         section == LibrarySection::All ||
+        (section == LibrarySection::Arcade &&
+         std::holds_alternative<NativeLaunchTarget>(entry.launch_target)) ||
         (section == LibrarySection::Favorites && entry.favorite) ||
         (section == LibrarySection::Recent && entry.recent_rank.has_value());
     if (included) {
@@ -49,8 +54,15 @@ std::string_view LibraryPresentation::title() const noexcept {
       return "FAVORITES";
     case LibrarySection::All:
       return "ALL GAMES";
+    case LibrarySection::Arcade:
+      return "SPROUT ARCADE";
   }
   return "LIBRARY";
+}
+
+std::string_view LibraryPresentation::source_label() const noexcept {
+  return section_ == LibrarySection::Arcade ? "LOCAL NATIVE GAMES"
+                                            : "LOCAL GAME LIBRARY";
 }
 
 std::string_view LibraryPresentation::empty_message() const noexcept {
@@ -61,6 +73,8 @@ std::string_view LibraryPresentation::empty_message() const noexcept {
       return "NO FAVORITES YET";
     case LibrarySection::All:
       return "NO SUPPORTED GAMES FOUND";
+    case LibrarySection::Arcade:
+      return "NO ARCADE GAMES FOUND";
   }
   return "NO GAMES FOUND";
 }
@@ -74,6 +88,10 @@ ReadOnlyView<LibraryEntry> LibraryPresentation::entries() const noexcept {
 }
 
 std::string_view LibraryPresentation::notice() const noexcept { return notice_; }
+
+void LibraryPresentation::report_launch_result(std::string message) {
+  notice_ = std::move(message);
+}
 
 std::optional<LibraryPresentationEvent> LibraryPresentation::handle(Action action) {
   if (action == Action::Back) {
@@ -109,14 +127,13 @@ std::optional<LibraryPresentationEvent> LibraryPresentation::handle(Action actio
     };
   }
   notice_.clear();
+  auto launch_target = entry.launch_target;
+  std::visit(
+      [&](auto& target) { target.launch_allowed = entry.launch_allowed; },
+      launch_target);
   return LibraryPresentationEvent{
       .type = LibraryPresentationEventType::LaunchRequested,
-      .launch_target = EmulatedLaunchTarget{
-          .item_id = entry.item.id,
-          .system = entry.item.system,
-          .rom_path = entry.item.rom_path,
-          .launch_allowed = true,
-      },
+      .launch_target = std::move(launch_target),
       .message = {},
   };
 }

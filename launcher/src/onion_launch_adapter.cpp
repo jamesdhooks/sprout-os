@@ -2,17 +2,9 @@
 
 #include <algorithm>
 #include <array>
-#include <cerrno>
 #include <cctype>
 #include <system_error>
 #include <utility>
-
-#ifndef _WIN32
-#include <spawn.h>
-#include <sys/wait.h>
-
-extern char** environ;
-#endif
 
 namespace sprout::launcher {
 namespace {
@@ -71,74 +63,6 @@ std::optional<OnionSystemContract> onion_system_contract(OnionSystem system) {
       };
   }
   return std::nullopt;
-}
-
-ProcessResult OnionLaunchProcess::run(
-    const std::filesystem::path& executable,
-    const std::vector<std::string>& arguments) {
-#ifdef _WIN32
-  static_cast<void>(executable);
-  static_cast<void>(arguments);
-  return {
-      .started = false,
-      .exit_code = std::nullopt,
-      .detail = "Onion launch execution is available only on the target Linux system",
-  };
-#else
-  std::vector<std::string> owned_arguments;
-  owned_arguments.reserve(arguments.size() + 1);
-  owned_arguments.push_back(executable.string());
-  owned_arguments.insert(owned_arguments.end(), arguments.begin(), arguments.end());
-
-  std::vector<char*> argument_pointers;
-  argument_pointers.reserve(owned_arguments.size() + 1);
-  for (auto& argument : owned_arguments) {
-    argument_pointers.push_back(argument.data());
-  }
-  argument_pointers.push_back(nullptr);
-
-  pid_t process_id{};
-  const auto spawn_result = posix_spawn(
-      &process_id, executable.c_str(), nullptr, nullptr,
-      argument_pointers.data(), environ);
-  if (spawn_result != 0) {
-    return {
-        .started = false,
-        .exit_code = std::nullopt,
-        .detail = std::error_code(spawn_result, std::generic_category()).message(),
-    };
-  }
-
-  int status{};
-  while (waitpid(process_id, &status, 0) == -1) {
-    if (errno != EINTR) {
-      return {
-          .started = true,
-          .exit_code = std::nullopt,
-          .detail = std::error_code(errno, std::generic_category()).message(),
-      };
-    }
-  }
-  if (WIFEXITED(status)) {
-    return {
-        .started = true,
-        .exit_code = WEXITSTATUS(status),
-        .detail = {},
-    };
-  }
-  if (WIFSIGNALED(status)) {
-    return {
-        .started = true,
-        .exit_code = 128 + WTERMSIG(status),
-        .detail = "Onion launcher terminated by a signal",
-    };
-  }
-  return {
-      .started = true,
-      .exit_code = std::nullopt,
-      .detail = "Onion launcher ended without an exit status",
-  };
-#endif
 }
 
 OnionLaunchAdapter::OnionLaunchAdapter(std::filesystem::path sd_card_root,

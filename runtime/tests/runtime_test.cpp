@@ -35,6 +35,7 @@ std::filesystem::path create_package(const std::filesystem::path& root) {
   "runtimeVersion": 1,
   "entrypoint": "game.lua",
   "logicalResolution": [320, 240],
+  "audience": "family",
   "capabilities": ["events", "local-storage"]
 })");
   write(package / "game.lua", R"(

@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, persisted daily child-time and startup-health decision cores, desktop configuration recovery, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, policy lifecycle, safe-boot integration, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, persisted daily child-time and startup-health decision cores, desktop configuration recovery, deterministic local GB/SNES discovery, a desktop-tested Onion launch contract, and local Sprout Arcade discovery and runtime handoff. There is no supported release, hardware-validated Onion execution, complete policy lifecycle, safe-boot integration, or deployable SD-card image.
 
 ## Tools
 
@@ -36,6 +36,16 @@ powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run-arcade
 ```
 
 This starts the checked-in `games/snake` package with isolated storage under `out/arcade-preview-data`. Arrow keys or WASD control direction, `Z`/Enter or controller A restarts after a round, and Escape or controller Back exits. This is Windows runtime evidence only; it does not validate the Miyoo renderer, input driver, performance, or package installation.
+
+The ordinary launcher preview now discovers direct packages under `games/` and exposes them through **Sprout Arcade** for parent profiles and for child profiles when the manifest declares `audience: family`. Native saves are isolated below `out/preview-data/data/native-games/<profile-id>/<package-id>/`.
+
+Run the noninteractive launcher-to-runtime verification with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action arcade-smoke
+```
+
+This discovers the first valid local package, creates isolated diagnostic-profile storage, launches it through the configured runtime, checks the runtime's start and normal-exit path, and returns a nonzero status on failure. It is deterministic Windows integration evidence and does not replace interactive or device testing.
 
 By default, recent, favorite, and all-game views use sanitized in-memory fixtures. To inspect filenames on an explicitly selected development-card or fixture root without executing games:
 
@@ -79,7 +89,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, repeated-start routing decisions, recovery restore/reset presentation and quarantine safety, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. One integration journey reopens a shared synthetic data root across the implemented host boundaries. The pinned ARM build is also checked in CI. The [MVP evidence checklist](mvp-evidence.md) separates this automated proof from desktop-manual and hardware-only acceptance; device deployment remains manual.
+The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, repeated-start routing decisions, recovery restore/reset presentation and quarantine safety, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting, deterministic local GB/SNES discovery, local native-package discovery and launch validation, recent/favorite/all/Arcade presentation, the typed Onion launch contract, and a headless SDL render traversal. One integration journey reopens a shared synthetic data root across the implemented host boundaries. The pinned ARM build is also checked in CI. The [MVP evidence checklist](mvp-evidence.md) separates this automated proof from desktop-manual and hardware-only acceptance; device deployment remains manual.
 
 ## Configuration and secrets
 

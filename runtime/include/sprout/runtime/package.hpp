@@ -7,6 +7,11 @@
 
 namespace sprout::runtime {
 
+enum class PackageAudience {
+  Family,
+  Parent,
+};
+
 struct PackageManifest {
   std::uint32_t schema_version{};
   std::string id;
@@ -17,6 +22,7 @@ struct PackageManifest {
   std::filesystem::path entrypoint;
   int logical_width{};
   int logical_height{};
+  PackageAudience audience{PackageAudience::Parent};
   std::vector<std::string> capabilities;
 };
 

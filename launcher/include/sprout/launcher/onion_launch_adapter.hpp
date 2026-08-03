@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sprout/launcher/launch_process.hpp"
+
 #include <filesystem>
 #include <optional>
 #include "sprout/launcher/read_only_view.hpp"
@@ -32,26 +34,7 @@ struct EmulatedLaunchTarget {
   bool launch_allowed{false};
 };
 
-struct ProcessResult {
-  bool started{false};
-  std::optional<int> exit_code;
-  std::string detail;
-};
-
-class LaunchProcess {
- public:
-  virtual ~LaunchProcess() = default;
-  [[nodiscard]] virtual ProcessResult run(
-      const std::filesystem::path& executable,
-      const std::vector<std::string>& arguments) = 0;
-};
-
-class OnionLaunchProcess final : public LaunchProcess {
- public:
-  [[nodiscard]] ProcessResult run(
-      const std::filesystem::path& executable,
-      const std::vector<std::string>& arguments) override;
-};
+using OnionLaunchProcess = SystemLaunchProcess;
 
 enum class LaunchOutcome {
   Completed,

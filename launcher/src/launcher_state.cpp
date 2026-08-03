@@ -7,18 +7,20 @@
 namespace sprout::launcher {
 namespace {
 
-constexpr std::array<std::string_view, 5> kChildMenu{
+constexpr std::array<std::string_view, 6> kChildMenu{
     "Continue",
     "Favorites",
     "See All",
+    "Sprout Arcade",
     "Ask for More Time",
     "Profile Select",
 };
 
-constexpr std::array<std::string_view, 8> kParentMenu{
+constexpr std::array<std::string_view, 9> kParentMenu{
     "Continue",
     "Favorites",
     "All Games",
+    "Sprout Arcade",
     "Family Dashboard",
     "Onion Tools",
     "Backup & Restore",

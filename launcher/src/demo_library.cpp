@@ -16,13 +16,16 @@ std::vector<LibraryEntry> make_demo_library() {
                          std::optional<std::size_t> recent_rank, bool allowed,
                          std::string unavailable_reason = {}) {
     return LibraryEntry{
-        .item = EmulatedLibraryItem{
-            .schema_version = EmulatedLibraryItem::kSchemaVersion,
-            .id = std::move(id),
-            .title = std::move(title),
+        .id = id,
+        .title = std::move(title),
+        .platform_label = system == OnionSystem::GameBoy ? "GB" : "SFC",
+        .launch_target = EmulatedLaunchTarget{
+            .item_id = std::move(id),
             .system = system,
             .rom_path = root / relative_path,
+            .launch_allowed = allowed,
         },
+        .child_visible = true,
         .favorite = favorite,
         .recent_rank = recent_rank,
         .launch_allowed = allowed,
