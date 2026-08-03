@@ -56,6 +56,20 @@ def chunk(kind: bytes, data: bytes) -> bytes:
             struct.pack(">I", binascii.crc32(kind + data) & 0xFFFFFFFF))
 
 
+def deterministic_zlib(data: bytes) -> bytes:
+    """Encode DEFLATE stored blocks so bytes do not depend on zlib versions."""
+    output = bytearray(b"\x78\x01")
+    for offset in range(0, len(data), 65535):
+        block = data[offset:offset + 65535]
+        final = offset + len(block) == len(data)
+        output.append(1 if final else 0)
+        output.extend(struct.pack("<H", len(block)))
+        output.extend(struct.pack("<H", 0xFFFF ^ len(block)))
+        output.extend(block)
+    output.extend(struct.pack(">I", zlib.adler32(data) & 0xFFFFFFFF))
+    return bytes(output)
+
+
 def encode_png(canvas: Canvas) -> bytes:
     scanlines = bytearray()
     for row in canvas.pixels:
@@ -64,7 +78,7 @@ def encode_png(canvas: Canvas) -> bytes:
             scanlines.extend(pixel)
     header = struct.pack(">IIBBBBB", W, H, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) +
-            chunk(b"IDAT", zlib.compress(bytes(scanlines), 9)) +
+            chunk(b"IDAT", deterministic_zlib(bytes(scanlines))) +
             chunk(b"IEND", b""))
 
 
