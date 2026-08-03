@@ -68,7 +68,11 @@ std::optional<ParentAccessEvent> ParentAccessController::handle(
     return std::nullopt;
   }
   if (launcher_event->type == EventType::ExitRequested) {
-    return ParentAccessEvent{.type = ParentAccessEventType::ExitRequested};
+    return ParentAccessEvent{
+        .type = ParentAccessEventType::ExitRequested,
+        .profile_id = {},
+        .target = {},
+    };
   }
   if (launcher_event->type != EventType::MenuItemInvoked) {
     return std::nullopt;

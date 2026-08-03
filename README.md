@@ -24,7 +24,7 @@ Sprout is an open-source, family-oriented gaming platform for retro handhelds an
 | Sprout Server | Optional sync, family management, and recommendations | Planned later |
 | Sprout SDK | Schemas, package contracts, and developer tooling | Planned as real consumers emerge |
 
-The initial milestone is the **Sprout Family Launcher MVP**: a development-card vertical slice from profile selection through Onion launch, GameSwitcher return, time accounting, parent control, and safe recovery. See the [roadmap](docs/roadmap.md).
+The initial milestone is the **Sprout Family Launcher MVP**: a development-card vertical slice from profile selection through Onion launch, GameSwitcher return, time accounting, parent control, and safe recovery. A pinned ARM command-line diagnostic now builds, but device execution and the launcher renderer remain unverified. See the [roadmap](docs/roadmap.md).
 
 ## Repository layout
 

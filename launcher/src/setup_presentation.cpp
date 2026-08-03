@@ -20,7 +20,7 @@ std::string_view SetupPresentation::description() const noexcept {
   return description_;
 }
 
-std::span<const std::string_view> SetupPresentation::choices() const noexcept {
+ReadOnlyView<std::string_view> SetupPresentation::choices() const noexcept {
   return choices_;
 }
 
@@ -191,6 +191,9 @@ void SetupPresentation::confirm() {
           .role = ProfileRole::Parent,
           .avatar_ref = focus_index_ == 0 ? "builtin:fox" : "builtin:owl",
           .save_namespace = "saves-parent-primary",
+          .content_policy_ref = std::nullopt,
+          .time_policy_ref = std::nullopt,
+          .preferences_json = "{}",
       });
       return;
     case SetupStep::ParentPin:
@@ -213,6 +216,7 @@ void SetupPresentation::confirm() {
           .save_namespace = "saves-child-primary",
           .content_policy_ref = "content:child-default",
           .time_policy_ref = "time:child-default",
+          .preferences_json = "{}",
       });
       return;
     case SetupStep::Avatars:

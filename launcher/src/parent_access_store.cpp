@@ -1,4 +1,5 @@
 #include "sprout/launcher/parent_access_store.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <argon2.h>
 #include <blake2.h>
@@ -7,7 +8,6 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <chrono>
 #include <fstream>
 #include <limits>
 #include <stdexcept>
@@ -102,7 +102,7 @@ void secure_clear(std::string& value) noexcept {
 }
 
 void validate_credential_ref(std::string_view reference) {
-  if (!reference.starts_with("secret:") || reference.size() > 96 ||
+  if (!starts_with(reference, "secret:") || reference.size() > 96 ||
       !std::all_of(reference.begin() + 7, reference.end(), [](unsigned char value) {
         return std::isalnum(value) != 0 || value == '-' || value == '_';
       })) {
@@ -132,9 +132,18 @@ void validate_local_date(std::string_view value) {
   const int year = std::stoi(std::string(value.substr(0, 4)));
   const unsigned month = static_cast<unsigned>(std::stoi(std::string(value.substr(5, 2))));
   const unsigned day = static_cast<unsigned>(std::stoi(std::string(value.substr(8, 2))));
-  if (!std::chrono::year_month_day(std::chrono::year(year),
-                                   std::chrono::month(month),
-                                   std::chrono::day(day)).ok()) {
+  static constexpr std::array<unsigned, 12> days_per_month{
+      31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  if (year < 1 || month < 1 || month > days_per_month.size()) {
+    throw std::invalid_argument("Local date is not a calendar date");
+  }
+  unsigned maximum_day = days_per_month[month - 1];
+  const bool leap_year =
+      year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+  if (month == 2 && leap_year) {
+    ++maximum_day;
+  }
+  if (day < 1 || day > maximum_day) {
     throw std::invalid_argument("Local date is not a calendar date");
   }
 }

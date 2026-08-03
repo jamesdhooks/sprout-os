@@ -1,4 +1,5 @@
 #include "sprout/launcher/library_presentation.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -65,7 +66,7 @@ void menu_targets_map_to_sections() {
 void demo_library_is_sanitized_and_useful() {
   const auto demo = sprout::launcher::make_demo_library();
   require(demo.size() == 5, "demo library should remain small and deterministic");
-  require(demo[0].item.id.starts_with("preview:") &&
+  require(sprout::launcher::starts_with(demo[0].item.id, "preview:") &&
               demo[0].item.rom_path.is_absolute(),
           "demo entries should be clearly synthetic typed targets");
 }

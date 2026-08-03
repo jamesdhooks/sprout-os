@@ -2,7 +2,8 @@
 
 #include <cstdint>
 #include <optional>
-#include <span>
+#include "sprout/launcher/read_only_view.hpp"
+
 #include <string>
 #include <string_view>
 #include <vector>
@@ -60,9 +61,9 @@ class LauncherState {
 
   [[nodiscard]] Screen screen() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
-  [[nodiscard]] std::span<const Profile> profiles() const noexcept;
+  [[nodiscard]] ReadOnlyView<Profile> profiles() const noexcept;
   [[nodiscard]] const Profile* active_profile() const noexcept;
-  [[nodiscard]] std::span<const std::string_view> menu_items() const noexcept;
+  [[nodiscard]] ReadOnlyView<std::string_view> menu_items() const noexcept;
   [[nodiscard]] std::optional<LauncherEvent> handle(Action action);
 
  private:

@@ -1,4 +1,5 @@
 #include "sprout/launcher/profile_repository.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <sqlite3.h>
 
@@ -137,7 +138,8 @@ constexpr std::string_view kProfileColumns =
     "local_revision, created_at, updated_at";
 
 void validate_avatar_ref(std::string_view avatar_ref) {
-  if (!avatar_ref.starts_with("builtin:") && !avatar_ref.starts_with("local:")) {
+  if (!starts_with(avatar_ref, "builtin:") &&
+      !starts_with(avatar_ref, "local:")) {
     throw std::invalid_argument("Avatar reference must use builtin: or local:");
   }
 }

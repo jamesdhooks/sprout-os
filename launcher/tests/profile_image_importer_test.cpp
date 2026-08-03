@@ -1,4 +1,5 @@
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/string_compat.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
 
 #define SDL_MAIN_HANDLED
@@ -173,7 +174,7 @@ void imports_managed_variants_and_updates_profile() {
 
   ProfileImageImporter importer(directory.path() / "images", profiles);
   const auto imported = importer.import_for_profile("parent-sam", source);
-  expect(imported.avatar_ref.starts_with("local:"),
+  expect(sprout::launcher::starts_with(imported.avatar_ref, "local:"),
          "import should produce a managed local reference");
   expect(std::filesystem::is_regular_file(imported.portrait_path),
          "import should write a managed portrait");
@@ -312,7 +313,8 @@ void crop_session_is_bounded_and_presentation_imports() {
   expect(accepted.handle(sprout::launcher::Action::Confirm) ==
              ProfileImageCropEvent::Imported,
          "confirm should import the visible crop");
-  expect(profiles.find_profile("parent-sam")->avatar_ref.starts_with("local:"),
+  expect(sprout::launcher::starts_with(
+             profiles.find_profile("parent-sam")->avatar_ref, "local:"),
          "crop confirmation should persist a managed reference");
 }
 
