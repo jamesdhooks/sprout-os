@@ -1,7 +1,9 @@
 add_library(
   sprout_launcher_core
+  src/built_in_avatar.cpp
   src/demo_household.cpp
   src/launcher_state.cpp
+  src/portrait_outline.cpp
 )
 
 add_library(
@@ -51,6 +53,11 @@ add_library(
   sprout_profile_archive
   src/profile_archive.cpp
   src/profile_archive_presentation.cpp
+)
+
+add_library(
+  sprout_profile_avatars
+  src/profile_avatar_presentation.cpp
 )
 
 add_library(
@@ -137,6 +144,12 @@ target_link_libraries(
     sprout_profile_store
     yyjson
 )
+target_include_directories(sprout_profile_avatars PUBLIC include)
+target_compile_features(sprout_profile_avatars PUBLIC cxx_std_20)
+target_link_libraries(
+  sprout_profile_avatars
+  PRIVATE sprout_launcher_core sprout_profile_store
+)
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
 target_link_libraries(sprout_onion_adapter PUBLIC sprout_launch_process)
@@ -179,6 +192,7 @@ if(MSVC)
   target_compile_options(sprout_startup_health PRIVATE /W4 /permissive-)
   target_compile_options(sprout_recovery PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_profile_avatars PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
   target_compile_options(sprout_launch_process PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_RUNTIME)
@@ -198,6 +212,7 @@ else()
   target_compile_options(sprout_startup_health PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_recovery PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_profile_avatars PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_launch_process PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_RUNTIME)
@@ -242,6 +257,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_profile_images
       sprout_parent_access
       sprout_profile_archive
+      sprout_profile_avatars
       sprout_onion_adapter
       sprout_native_games
       sprout_setup
@@ -270,11 +286,24 @@ if(SPROUT_BUILD_DESKTOP)
 endif()
 
 if(BUILD_TESTING)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+  add_test(
+    NAME profile-avatar-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/validate-profile-avatars.py"
+  )
+
   add_executable(sprout-launcher-state-test tests/launcher_state_test.cpp)
   target_compile_features(sprout-launcher-state-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-launcher-state-test PRIVATE sprout_launcher_core)
 
   add_test(NAME launcher-state COMMAND sprout-launcher-state-test)
+
+  add_executable(sprout-portrait-outline-test tests/portrait_outline_test.cpp)
+  target_compile_features(sprout-portrait-outline-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-portrait-outline-test PRIVATE sprout_launcher_core)
+  add_test(NAME portrait-outline COMMAND sprout-portrait-outline-test)
 
   add_executable(sprout-profile-store-test tests/profile_repository_test.cpp)
   target_compile_features(sprout-profile-store-test PRIVATE cxx_std_20)
@@ -285,6 +314,15 @@ if(BUILD_TESTING)
       sprout_sqlite
   )
   add_test(NAME profile-store COMMAND sprout-profile-store-test)
+
+  add_executable(sprout-profile-avatar-presentation-test
+                 tests/profile_avatar_presentation_test.cpp)
+  target_compile_features(sprout-profile-avatar-presentation-test
+                          PRIVATE cxx_std_20)
+  target_link_libraries(sprout-profile-avatar-presentation-test
+                        PRIVATE sprout_profile_avatars sprout_profile_store)
+  add_test(NAME profile-avatar-presentation
+           COMMAND sprout-profile-avatar-presentation-test)
 
   add_executable(sprout-configuration-test tests/local_configuration_test.cpp)
   target_compile_features(sprout-configuration-test PRIVATE cxx_std_20)

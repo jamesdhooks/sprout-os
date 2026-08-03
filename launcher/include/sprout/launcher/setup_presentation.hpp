@@ -16,13 +16,16 @@ enum class SetupPresentationEvent {
   Completed,
   ExitRequested,
   ImportParentImageRequested,
+  ChooseParentAvatarRequested,
+  ChooseChildAvatarRequested,
   ConfigureParentPinRequested,
 };
 
 class SetupPresentation {
  public:
   explicit SetupPresentation(SetupWizard& wizard,
-                             bool custom_image_available = false);
+                             bool custom_image_available = false,
+                             bool child_profile_available = true);
 
   [[nodiscard]] SetupStep step() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
@@ -43,6 +46,7 @@ class SetupPresentation {
 
   SetupWizard& wizard_;
   bool custom_image_available_{false};
+  bool child_profile_available_{true};
   std::size_t focus_index_{0};
   std::string_view title_;
   std::string_view description_;

@@ -5,8 +5,12 @@
 
 namespace sprout::launcher {
 
-SetupPresentation::SetupPresentation(SetupWizard& wizard, bool custom_image_available)
-    : wizard_(wizard), custom_image_available_(custom_image_available) {
+SetupPresentation::SetupPresentation(SetupWizard& wizard,
+                                     bool custom_image_available,
+                                     bool child_profile_available)
+    : wizard_(wizard),
+      custom_image_available_(custom_image_available),
+      child_profile_available_(child_profile_available) {
   refresh_content();
 }
 
@@ -46,8 +50,17 @@ std::optional<SetupPresentationEvent> SetupPresentation::handle(Action action) {
 
   error_message_.clear();
   try {
-    if (step() == SetupStep::Avatars && custom_image_available_ && focus_index_ == 0) {
-      return SetupPresentationEvent::ImportParentImageRequested;
+    if (step() == SetupStep::Avatars) {
+      if (focus_index_ == 0) {
+        return SetupPresentationEvent::ChooseParentAvatarRequested;
+      }
+      if (child_profile_available_ && focus_index_ == 1) {
+        return SetupPresentationEvent::ChooseChildAvatarRequested;
+      }
+      const std::size_t import_index = child_profile_available_ ? 2U : 1U;
+      if (custom_image_available_ && focus_index_ == import_index) {
+        return SetupPresentationEvent::ImportParentImageRequested;
+      }
     }
     if (step() == SetupStep::ParentPin && focus_index_ == 0) {
       return SetupPresentationEvent::ConfigureParentPinRequested;
@@ -112,7 +125,7 @@ void SetupPresentation::refresh_content() {
     case SetupStep::Parent:
       title_ = "CREATE A PARENT";
       description_ = "CHOOSE A BUILT-IN PORTRAIT";
-      choices_ = {"FOX PARENT", "OWL PARENT"};
+      choices_ = {"EXPLORER FOX", "MOON RABBIT"};
       return;
     case SetupStep::ParentPin:
       title_ = "PARENT PIN";
@@ -126,11 +139,11 @@ void SetupPresentation::refresh_content() {
       return;
     case SetupStep::Avatars:
       title_ = "PROFILE PORTRAITS";
-      description_ = custom_image_available_ ? "CUSTOMIZE THE PARENT PORTRAIT"
-                                             : "BUILT-IN PORTRAITS ARE READY";
-      choices_ = custom_image_available_
-                     ? std::vector<std::string_view>{"IMPORT FOR PARENT", "KEEP BUILT IN"}
-                     : std::vector<std::string_view>{"CONTINUE"};
+      description_ = "CHOOSE FROM 32 BUILT-IN PORTRAITS";
+      choices_ = {"CHOOSE PARENT"};
+      if (child_profile_available_) choices_.push_back("CHOOSE CHILD");
+      if (custom_image_available_) choices_.push_back("IMPORT FOR PARENT");
+      choices_.push_back("CONTINUE");
       return;
     case SetupStep::Library:
       title_ = "GAME LIBRARY";
@@ -189,7 +202,8 @@ void SetupPresentation::confirm() {
           .id = "parent-primary",
           .display_name = "Parent",
           .role = ProfileRole::Parent,
-          .avatar_ref = focus_index_ == 0 ? "builtin:fox" : "builtin:owl",
+          .avatar_ref = focus_index_ == 0 ? "builtin:explorer-fox"
+                                         : "builtin:moon-rabbit",
           .save_namespace = "saves-parent-primary",
           .content_policy_ref = std::nullopt,
           .time_policy_ref = std::nullopt,
@@ -212,7 +226,7 @@ void SetupPresentation::confirm() {
           .id = "child-primary",
           .display_name = "Alex",
           .role = ProfileRole::Child,
-          .avatar_ref = "builtin:sprout",
+          .avatar_ref = "builtin:friendly-dragon",
           .save_namespace = "saves-child-primary",
           .content_policy_ref = "content:child-default",
           .time_policy_ref = "time:child-default",

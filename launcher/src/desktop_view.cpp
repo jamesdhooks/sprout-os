@@ -1,4 +1,6 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/built_in_avatar.hpp"
+#include "sprout/launcher/portrait_outline.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
 #include "sprout/launcher/string_compat.hpp"
 
@@ -13,6 +15,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace sprout::launcher {
 namespace {
@@ -147,8 +150,96 @@ std::string path_as_utf8(const std::filesystem::path& path) {
   return {reinterpret_cast<const char*>(encoded.data()), encoded.size()};
 }
 
+bool render_treated_portrait(SDL_Renderer* renderer,
+                             const std::filesystem::path& path,
+                             const SDL_Rect& destination, Color border,
+                             float border_radius = 5.0F) {
+  struct CachedPortrait {
+    SDL_Renderer* renderer;
+    std::string path;
+    Color border;
+    int radius_tenths;
+    SDL_Texture* border_texture;
+    SDL_Texture* source_texture;
+  };
+  static std::vector<CachedPortrait> cache;
+  const std::string encoded_path = path_as_utf8(path);
+  const int radius_tenths = static_cast<int>(border_radius * 10.0F);
+  const auto cached = std::find_if(
+      cache.begin(), cache.end(), [&](const CachedPortrait& candidate) {
+        return candidate.renderer == renderer && candidate.path == encoded_path &&
+               candidate.border.red == border.red &&
+               candidate.border.green == border.green &&
+               candidate.border.blue == border.blue &&
+               candidate.border.alpha == border.alpha &&
+               candidate.radius_tenths == radius_tenths;
+      });
+  if (cached != cache.end()) {
+    SDL_RenderCopy(renderer, cached->border_texture, nullptr, &destination);
+    SDL_RenderCopy(renderer, cached->source_texture, nullptr, &destination);
+    return true;
+  }
+
+  SDL_Surface* loaded = IMG_Load(encoded_path.c_str());
+  if (loaded == nullptr) return false;
+  SDL_Surface* source =
+      SDL_ConvertSurfaceFormat(loaded, SDL_PIXELFORMAT_RGBA32, 0);
+  SDL_FreeSurface(loaded);
+  if (source == nullptr) return false;
+
+  std::vector<std::uint8_t> alpha(
+      static_cast<std::size_t>(source->w * source->h));
+  const auto* pixels = static_cast<const std::uint8_t*>(source->pixels);
+  for (int y = 0; y < source->h; ++y) {
+    for (int x = 0; x < source->w; ++x) {
+      alpha[static_cast<std::size_t>(y * source->w + x)] =
+          pixels[y * source->pitch + x * 4 + 3];
+    }
+  }
+
+  const auto mask =
+      smooth_portrait_outline(alpha, source->w, source->h, border_radius);
+  SDL_Surface* border_surface = SDL_CreateRGBSurfaceWithFormat(
+      0, source->w, source->h, 32, SDL_PIXELFORMAT_RGBA32);
+  if (border_surface == nullptr) {
+    SDL_FreeSurface(source);
+    return false;
+  }
+  auto* border_pixels = static_cast<std::uint8_t*>(border_surface->pixels);
+  for (int y = 0; y < source->h; ++y) {
+    for (int x = 0; x < source->w; ++x) {
+      const auto index = static_cast<std::size_t>(y * source->w + x);
+      auto* pixel = border_pixels + y * border_surface->pitch + x * 4;
+      pixel[0] = border.red;
+      pixel[1] = border.green;
+      pixel[2] = border.blue;
+      pixel[3] = static_cast<std::uint8_t>(
+          static_cast<unsigned int>(mask[index]) * border.alpha / 255U);
+    }
+  }
+
+  SDL_Texture* border_texture =
+      SDL_CreateTextureFromSurface(renderer, border_surface);
+  SDL_Texture* source_texture = SDL_CreateTextureFromSurface(renderer, source);
+  SDL_FreeSurface(border_surface);
+  SDL_FreeSurface(source);
+  if (border_texture == nullptr || source_texture == nullptr) {
+    if (border_texture != nullptr) SDL_DestroyTexture(border_texture);
+    if (source_texture != nullptr) SDL_DestroyTexture(source_texture);
+    return false;
+  }
+  SDL_SetTextureBlendMode(border_texture, SDL_BLENDMODE_BLEND);
+  SDL_SetTextureBlendMode(source_texture, SDL_BLENDMODE_BLEND);
+  SDL_RenderCopy(renderer, border_texture, nullptr, &destination);
+  SDL_RenderCopy(renderer, source_texture, nullptr, &destination);
+  cache.push_back({renderer, encoded_path, border, radius_tenths,
+                   border_texture, source_texture});
+  return true;
+}
+
 void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
-                           const std::filesystem::path& managed_image_root) {
+                           const std::filesystem::path& managed_image_root,
+                           const std::filesystem::path& built_in_avatar_root) {
   draw_centered_text(renderer, "SPROUT", kWidth / 2, 34, 5, kText);
   draw_centered_text(renderer, "WHO IS PLAYING?", kWidth / 2, 82, 2, kMuted);
 
@@ -169,21 +260,30 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
     }
 
     const SDL_Rect avatar{x + 55, 151, 120, 120};
-    fill_rect(renderer, avatar, color_from_rgb(profile.accent_rgb));
     bool rendered_portrait = false;
     if (!managed_image_root.empty() &&
         starts_with(profile.avatar_ref, "local:")) {
       try {
         const auto path = ProfileImageImporter::resolve_portrait_at(
             managed_image_root, profile.avatar_ref);
-        const auto encoded = path_as_utf8(path);
-        SDL_Texture* texture = IMG_LoadTexture(renderer, encoded.c_str());
-        if (texture != nullptr) {
-          SDL_RenderCopy(renderer, texture, nullptr, &avatar);
-          SDL_DestroyTexture(texture);
-          rendered_portrait = true;
-        }
+        rendered_portrait = render_treated_portrait(
+            renderer, path, avatar,
+            index == state.focus_index() ? kFocus
+                                         : color_from_rgb(profile.accent_rgb));
       } catch (const std::exception&) {
+      }
+    } else if (!built_in_avatar_root.empty()) {
+      const auto* built_in = find_built_in_avatar(profile.avatar_ref);
+      if (built_in != nullptr) {
+        try {
+          const auto path = built_in_avatar_thumbnail_path(
+              built_in_avatar_root, built_in->id);
+          rendered_portrait = render_treated_portrait(
+              renderer, path, avatar,
+              index == state.focus_index() ? kFocus
+                                           : color_from_rgb(profile.accent_rgb));
+        } catch (const std::exception&) {
+        }
       }
     }
     if (!rendered_portrait) {
@@ -260,7 +360,8 @@ bool render_startup_splash(SDL_Renderer* renderer,
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
                      const std::filesystem::path& managed_image_root,
                      const std::filesystem::path& background_image,
-                     const std::filesystem::path& accent_atlas) {
+                     const std::filesystem::path& accent_atlas,
+                     const std::filesystem::path& built_in_avatar_root) {
   set_color(renderer, kBackground);
   SDL_RenderClear(renderer);
   if (!background_image.empty()) {
@@ -296,7 +397,8 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
   }
 
   if (state.screen() == Screen::ProfileSelect) {
-    render_profile_select(renderer, state, managed_image_root);
+    render_profile_select(renderer, state, managed_image_root,
+                          built_in_avatar_root);
   } else {
     render_home(renderer, state);
   }
@@ -399,11 +501,105 @@ void render_profile_archive(SDL_Renderer* renderer,
   SDL_RenderPresent(renderer);
 }
 
+void render_profile_avatars(
+    SDL_Renderer* renderer, const ProfileAvatarPresentation& presentation,
+    const std::filesystem::path& built_in_avatar_root) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+
+  draw_centered_text(renderer, "PROFILE IMAGES", kWidth / 2, 24, 4, kText);
+  if (presentation.stage() == ProfileAvatarStage::Profile) {
+    draw_centered_text(renderer, "CHOOSE A PROFILE TO CUSTOMIZE", kWidth / 2,
+                       70, 1, kMuted);
+    const auto profiles = presentation.profiles();
+    for (std::size_t index = 0; index < profiles.size(); ++index) {
+      const SDL_Rect row{92, 116 + static_cast<int>(index) * 62, 456, 48};
+      fill_rect(renderer, row,
+                index == presentation.focus_index() ? kPanelFocused : kPanel);
+      if (index == presentation.focus_index()) {
+        outline_rect(renderer, row, 3, kFocus);
+      }
+      draw_text(renderer, profiles[index].display_name, 118, row.y + 11, 3,
+                kText);
+      draw_text(renderer,
+                profiles[index].role == ProfileRole::Child ? "CHILD" : "PARENT",
+                438, row.y + 17, 1, kMuted);
+    }
+  } else {
+    const auto* profile = presentation.selected_profile();
+    draw_centered_text(
+        renderer,
+        profile == nullptr ? "CHOOSE A PORTRAIT"
+                           : "PORTRAIT FOR " + profile->display_name,
+        kWidth / 2, 68, 2, kMuted);
+
+    constexpr int cell_size = 112;
+    constexpr int gap_x = 20;
+    constexpr int gap_y = 20;
+    constexpr int start_x = 66;
+    constexpr int start_y = 102;
+    const auto avatars = presentation.avatars();
+    const std::size_t first = presentation.page_index() * 8U;
+    const std::size_t total = avatars.size() +
+                              (presentation.custom_image_available() ? 1U : 0U);
+    const std::size_t last = std::min(total, first + 8U);
+    for (std::size_t index = first; index < last; ++index) {
+      const std::size_t local_index = index - first;
+      const int column = static_cast<int>(local_index % 4U);
+      const int row = static_cast<int>(local_index / 4U);
+      const SDL_Rect cell{start_x + column * (cell_size + gap_x),
+                          start_y + row * (cell_size + gap_y), cell_size,
+                          cell_size};
+      fill_rect(renderer, cell,
+                index == presentation.focus_index() ? kPanelFocused : kPanel);
+      if (index == presentation.focus_index()) {
+        outline_rect(renderer, cell, 4, kFocus);
+      }
+      if (index < avatars.size()) {
+        try {
+          const auto path = built_in_avatar_thumbnail_path(
+              built_in_avatar_root, avatars[index].id);
+          const SDL_Rect image{cell.x + 8, cell.y + 8, 96, 96};
+          static_cast<void>(render_treated_portrait(
+              renderer, path, image,
+              index == presentation.focus_index() ? kFocus : kMuted));
+        } catch (const std::exception&) {
+        }
+      } else {
+        draw_centered_text(renderer, "+", cell.x + cell.w / 2, cell.y + 24, 8,
+                           kFocus);
+        draw_centered_text(renderer, "CUSTOM", cell.x + cell.w / 2,
+                           cell.y + 82, 1, kText);
+      }
+    }
+
+    std::string label = "IMPORT CUSTOM IMAGE";
+    if (!presentation.import_focused() &&
+        presentation.focus_index() < avatars.size()) {
+      label = std::string(avatars[presentation.focus_index()].label);
+    }
+    draw_centered_text(renderer, label, kWidth / 2, 380, 2, kText);
+    draw_centered_text(
+        renderer,
+        "PAGE " + std::to_string(presentation.page_index() + 1U) + " OF " +
+            std::to_string(presentation.page_count()),
+        kWidth / 2, 410, 1, kMuted);
+  }
+
+  if (!presentation.notice().empty()) {
+    draw_centered_text(renderer, presentation.notice(), kWidth / 2, 430, 1,
+                       kFocus);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   A SELECT   B BACK", kWidth / 2,
+                     452, 1, kMuted);
+  SDL_RenderPresent(renderer);
+}
+
 void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop) {
   set_color(renderer, kBackground);
   SDL_RenderClear(renderer);
-  draw_centered_text(renderer, "CROP PARENT PORTRAIT", kWidth / 2, 34, 3, kText);
+  draw_centered_text(renderer, "CROP PROFILE PORTRAIT", kWidth / 2, 34, 3, kText);
   draw_centered_text(renderer, "MOVE THE PHOTO INSIDE THE SQUARE", kWidth / 2, 76, 1,
                      kMuted);
 

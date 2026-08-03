@@ -10,6 +10,19 @@ The desktop build uses SDL2_image 2.8.8 at commit `c1bf2245b0ba63a25afe2f8574d30
 
 ## Validation and normalization
 
+Sprout ships 32 reviewed built-in portraits. Each built-in has a transparent
+512Ã—512 master and a 128Ã—128 runtime thumbnail; the launcher uses the thumbnail
+for profile grids and selectors rather than decoding the master in small
+contexts. Built-in references are restricted to the maintained catalogue and
+remain ordinary `builtin:<id>` values in profile storage.
+
+Built-in artwork stores only the borderless subject on transparency. The
+launcher derives a feathered outline from the subject alpha once, caches the
+resulting texture, and chooses its color at render time. Focus uses the theme
+focus color, normal profile cards use the profile accent, and catalogue cells
+use the neutral theme color. Artwork therefore keeps its smooth illustrated
+edge without fixing the interface to a green or any other baked-in border.
+
 - Source files must exist and be between 1 byte and 16 MiB.
 - Decode dimensions are limited to 8,192 pixels per side and roughly 32 million pixels total.
 - Malformed and unsupported input fails before the profile reference changes.
@@ -28,6 +41,13 @@ The source image is not preserved in v1. A portable profile export can include o
 
 ## Setup presentation
 
-First-run setup checks only the data directory's `imports/` folder for `profile-image.png`, `profile-image.jpg`, `profile-image.jpeg`, or `profile-image.bmp`, in that order. If one exists, the portrait step offers either an explicit parent-image import or the built-in portrait. The staged source path is never persisted.
+First-run setup checks only the data directory's `imports/` folder for `profile-image.png`, `profile-image.jpg`, `profile-image.jpeg`, or `profile-image.bmp`, in that order. The portrait step can open the complete built-in catalogue for the parent or child and, when a staged image exists, explicitly import it for the parent. The staged source path is never persisted.
 
-The crop screen decodes and orients the source once, then supports D-pad or arrow-key positioning and bounded zoom with the controller shoulder buttons or Q/E. Confirm activates the rendered crop; Back cancels without changing the profile. A missing or invalid staged image returns a visible error at the portrait step. Managed portraits are resolved from their validated `local:` reference and rendered in the profile selector, with the built-in initial used as a safe fallback when the file cannot be loaded.
+After setup, an authenticated parent opens **Profile Settings**, chooses any
+active household profile, and assigns a built-in portrait. If a staged import
+exists, the same screen exposes **Import Custom Image** for the selected
+profile and routes through the existing crop/validation pipeline. Changing a
+portrait requires fresh parent PIN verification; child mode cannot enter this
+surface.
+
+The crop screen decodes and orients the source once, then supports D-pad or arrow-key positioning and bounded zoom with the controller shoulder buttons or Q/E. Confirm activates the rendered crop; Back cancels without changing the profile. A missing or invalid staged image returns a visible error at the portrait step. Managed portraits are resolved from their validated `local:` reference and rendered in the profile selector. Built-in thumbnails are resolved only from the packaged catalogue; either path falls back to the profile initial if its file cannot be loaded.

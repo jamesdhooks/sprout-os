@@ -311,6 +311,8 @@ int run_smoke_test(SDL_Renderer* renderer) {
       setup.complete_parent_pin_step("secret:parent-primary");
       configured_pin = true;
     } else if (setup.step() == sprout::launcher::SetupStep::Avatars) {
+      (void)setup.handle(Action::Right);
+      (void)setup.handle(Action::Right);
       const auto event = setup.handle(Action::Confirm);
       if (event != sprout::launcher::SetupPresentationEvent::ImportParentImageRequested) {
         std::cerr << "Setup smoke test did not request the staged profile image\n";
@@ -559,6 +561,7 @@ int main(int argc, char* argv[]) {
       executable_root / "assets" / "launcher-family.png";
   const auto launcher_accents =
       executable_root / "assets" / "sprout-menu-particles-atlas.png";
+  const auto built_in_avatar_root = executable_root / "assets" / "avatars";
 
   if (smoke_test) {
     const int result = run_smoke_test(renderer);
@@ -761,6 +764,40 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
+    if (screenshot_screen == "profile-avatars" ||
+        screenshot_screen == "profile-avatars-last") {
+      TemporaryDirectory directory("profile-avatars-screenshot");
+      sprout::launcher::ProfileRepository profiles(
+          directory.path() / "profiles.sqlite3");
+      profiles.create_profile(sprout::launcher::NewProfile{
+          .id = "parent-primary",
+          .display_name = "Parent",
+          .role = sprout::launcher::ProfileRole::Parent,
+          .avatar_ref = "builtin:explorer-fox",
+          .save_namespace = "saves-parent-primary",
+      });
+      profiles.create_profile(sprout::launcher::NewProfile{
+          .id = "child-alex",
+          .display_name = "Alex",
+          .role = sprout::launcher::ProfileRole::Child,
+          .avatar_ref = "builtin:friendly-dragon",
+          .save_namespace = "saves-child-alex",
+          .content_policy_ref = "content:child-default",
+          .time_policy_ref = "time:child-default",
+      });
+      sprout::launcher::ProfileAvatarPresentation avatars(
+          profiles, true, "child-alex");
+      if (screenshot_screen == "profile-avatars-last") {
+        static_cast<void>(avatars.handle(Action::Left));
+      }
+      sprout::launcher::render_profile_avatars(
+          renderer, avatars, built_in_avatar_root);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     LauncherState state(sprout::launcher::make_demo_household());
     if (screenshot_screen == "child") {
       (void)state.handle(Action::Confirm);
@@ -769,7 +806,8 @@ int main(int argc, char* argv[]) {
       (void)state.handle(Action::Confirm);
     }
     sprout::launcher::render_launcher(renderer, state, {}, launcher_background,
-                                      launcher_accents);
+                                      launcher_accents,
+                                      built_in_avatar_root);
     const int result = save_screenshot(renderer, screenshot_path);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -802,6 +840,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::SetupPresentation> setup;
   std::unique_ptr<sprout::launcher::ProfileImageImporter> image_importer;
   std::unique_ptr<sprout::launcher::ProfileImageCropPresentation> image_crop;
+  std::unique_ptr<sprout::launcher::ProfileAvatarPresentation> profile_avatars;
   std::unique_ptr<sprout::launcher::ParentAccessStore> parent_access;
   std::unique_ptr<sprout::launcher::ParentPinPresentation> parent_pin;
   std::unique_ptr<sprout::launcher::ParentAccessController> access_controller;
@@ -811,6 +850,7 @@ int main(int argc, char* argv[]) {
   std::vector<sprout::launcher::LibraryEntry> library_entries;
   std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
+  bool image_crop_advances_setup{false};
   std::optional<LauncherState> state;
   std::optional<std::uint64_t> startup_attempt_id;
 
@@ -946,8 +986,41 @@ int main(int argc, char* argv[]) {
           image_crop.reset();
         } else if (crop_event == sprout::launcher::ProfileImageCropEvent::Imported) {
           image_crop.reset();
-          setup->complete_avatar_step();
+          if (image_crop_advances_setup && setup != nullptr) {
+            setup->complete_avatar_step();
+          } else {
+            profile_avatars.reset();
+            state.emplace(load_launcher_profiles(*profiles));
+            access_controller =
+                std::make_unique<sprout::launcher::ParentAccessController>(
+                    *state, parent_access.get(), parent_credential_ref);
+          }
+          image_crop_advances_setup = false;
         }
+        return true;
+      }
+      if (profile_avatars != nullptr) {
+        const auto avatar_event = profile_avatars->handle(action);
+        if (!avatar_event.has_value()) return true;
+        if (avatar_event->type ==
+            sprout::launcher::ProfileAvatarEventType::BackRequested) {
+          profile_avatars.reset();
+          return true;
+        }
+        if (avatar_event->type ==
+            sprout::launcher::ProfileAvatarEventType::ImportRequested) {
+          if (!image_source.has_value()) return true;
+          image_crop =
+              std::make_unique<sprout::launcher::ProfileImageCropPresentation>(
+                  *image_importer, avatar_event->profile_id, *image_source);
+          image_crop_advances_setup = false;
+          return true;
+        }
+        profile_avatars.reset();
+        state.emplace(load_launcher_profiles(*profiles));
+        access_controller =
+            std::make_unique<sprout::launcher::ParentAccessController>(
+                *state, parent_access.get(), parent_credential_ref);
         return true;
       }
       if (setup != nullptr) {
@@ -971,6 +1044,21 @@ int main(int argc, char* argv[]) {
           try {
             image_crop = std::make_unique<sprout::launcher::ProfileImageCropPresentation>(
                 *image_importer, "parent-primary", *image_source);
+            image_crop_advances_setup = true;
+          } catch (const std::exception& error) {
+            setup->report_avatar_error(error.what());
+          }
+        } else if (setup_event ==
+                       sprout::launcher::SetupPresentationEvent::ChooseParentAvatarRequested ||
+                   setup_event ==
+                       sprout::launcher::SetupPresentationEvent::ChooseChildAvatarRequested) {
+          try {
+            profile_avatars =
+                std::make_unique<sprout::launcher::ProfileAvatarPresentation>(
+                    *profiles, image_source.has_value(),
+                    setup_event == sprout::launcher::SetupPresentationEvent::ChooseParentAvatarRequested
+                        ? "parent-primary"
+                        : "child-primary");
           } catch (const std::exception& error) {
             setup->report_avatar_error(error.what());
           }
@@ -1140,6 +1228,12 @@ int main(int argc, char* argv[]) {
                 *data_root / "imports");
         return true;
       }
+      if (session_event->target == "Profile Settings" && profiles != nullptr) {
+        profile_avatars =
+            std::make_unique<sprout::launcher::ProfileAvatarPresentation>(
+                *profiles, image_source.has_value());
+        return true;
+      }
       std::cout << "preview action: " << session_event->target << " ("
                 << session_event->profile_id << ")\n";
       return true;
@@ -1180,6 +1274,9 @@ int main(int argc, char* argv[]) {
                                             access_controller->pin_prompt());
       } else if (image_crop != nullptr) {
         sprout::launcher::render_profile_image_crop(renderer, *image_crop);
+      } else if (profile_avatars != nullptr) {
+        sprout::launcher::render_profile_avatars(
+            renderer, *profile_avatars, built_in_avatar_root);
       } else if (setup != nullptr) {
         sprout::launcher::render_setup(renderer, *setup);
       } else if (library != nullptr) {
@@ -1191,7 +1288,7 @@ int main(int argc, char* argv[]) {
             renderer, *state,
             data_root.has_value() ? *data_root / "data" / "profile-images"
                                   : std::filesystem::path{},
-            launcher_background, launcher_accents);
+            launcher_background, launcher_accents, built_in_avatar_root);
       }
       if (recovery == nullptr && startup_attempt_id.has_value()) {
         try {

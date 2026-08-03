@@ -7,7 +7,8 @@ namespace sprout::launcher {
 namespace {
 
 bool sensitive_target(const std::string& target) {
-  return target == "Family Dashboard" || target == "Onion Tools" ||
+  return target == "Family Dashboard" || target == "Profile Settings" ||
+         target == "Onion Tools" ||
          target == "Backup & Restore";
 }
 

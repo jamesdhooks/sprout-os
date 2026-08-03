@@ -27,7 +27,7 @@ This policy cannot prove that the wall clock is correct after a powered-off devi
 
 ## Sensitive actions
 
-An active grant permits ordinary parent-mode navigation. The current launcher requires fresh PIN verification before its Family Dashboard and Onion Tools placeholders and exposes a dedicated manual-lock action that revokes the grant before returning to profile selection. Parent-profile selection alone never authorizes these targets.
+An active grant permits ordinary parent-mode navigation. The current launcher requires fresh PIN verification before Family Dashboard, Profile Settings, Onion Tools, and Backup & Restore. Profile Settings can assign built-in or imported portraits to any active household profile. A dedicated manual-lock action revokes the grant before returning to profile selection. Parent-profile selection alone never authorizes these targets.
 
 Changing the PIN, disabling parental controls, deleting profiles, clearing usage history, exporting secrets, or changing recovery policy must use the same reauthentication boundary when those actions gain concrete implementations.
 
