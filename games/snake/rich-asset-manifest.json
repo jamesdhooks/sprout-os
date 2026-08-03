@@ -11,8 +11,8 @@
       "id": "rich-character",
       "image": "assets/rich-character.png",
       "size": [
-        2048,
-        2048
+        1024,
+        1024
       ]
     },
     {
@@ -29,224 +29,224 @@
       "id": "rich.snake-head-north",
       "atlas": "rich-character",
       "rect": [
-        2,
-        2,
-        425,
-        438
+        0,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        213,
-        438
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-head-east",
       "atlas": "rich-character",
       "rect": [
-        431,
-        2,
-        430,
-        437
+        256,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        215,
-        437
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-head-south",
       "atlas": "rich-character",
       "rect": [
-        865,
-        2,
-        432,
-        437
+        512,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        216,
-        437
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-head-west",
       "atlas": "rich-character",
       "rect": [
-        1301,
-        2,
-        430,
-        437
+        768,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        215,
-        437
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-body-vertical",
       "atlas": "rich-character",
       "rect": [
-        1735,
-        2,
-        238,
-        466
+        0,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        119,
-        466
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-body-horizontal",
       "atlas": "rich-character",
       "rect": [
-        2,
-        472,
-        235,
-        463
+        256,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        118,
-        463
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-corner-ne",
       "atlas": "rich-character",
       "rect": [
-        241,
-        472,
-        460,
-        223
+        512,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        230,
-        223
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-corner-es",
       "atlas": "rich-character",
       "rect": [
-        705,
-        472,
-        431,
-        450
+        768,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        216,
-        450
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-corner-sw",
       "atlas": "rich-character",
       "rect": [
-        1140,
-        472,
-        432,
-        443
+        0,
+        512,
+        256,
+        256
       ],
       "pivot": [
-        216,
-        443
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-corner-wn",
       "atlas": "rich-character",
       "rect": [
-        1576,
-        472,
-        430,
-        438
+        256,
+        512,
+        256,
+        256
       ],
       "pivot": [
-        215,
-        438
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-tail-north",
       "atlas": "rich-character",
       "rect": [
-        2,
-        939,
-        435,
-        442
+        512,
+        512,
+        256,
+        256
       ],
       "pivot": [
-        218,
-        442
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-tail-east",
       "atlas": "rich-character",
       "rect": [
-        441,
-        939,
-        405,
-        434
+        768,
+        512,
+        256,
+        256
       ],
       "pivot": [
-        203,
-        434
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-tail-south",
       "atlas": "rich-character",
       "rect": [
-        850,
-        939,
-        257,
-        432
+        0,
+        768,
+        256,
+        256
       ],
       "pivot": [
-        129,
-        432
+        128,
+        128
       ]
     },
     {
       "id": "rich.snake-tail-west",
       "atlas": "rich-character",
       "rect": [
-        1111,
-        939,
-        265,
-        435
+        256,
+        768,
+        256,
+        256
       ],
       "pivot": [
-        133,
-        435
+        128,
+        128
       ]
     },
     {
       "id": "rich.fruit-apple",
       "atlas": "rich-character",
       "rect": [
-        1380,
-        939,
-        388,
-        419
+        512,
+        768,
+        256,
+        256
       ],
       "pivot": [
-        194,
-        419
+        128,
+        128
       ]
     },
     {
       "id": "rich.fruit-pear",
       "atlas": "rich-character",
       "rect": [
-        2,
-        1385,
-        343,
-        461
+        768,
+        768,
+        256,
+        256
       ],
       "pivot": [
-        172,
-        461
+        128,
+        128
       ]
     },
     {

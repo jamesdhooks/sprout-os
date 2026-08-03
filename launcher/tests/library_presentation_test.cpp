@@ -121,8 +121,8 @@ void filters_and_recent_order_are_deterministic() {
 
 void navigation_launch_and_unavailable_are_explicit() {
   LibraryPresentation library(entries(), LibrarySection::All);
-  (void)library.handle(Action::Up);
-  require(library.focus_index() == 2, "up should wrap to the final item");
+  (void)library.handle(Action::Left);
+  require(library.focus_index() == 2, "left should wrap to the final item");
   auto event = library.handle(Action::Confirm);
   require(event.has_value() &&
               event->type == LibraryPresentationEventType::Unavailable &&
@@ -131,7 +131,7 @@ void navigation_launch_and_unavailable_are_explicit() {
   require(event->message == "Ask a parent to allow this game",
           "unavailable event should retain its family-facing reason");
 
-  (void)library.handle(Action::Down);
+  (void)library.handle(Action::Right);
   event = library.handle(Action::Confirm);
   require(event.has_value() &&
               event->type == LibraryPresentationEventType::LaunchRequested &&
@@ -148,6 +148,38 @@ void navigation_launch_and_unavailable_are_explicit() {
   require(event.has_value() &&
               event->type == LibraryPresentationEventType::BackRequested,
           "back should return to the launcher home");
+}
+
+void vertical_navigation_changes_rails_without_losing_focus() {
+  auto values = entries();
+  values.push_back(LibraryEntry{
+      .id = "arcade:sprout.snake",
+      .title = "Snake",
+      .platform_label = "ARCADE",
+      .launch_target = NativeLaunchTarget{
+          .item_id = "arcade:sprout.snake",
+          .package_root = std::filesystem::temp_directory_path() / "snake",
+          .profile_id = "child-alex",
+          .seed = 7,
+          .launch_allowed = true,
+      },
+      .child_visible = true,
+      .launch_allowed = true,
+  });
+  LibraryPresentation library(std::move(values), LibrarySection::Recent);
+  require(library.section() == LibrarySection::Recent,
+          "requested rail should be active initially");
+  (void)library.handle(Action::Down);
+  require(library.section() == LibrarySection::Favorites,
+          "down should activate the next library rail");
+  (void)library.handle(Action::Down);
+  (void)library.handle(Action::Down);
+  require(library.section() == LibrarySection::Arcade &&
+              library.entries().size() == 1,
+          "vertical navigation should reach the native-game rail");
+  (void)library.handle(Action::Up);
+  require(library.section() == LibrarySection::All,
+          "up should return to the previous rail");
 }
 
 void empty_section_is_safe() {
@@ -168,6 +200,7 @@ int main() {
     demo_library_is_sanitized_and_useful();
     filters_and_recent_order_are_deterministic();
     navigation_launch_and_unavailable_are_explicit();
+    vertical_navigation_changes_rails_without_losing_focus();
     empty_section_is_safe();
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

@@ -3,6 +3,7 @@
 #include "sprout/runtime/assets.hpp"
 
 #include <cstdint>
+#include <array>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -34,6 +35,16 @@ struct TitleScreen {
   PresentationFit fit{PresentationFit::Cover};
   NormalizedRegion title_region;
   NormalizedRegion controls_region;
+  std::array<std::uint8_t, 4> controls_background{255, 249, 225, 235};
+  std::array<std::uint8_t, 4> controls_foreground{37, 67, 53, 255};
+};
+
+struct LibraryArtwork {
+  bool enabled{};
+  std::filesystem::path image;
+  int image_width{};
+  int image_height{};
+  PresentationFit fit{PresentationFit::Cover};
 };
 
 struct PackageManifest {
@@ -50,6 +61,7 @@ struct PackageManifest {
   std::vector<std::string> capabilities;
   AssetCatalogue assets;
   TitleScreen title_screen;
+  LibraryArtwork library_artwork;
 };
 
 PackageManifest load_package(const std::filesystem::path& package_root);

@@ -447,9 +447,12 @@ void draw_title_screen(SDL_Renderer* renderer,
   const SDL_Rect controls = logical_region(package.title_screen.controls_region,
                                            package.logical_width,
                                            package.logical_height);
+  const auto& background = package.title_screen.controls_background;
+  const auto& foreground = package.title_screen.controls_foreground;
   fill_rounded_rect(renderer, controls, std::min(controls.h / 2, 12),
-                    {255, 249, 225, 235});
-  draw_text(renderer, "A Start    B Back", controls, {37, 67, 53, 255});
+                    {background[0], background[1], background[2], background[3]});
+  draw_text(renderer, "A Start    B Back", controls,
+            {foreground[0], foreground[1], foreground[2], foreground[3]});
   SDL_RenderPresent(renderer);
 }
 

@@ -67,6 +67,9 @@ NativeLibraryScanResult NativePackageScanner::discover() const {
             .title = package.title,
             .package_version = package.version,
             .package_root = package.root,
+            .artwork_path = package.library_artwork.enabled
+                                ? package.library_artwork.image
+                                : std::filesystem::path{},
             .child_visible =
                 package.audience == sprout::runtime::PackageAudience::Family,
         });

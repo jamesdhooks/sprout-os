@@ -14,6 +14,7 @@ struct NativeLibraryItem {
   std::string title;
   std::string package_version;
   std::filesystem::path package_root;
+  std::filesystem::path artwork_path;
   bool child_visible{false};
 };
 

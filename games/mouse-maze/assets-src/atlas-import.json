@@ -20,10 +20,7 @@
       "manifest": "rich-world-atlas.json",
       "image": "assets/rich-world.png",
       "prefix": "rich.",
-      "animationPrefix": "rich.",
-      "rename": {
-        "hedge-cross": "rich.cheese-goal"
-      }
+      "animationPrefix": "rich."
     }
   ]
 }

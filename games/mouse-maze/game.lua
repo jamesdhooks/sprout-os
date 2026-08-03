@@ -15,7 +15,8 @@ local layout = {
 }
 
 local tiles = ""
-local rich_scale = 3 / 64
+local character_scale = 5 / 32
+local object_scale = 3 / 32
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
@@ -62,19 +63,20 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 247, 240, 211)
-  sprout.rect(36, 44, 248, 184, 126, 165, 95)
+  sprout.rect(0, 0, 320, 240, 49, 39, 61)
+  sprout.rect(24, 32, 272, 208, 83, 75, 48)
+  sprout.rect(32, 40, 256, 192, 170, 119, 57)
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y)
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal", x = origin_x + 13 * 16 + 8,
-      y = origin_y + 10 * 16, scale = rich_scale},
+      y = origin_y + 9 * 16 + 8, scale = object_scale},
     {animation = "rich.mouse-walk-" .. rich_direction[direction],
-      x = origin_x + mouse_x * 16 + 8, y = origin_y + (mouse_y + 1) * 16,
-      scale = rich_scale}
+      x = origin_x + mouse_x * 16 + 8, y = origin_y + mouse_y * 16 + 8,
+      scale = character_scale}
   })
   if complete then
-    sprout.rect(88, 7, 144, 25, 255, 249, 225)
-    sprout.label("Cheese found!", 94, 8, 132, 22, 37, 67, 53)
+    sprout.rect(86, 6, 148, 27, 255, 226, 155)
+    sprout.label("Cheese found!", 94, 8, 132, 22, 82, 35, 65)
   end
 end
 

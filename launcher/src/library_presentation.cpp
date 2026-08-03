@@ -25,19 +25,21 @@ std::optional<LibrarySection> library_section_for_menu_target(
 LibraryPresentation::LibraryPresentation(std::vector<LibraryEntry> entries,
                                          LibrarySection section)
     : section_(section) {
-  for (auto& entry : entries) {
-    const bool included =
-        section == LibrarySection::All ||
-        (section == LibrarySection::Arcade &&
-         std::holds_alternative<NativeLaunchTarget>(entry.launch_target)) ||
-        (section == LibrarySection::Favorites && entry.favorite) ||
-        (section == LibrarySection::Recent && entry.recent_rank.has_value());
-    if (included) {
-      entries_.push_back(std::move(entry));
+  for (const auto& entry : entries) {
+    sections_[section_offset(LibrarySection::All)].push_back(entry);
+    if (std::holds_alternative<NativeLaunchTarget>(entry.launch_target)) {
+      sections_[section_offset(LibrarySection::Arcade)].push_back(entry);
+    }
+    if (entry.favorite) {
+      sections_[section_offset(LibrarySection::Favorites)].push_back(entry);
+    }
+    if (entry.recent_rank.has_value()) {
+      sections_[section_offset(LibrarySection::Recent)].push_back(entry);
     }
   }
-  if (section == LibrarySection::Recent) {
-    std::stable_sort(entries_.begin(), entries_.end(),
+  auto& recent = sections_[section_offset(LibrarySection::Recent)];
+  if (!recent.empty()) {
+    std::stable_sort(recent.begin(), recent.end(),
                      [](const LibraryEntry& left, const LibraryEntry& right) {
                        return *left.recent_rank < *right.recent_rank;
                      });
@@ -80,11 +82,20 @@ std::string_view LibraryPresentation::empty_message() const noexcept {
 }
 
 std::size_t LibraryPresentation::focus_index() const noexcept {
-  return focus_index_;
+  return focus_index(section_);
+}
+
+std::size_t LibraryPresentation::focus_index(LibrarySection section) const noexcept {
+  return focus_indices_[section_offset(section)];
 }
 
 ReadOnlyView<LibraryEntry> LibraryPresentation::entries() const noexcept {
-  return entries_;
+  return entries(section_);
+}
+
+ReadOnlyView<LibraryEntry> LibraryPresentation::entries(
+    LibrarySection section) const noexcept {
+  return sections_[section_offset(section)];
 }
 
 std::string_view LibraryPresentation::notice() const noexcept { return notice_; }
@@ -101,21 +112,32 @@ std::optional<LibraryPresentationEvent> LibraryPresentation::handle(Action actio
         .message = {},
     };
   }
-  if (action == Action::Up || action == Action::Left) {
+  if (action == Action::Up) {
+    notice_.clear();
+    move_section(-1);
+    return std::nullopt;
+  }
+  if (action == Action::Down) {
+    notice_.clear();
+    move_section(1);
+    return std::nullopt;
+  }
+  if (action == Action::Left) {
     notice_.clear();
     move_focus(-1);
     return std::nullopt;
   }
-  if (action == Action::Down || action == Action::Right) {
+  if (action == Action::Right) {
     notice_.clear();
     move_focus(1);
     return std::nullopt;
   }
-  if (action != Action::Confirm || entries_.empty()) {
+  const auto active_entries = entries();
+  if (action != Action::Confirm || active_entries.empty()) {
     return std::nullopt;
   }
 
-  const auto& entry = entries_[focus_index_];
+  const auto& entry = active_entries[focus_index()];
   if (!entry.launch_allowed || !entry.unavailable_reason.empty()) {
     notice_ = entry.unavailable_reason.empty()
                   ? "This game is not available for the active profile"
@@ -139,12 +161,32 @@ std::optional<LibraryPresentationEvent> LibraryPresentation::handle(Action actio
 }
 
 void LibraryPresentation::move_focus(int delta) {
-  if (entries_.empty()) {
+  const auto active_entries = entries();
+  if (active_entries.empty()) {
     return;
   }
-  const auto count = static_cast<long long>(entries_.size());
-  const auto focus = static_cast<long long>(focus_index_);
-  focus_index_ = static_cast<std::size_t>((focus + delta + count) % count);
+  const auto count = static_cast<long long>(active_entries.size());
+  auto& focus = focus_indices_[section_offset(section_)];
+  const auto current = static_cast<long long>(focus);
+  focus = static_cast<std::size_t>((current + delta + count) % count);
+}
+
+void LibraryPresentation::move_section(int delta) {
+  constexpr std::array<LibrarySection, 4> order{
+      LibrarySection::Recent, LibrarySection::Favorites,
+      LibrarySection::All, LibrarySection::Arcade};
+  const auto current = static_cast<long long>(section_offset(section_));
+  section_ = order[static_cast<std::size_t>((current + delta + 4) % 4)];
+}
+
+std::size_t LibraryPresentation::section_offset(LibrarySection section) noexcept {
+  switch (section) {
+    case LibrarySection::Recent: return 0;
+    case LibrarySection::Favorites: return 1;
+    case LibrarySection::All: return 2;
+    case LibrarySection::Arcade: return 3;
+  }
+  return 0;
 }
 
 }  // namespace sprout::launcher

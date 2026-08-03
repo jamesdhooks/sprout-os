@@ -6,6 +6,8 @@
 #include "sprout/launcher/read_only_view.hpp"
 
 #include <optional>
+#include <array>
+#include <filesystem>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -27,6 +29,7 @@ struct LibraryEntry {
   std::string id;
   std::string title;
   std::string platform_label;
+  std::filesystem::path artwork_path;
   LibraryLaunchTarget launch_target;
   bool child_visible{false};
   bool favorite{false};
@@ -61,17 +64,21 @@ class LibraryPresentation {
   [[nodiscard]] std::string_view source_label() const noexcept;
   [[nodiscard]] std::string_view empty_message() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
+  [[nodiscard]] std::size_t focus_index(LibrarySection section) const noexcept;
   [[nodiscard]] ReadOnlyView<LibraryEntry> entries() const noexcept;
+  [[nodiscard]] ReadOnlyView<LibraryEntry> entries(LibrarySection section) const noexcept;
   [[nodiscard]] std::string_view notice() const noexcept;
   void report_launch_result(std::string message);
   [[nodiscard]] std::optional<LibraryPresentationEvent> handle(Action action);
 
  private:
   void move_focus(int delta);
+  void move_section(int delta);
+  static std::size_t section_offset(LibrarySection section) noexcept;
 
   LibrarySection section_;
-  std::vector<LibraryEntry> entries_;
-  std::size_t focus_index_{0};
+  std::array<std::vector<LibraryEntry>, 4> sections_;
+  std::array<std::size_t, 4> focus_indices_{};
   std::string notice_;
 };
 

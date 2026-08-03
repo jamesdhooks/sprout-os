@@ -5,7 +5,7 @@ local board_x = 20
 local board_y = 36
 local move_interval = 8
 local half_cell = 7
-local rich_scale = cell / 512
+local rich_scale = cell / 256
 
 local snake = {}
 local direction = {x = 1, y = 0}
@@ -148,36 +148,36 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 247, 240, 211)
-  sprout.label("Snake", 8, 3, 108, 24, 37, 67, 53)
-  sprout.label("Score " .. string.format("%02d", score), 176, 3, 136, 20, 37, 67, 53)
-  sprout.label("Best " .. string.format("%02d", best), 216, 19, 96, 12, 91, 109, 94)
+  sprout.rect(0, 0, 320, 240, 25, 22, 74)
+  sprout.label("Snake", 8, 3, 108, 24, 255, 203, 62)
+  sprout.label("Score " .. string.format("%02d", score), 176, 3, 136, 20, 248, 236, 201)
+  sprout.label("Best " .. string.format("%02d", best), 216, 19, 96, 12, 173, 190, 232)
 
   sprout.rect(board_x - 2, board_y - 2, width * cell + 4, height * cell + 4,
-              91, 124, 79)
-  sprout.rect(board_x, board_y, width * cell, height * cell, 147, 181, 105)
+              238, 92, 133)
+  sprout.rect(board_x, board_y, width * cell, height * cell, 61, 83, 72)
   local sprites = {}
   for y = 0, height - 1 do
     for x = 0, width - 1 do
       sprites[#sprites + 1] = {sprite = "rich.grass-plain",
         x = board_x + x * cell + half_cell,
-        y = board_y + (y + 1) * cell, scale = rich_scale}
+        y = board_y + y * cell + half_cell, scale = rich_scale}
     end
   end
   sprites[#sprites + 1] = {sprite = "rich.fruit-apple",
     x = board_x + fruit.x * cell + half_cell,
-    y = board_y + (fruit.y + 1) * cell, scale = rich_scale}
+    y = board_y + fruit.y * cell + half_cell, scale = rich_scale}
   for index, part in ipairs(snake) do
     sprites[#sprites + 1] = {sprite = body_sprite(index),
       x = board_x + part.x * cell + half_cell,
-      y = board_y + (part.y + 1) * cell, scale = rich_scale}
+      y = board_y + part.y * cell + half_cell, scale = rich_scale}
   end
   sprout.sprite_batch(sprites)
 
   if ended then
-    sprout.rect(72, 101, 176, 47, 255, 249, 225)
-    sprout.label("Round over", 82, 106, 156, 23, 122, 66, 47)
-    sprout.label("Press A to try again", 82, 128, 156, 14, 37, 67, 53)
+    sprout.rect(72, 101, 176, 47, 255, 219, 109)
+    sprout.label("Round over", 82, 106, 156, 23, 86, 31, 82)
+    sprout.label("Press A to try again", 82, 128, 156, 14, 25, 22, 74)
   end
 end
 

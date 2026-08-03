@@ -32,6 +32,7 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `audience` | `family` for child-visible packages or `parent` for parent-only packages |
 | `logicalResolution` | Per-game logical width and height, each 64–4096; independent of the physical display target |
 | `titleScreen` | Optional full-screen art with a baked game title plus a normalized runtime-control region |
+| `libraryArtwork` | Optional wide cover image for launcher library rails |
 | `capabilities` | Unique subset of `events` and `local-storage` |
 
 ## Lifecycle
@@ -79,6 +80,13 @@ An optional `titleScreen` contains a relative PNG, declared pixel dimensions,
 belongs to the game's art direction. Game titles must not be prefixed with
 `Sprout`. The host owns the separate `A Start / B Back` control pill so input,
 localization, profile state, and resume behavior remain dynamic.
+
+`titleScreen.controlsBackground` and `controlsForeground` are optional RGBA
+arrays. They let each game keep its controls within its own palette while the
+runtime retains input and localization ownership. `libraryArtwork` contains a
+relative PNG, declared dimensions, and `cover` or `contain` fit. It is separate
+from title art because the library consumes a wide cover-safe composition while
+the runtime title page consumes the full 4:3 display.
 
 Title art is stored at the highest reviewed practical resolution and scaled by
 the runtime for the active target. The first three packages use 1536×1152 title

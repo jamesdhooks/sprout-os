@@ -12,7 +12,14 @@
     "dimensions": [1536, 1152],
     "fit": "cover",
     "titleRegion": [30, 30, 940, 210],
-    "controlsRegion": [160, 840, 680, 120]
+    "controlsRegion": [160, 840, 680, 120],
+    "controlsBackground": [255, 225, 155, 238],
+    "controlsForeground": [82, 35, 65, 255]
+  },
+  "libraryArtwork": {
+    "image": "assets/library-cover.png",
+    "dimensions": [1280, 720],
+    "fit": "cover"
   },
   "audience": "family",
   "capabilities": ["events", "local-storage"]

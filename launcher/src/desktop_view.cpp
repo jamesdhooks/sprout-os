@@ -15,6 +15,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -275,6 +276,17 @@ void draw_footer(SDL_Renderer* renderer, std::string_view text) {
   draw_centered_text(renderer, text, kWidth / 2, 445, 1, kMuted);
 }
 
+void draw_heading_panel(SDL_Renderer* renderer, const SDL_Rect& bounds,
+                        std::string_view title, std::string_view subtitle = {}) {
+  fill_rect(renderer, bounds, {255, 250, 231, 238});
+  draw_centered_text(renderer, title, bounds.x + bounds.w / 2,
+                     bounds.y + 10, 3, kText);
+  if (!subtitle.empty()) {
+    draw_centered_text(renderer, subtitle, bounds.x + bounds.w / 2,
+                       bounds.y + 43, 1, kMuted);
+  }
+}
+
 Color color_from_rgb(std::uint32_t rgb) {
   return {
       static_cast<std::uint8_t>((rgb >> 16U) & 0xFFU),
@@ -401,8 +413,9 @@ bool render_treated_portrait(SDL_Renderer* renderer,
 void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
                            const std::filesystem::path& managed_image_root,
                            const std::filesystem::path& built_in_avatar_root) {
-  draw_centered_text(renderer, "Who's playing?", kWidth / 2, 36, 6, kText);
-  draw_centered_text(renderer, "Choose your profile", kWidth / 2, 96, 2,
+  fill_rect(renderer, {126, 18, 388, 88}, {255, 250, 231, 230});
+  draw_centered_text(renderer, "Who's playing?", kWidth / 2, 30, 5, kText);
+  draw_centered_text(renderer, "Choose your profile", kWidth / 2, 76, 1,
                      kMuted);
 
   const int count = static_cast<int>(state.profiles().size());
@@ -455,6 +468,10 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
       draw_centered_text(renderer, initial, center_x, 178 + bob, 8, kText);
     }
 
+    const SDL_Rect name_panel{center_x - (focused ? 78 : 66),
+                              focused ? 316 : 314,
+                              focused ? 156 : 132, focused ? 48 : 40};
+    fill_rect(renderer, name_panel, {255, 250, 231, 230});
     draw_centered_text(renderer, profile.display_name, center_x,
                        focused ? 328 : 322, focused ? 4 : 3, kText);
   }
@@ -572,53 +589,95 @@ void render_library(SDL_Renderer* renderer,
                     const LibraryPresentation& library) {
   render_storybook_background(renderer);
 
-  draw_text(renderer, library.title(), 48, 32, 4, kText);
-  draw_text(renderer, library.source_label(), 50, 76, 2, kMuted);
+  fill_rect(renderer, {14, 10, 612, 38}, {255, 250, 231, 238});
+  draw_text(renderer, "GAME LIBRARY", 28, 17, 3, kText);
+  draw_text(renderer, "UP DOWN  ROW    LEFT RIGHT  GAME", 344, 23, 1, kMuted);
 
-  const auto entries = library.entries();
-  if (entries.empty()) {
-    const SDL_Rect panel{70, 150, 500, 180};
-    fill_rect(renderer, panel, kPanel);
-    draw_centered_text(renderer, library.empty_message(), kWidth / 2, 218, 2,
-                       kText);
-    draw_centered_text(renderer, "ADD SUPPORTED GAMES OR GO BACK", kWidth / 2,
-                       260, 1, kMuted);
-  } else {
-    constexpr std::size_t visible_count = 6;
-    const std::size_t first = library.focus_index() < visible_count
+  constexpr std::array<LibrarySection, 4> sections{
+      LibrarySection::Recent, LibrarySection::Favorites,
+      LibrarySection::All, LibrarySection::Arcade};
+  constexpr std::array<std::string_view, 4> labels{
+      "CONTINUE", "FAVORITES", "ALL GAMES", "ARCADE"};
+  for (std::size_t section_index = 0; section_index < sections.size();
+       ++section_index) {
+    const auto section = sections[section_index];
+    const bool active = section == library.section();
+    const int row_y = 56 + static_cast<int>(section_index) * 94;
+    const SDL_Rect label_panel{16, row_y + 8, 116, 68};
+    fill_rect(renderer, label_panel,
+              active ? Color{255, 226, 155, 246}
+                     : Color{255, 250, 231, 224});
+    if (active) outline_rect(renderer, label_panel, 3, kFocus);
+    draw_centered_text(renderer, labels[section_index], 74, row_y + 22,
+                       labels[section_index].size() > 9 ? 1 : 2,
+                       active ? kText : kMuted);
+
+    const auto entries = library.entries(section);
+    if (entries.empty()) {
+      const SDL_Rect empty{144, row_y + 8, 470, 68};
+      fill_rect(renderer, empty, {255, 250, 231, 212});
+      draw_centered_text(renderer, "Nothing here yet", empty.x + empty.w / 2,
+                         empty.y + 24, 2, kMuted);
+      continue;
+    }
+    constexpr std::size_t visible_count = 3;
+    const std::size_t focus = library.focus_index(section);
+    const std::size_t first = focus < visible_count
                                   ? 0
-                                  : library.focus_index() - visible_count + 1;
+                                  : focus - visible_count + 1;
     const std::size_t last = std::min(entries.size(), first + visible_count);
     for (std::size_t index = first; index < last; ++index) {
-      const auto& entry = entries[index];
-      const int row_number = static_cast<int>(index - first);
-      const SDL_Rect row{64, 112 + row_number * 48, 512, 38};
-      const bool focused = index == library.focus_index();
-      fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
+      const bool focused = active && index == focus;
+      const int local = static_cast<int>(index - first);
+      SDL_Rect card{144 + local * 158, row_y + 5, 148, 78};
       if (focused) {
-        outline_rect(renderer, row, 3, kFocus);
-        draw_text(renderer, ">", 78, row.y + 12, 2, kFocus);
+        card.x -= 3;
+        card.y -= 4;
+        card.w += 6;
+        card.h += 8;
       }
-      const std::string title = entry.title.size() > 30
-                                    ? entry.title.substr(0, 30)
+      fill_rect(renderer, card, {255, 250, 231, 244});
+      const auto& entry = entries[index];
+      std::filesystem::path artwork = entry.artwork_path;
+      if (!artwork.empty() && artwork.is_relative()) {
+        artwork = executable_asset(artwork.generic_string());
+      }
+      SDL_Texture* texture = artwork.empty() ? nullptr
+                                             : cached_texture(renderer, artwork);
+      const SDL_Rect image{card.x + 3, card.y + 3, card.w - 6, card.h - 24};
+      if (texture != nullptr) {
+        SDL_RenderCopy(renderer, texture, nullptr, &image);
+      } else {
+        const std::uint32_t seed = static_cast<std::uint32_t>(
+            std::hash<std::string>{}(entry.id));
+        fill_rect(renderer, image,
+                  {static_cast<std::uint8_t>(70 + seed % 90),
+                   static_cast<std::uint8_t>(80 + (seed >> 8U) % 100),
+                   static_cast<std::uint8_t>(100 + (seed >> 16U) % 110)});
+        const std::string initial(1, entry.title.empty() ? '?' : entry.title[0]);
+        draw_centered_text(renderer, initial, image.x + image.w / 2,
+                           image.y + 8, 5, {255, 250, 231});
+      }
+      fill_rect(renderer, {card.x + 3, card.y + card.h - 22, card.w - 6, 19},
+                {255, 250, 231, 246});
+      const std::string title = entry.title.size() > 17
+                                    ? entry.title.substr(0, 17)
                                     : entry.title;
-      draw_text(renderer, title, 106, row.y + 12, 2,
-                entry.launch_allowed && entry.unavailable_reason.empty()
-                    ? kText
-                    : kMuted);
-      draw_text(renderer, entry.platform_label, 476,
-                row.y + 12, 2, kMuted);
-      if (entry.favorite) {
-        draw_text(renderer, "*", 548, row.y + 12, 2, kFocus);
-      }
+      draw_centered_text(renderer, title, card.x + card.w / 2,
+                         card.y + card.h - 20, 1,
+                         entry.launch_allowed && entry.unavailable_reason.empty()
+                             ? kText
+                             : kMuted);
+      if (focused) outline_rect(renderer, card, 4, kFocus);
     }
   }
 
   if (!library.notice().empty()) {
+    fill_rect(renderer, {118, 398, 404, 34}, {255, 226, 155, 246});
     draw_centered_text(renderer, library.notice().substr(0, 68), kWidth / 2,
-                       410, 1, kFocus);
+                       407, 1, kFocus);
   }
-  draw_footer(renderer, "ARROWS MOVE   A PLAY   B BACK");
+  draw_footer(renderer, "A PLAY   B BACK");
   SDL_RenderPresent(renderer);
 }
 
@@ -626,9 +685,8 @@ void render_profile_archive(SDL_Renderer* renderer,
                             const ProfileArchivePresentation& archive) {
   render_storybook_background(renderer);
 
-  draw_centered_text(renderer, archive.title(), kWidth / 2, 34, 3, kText);
-  draw_centered_text(renderer, archive.description(), kWidth / 2, 76, 1,
-                     kMuted);
+  draw_heading_panel(renderer, {82, 16, 476, 78}, archive.title(),
+                     archive.description());
 
   const auto choices = archive.choices();
   constexpr std::size_t visible_count = 6;
@@ -664,6 +722,7 @@ void render_profile_avatars(
     const std::filesystem::path& built_in_avatar_root) {
   render_storybook_background(renderer);
 
+  fill_rect(renderer, {82, 14, 476, 72}, {255, 250, 231, 238});
   draw_centered_text(renderer, "PROFILE APPEARANCE", kWidth / 2, 24, 4, kText);
   if (presentation.stage() == ProfileAvatarStage::Profile) {
     draw_centered_text(renderer, "CHOOSE A PROFILE TO CUSTOMIZE", kWidth / 2,
@@ -784,6 +843,7 @@ void render_profile_avatars(
         presentation.focus_index() < avatars.size()) {
       label = std::string(avatars[presentation.focus_index()].label);
     }
+    fill_rect(renderer, {150, 366, 340, 66}, {255, 250, 231, 232});
     draw_centered_text(renderer, label, kWidth / 2, 380, 2, kText);
     draw_centered_text(
         renderer,
@@ -803,9 +863,8 @@ void render_profile_avatars(
 void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop) {
   render_storybook_background(renderer);
-  draw_centered_text(renderer, "CROP PROFILE PORTRAIT", kWidth / 2, 34, 3, kText);
-  draw_centered_text(renderer, "MOVE THE PHOTO INSIDE THE SQUARE", kWidth / 2, 76, 1,
-                     kMuted);
+  draw_heading_panel(renderer, {82, 16, 476, 78}, "CROP PROFILE PORTRAIT",
+                     "MOVE THE PHOTO INSIDE THE SQUARE");
 
   const auto pixels = crop.preview_rgba();
   SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -819,6 +878,7 @@ void render_profile_image_crop(SDL_Renderer* renderer,
   }
 
   const int zoom_percent = static_cast<int>(crop.selection().zoom * 100.0);
+  fill_rect(renderer, {222, 376, 196, 36}, {255, 250, 231, 232});
   draw_centered_text(renderer, "ZOOM " + std::to_string(zoom_percent) + "%",
                      kWidth / 2, 386, 2, kText);
   if (!crop.error_message().empty()) {
@@ -832,8 +892,8 @@ void render_profile_image_crop(SDL_Renderer* renderer,
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin) {
   render_storybook_background(renderer);
-  draw_centered_text(renderer, pin.title(), kWidth / 2, 28, 3, kText);
-  draw_centered_text(renderer, pin.description(), kWidth / 2, 64, 1, kMuted);
+  draw_heading_panel(renderer, {82, 12, 476, 70}, pin.title(),
+                     pin.description());
 
   const SDL_Rect pin_field{196, 88, 248, 48};
   fill_rect(renderer, pin_field, kPanel);
@@ -867,20 +927,21 @@ void render_parent_pin(SDL_Renderer* renderer,
 void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup) {
   render_storybook_background(renderer);
 
-  draw_centered_text(renderer, "SPROUT", kWidth / 2, 30, 4, kText);
   const std::string progress = "STEP " + std::to_string(setup_step_number(setup.step())) +
                                " OF 11";
-  draw_centered_text(renderer, progress, kWidth / 2, 72, 2, kMuted);
+  fill_rect(renderer, {18, 12, 604, 44}, {255, 250, 231, 238});
+  draw_text(renderer, "SPROUT", 34, 21, 3, kText);
+  draw_text(renderer, progress, 510, 26, 1, kMuted);
 
-  const SDL_Rect panel{54, 112, 532, 276};
+  const SDL_Rect panel{54, 68, 532, 322};
   fill_rect(renderer, panel, kPanel);
   outline_rect(renderer, panel, 2, kPanelFocused);
-  draw_centered_text(renderer, setup.title(), kWidth / 2, 144, 3, kText);
-  draw_centered_text(renderer, setup.description(), kWidth / 2, 192, 1, kMuted);
+  draw_centered_text(renderer, setup.title(), kWidth / 2, 94, 3, kText);
+  draw_centered_text(renderer, setup.description(), kWidth / 2, 138, 1, kMuted);
 
   const auto choices = setup.choices();
   for (std::size_t index = 0; index < choices.size(); ++index) {
-    const SDL_Rect choice{124, 246 + static_cast<int>(index) * 58, 392, 44};
+    const SDL_Rect choice{124, 202 + static_cast<int>(index) * 58, 392, 44};
     fill_rect(renderer, choice,
               index == setup.focus_index() ? kPanelFocused : kBackground);
     if (index == setup.focus_index()) {
@@ -902,9 +963,8 @@ void render_recovery(SDL_Renderer* renderer,
                      const RecoveryPresentation& recovery) {
   render_storybook_background(renderer);
 
-  draw_centered_text(renderer, recovery.title(), kWidth / 2, 34, 3, kText);
-  draw_centered_text(renderer, recovery.description(), kWidth / 2, 76, 1,
-                     kMuted);
+  draw_heading_panel(renderer, {82, 16, 476, 78}, recovery.title(),
+                     recovery.description());
 
   const auto choices = recovery.choices();
   for (std::size_t index = 0; index < choices.size(); ++index) {

@@ -11,7 +11,8 @@ local layout = {
   "##########"
 }
 local tiles = ""
-local rich_scale = 3 / 64
+local character_scale = 5 / 32
+local object_scale = 3 / 64
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
@@ -108,34 +109,35 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 247, 240, 211)
-  sprout.rect(76, 52, 168, 136, 126, 165, 95)
+  sprout.rect(0, 0, 320, 240, 19, 58, 106)
+  sprout.rect(58, 34, 204, 188, 194, 91, 58)
+  sprout.rect(70, 46, 180, 164, 56, 139, 158)
   sprout.tilemap("room.tiles", tiles, columns, origin_x, origin_y)
   local sprites = {}
   for _, button in ipairs(buttons) do
     sprites[#sprites + 1] = {
       sprite = crate_at(button.x, button.y) and "rich.button-down" or "rich.button-up",
-      x = origin_x + button.x * 16 + 8, y = origin_y + (button.y + 1) * 16,
-      scale = rich_scale
+      x = origin_x + button.x * 16 + 8, y = origin_y + button.y * 16 + 8,
+      scale = object_scale
     }
   end
   for _, crate in ipairs(crates) do
     sprites[#sprites + 1] = {
       sprite = button_at(crate.x, crate.y) and "rich.crate-solved" or "rich.crate-idle",
-      x = origin_x + crate.x * 16 + 8, y = origin_y + (crate.y + 1) * 16,
-      scale = rich_scale
+      x = origin_x + crate.x * 16 + 8, y = origin_y + crate.y * 16 + 8,
+      scale = object_scale
     }
   end
   sprites[#sprites + 1] = {animation = "rich.hero-walk-" .. rich_direction[direction],
-      x = origin_x + player_x * 16 + 8, y = origin_y + (player_y + 1) * 16,
-      scale = rich_scale}
+      x = origin_x + player_x * 16 + 8, y = origin_y + player_y * 16 + 8,
+      scale = character_scale}
   sprout.sprite_batch(sprites)
   if complete then
-    sprout.rect(86, 7, 148, 25, 255, 249, 225)
-    sprout.label("Puzzle solved!", 92, 8, 136, 22, 37, 67, 53)
+    sprout.rect(84, 6, 152, 27, 255, 207, 61)
+    sprout.label("Puzzle solved!", 92, 8, 136, 22, 15, 50, 94)
   elseif deadlocked then
-    sprout.rect(68, 7, 184, 25, 255, 249, 225)
-    sprout.label("No moves - A retry", 74, 8, 172, 22, 122, 66, 47)
+    sprout.rect(66, 6, 188, 27, 255, 191, 171)
+    sprout.label("No moves - A retry", 74, 8, 172, 22, 126, 39, 38)
   end
 end
 

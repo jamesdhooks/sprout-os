@@ -16,6 +16,10 @@ The launcher likewise renders profile and navigation UI over its own reviewed
 4:3 master and uses a standard `sprite-atlas.v1` sheet for small decorative
 accents. Neither launcher artwork nor its atlas is reused as a game title page.
 
+Every game also supplies a 16:9 library cover derivative or reviewed master.
+Cover art, title art, and gameplay assets share that game's characters and
+palette but have separate composition contracts.
+
 Status: **First deterministic atlases and runtime pipeline implemented**
 
 Sprout Arcade uses original, package-owned artwork with deterministic runtime
@@ -40,10 +44,15 @@ games/<game>/
 - Source art retains the highest practical reviewed resolution; atlas cells and runtime target sizes are explicit rather than inferred from one global grid.
 - Texture filtering follows the declared art profile. Storybook raster art uses smooth resampling; deliberately pixel-based packages may request nearest-neighbor scaling later.
 - A coherent named palette provides sufficient contrast for foreground, background, focus, success, and danger states.
+- Each game has a distinct named palette and title treatment. The collection
+  shares a storybook medium, not one repeated green-and-cream skin.
 - Shape and animation distinguish important state; color alone is insufficient.
 - One- or two-frame idle art is acceptable. Animation must serve input feedback or state readability.
 - Text uses one shared engine font/atlas; games do not embed private glyph tables.
 - Atlas padding and transparent pixels are validated to prevent sampling artifacts.
+- Directional sprite sheets use uniform cells and center anchors unless a
+  documented trimmed-frame contract is required. Runtime capture must confirm
+  stable orientation, scale, and silhouette across every frame.
 
 Initial asset sets are intentionally small:
 

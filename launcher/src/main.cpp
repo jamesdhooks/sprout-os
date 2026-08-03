@@ -194,6 +194,7 @@ std::vector<sprout::launcher::LibraryEntry> discovered_library(
         .title = item.title,
         .platform_label =
             item.system == sprout::launcher::OnionSystem::GameBoy ? "GB" : "SFC",
+        .artwork_path = {},
         .launch_target = sprout::launcher::EmulatedLaunchTarget{
             .item_id = item.id,
             .system = item.system,
@@ -224,6 +225,7 @@ std::vector<sprout::launcher::LibraryEntry> discovered_native_library(
         .id = item.id,
         .title = item.title,
         .platform_label = "ARCADE",
+        .artwork_path = std::move(item.artwork_path),
         .launch_target = sprout::launcher::NativeLaunchTarget{
             .item_id = item.id,
             .package_root = std::move(item.package_root),

@@ -128,6 +128,11 @@ int main() {
               snake_package.title_screen.image_width == 1536 &&
               snake_package.title_screen.image_height == 1152,
           "Snake high-resolution title presentation was not loaded");
+    check(snake_package.library_artwork.enabled &&
+              snake_package.library_artwork.image_width == 1280 &&
+              snake_package.library_artwork.image_height == 720 &&
+              snake_package.title_screen.controls_foreground[0] == 255,
+          "Snake library artwork and title palette were not loaded");
     check(snake_package.assets.atlases.size() == 2 &&
               snake_package.assets.sprites.size() == 32 &&
               snake_package.assets.animations.size() == 4,
@@ -157,8 +162,8 @@ int main() {
     check(mouse_package.title_screen.enabled,
           "Mouse Maze title presentation was not loaded");
     check(mouse_package.assets.atlases.size() == 3 &&
-              mouse_package.assets.sprites.size() == 44 &&
-              mouse_package.assets.animations.size() == 10 &&
+              mouse_package.assets.sprites.size() == 32 &&
+              mouse_package.assets.animations.size() == 9 &&
               mouse_package.assets.tile_sets.size() == 1,
           "Mouse Maze asset catalogue was not loaded");
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);

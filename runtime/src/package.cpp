@@ -89,6 +89,24 @@ NormalizedRegion read_region(yyjson_val* object, const char* key) {
   return {parts[0], parts[1], parts[2], parts[3]};
 }
 
+std::array<std::uint8_t, 4> read_color(
+    yyjson_val* object, const char* key,
+    std::array<std::uint8_t, 4> fallback) {
+  yyjson_val* value = yyjson_obj_get(object, key);
+  if (value == nullptr) return fallback;
+  if (!yyjson_is_arr(value) || yyjson_arr_size(value) != 4) {
+    throw std::runtime_error(std::string("Package color should contain RGBA values: ") + key);
+  }
+  for (std::size_t index = 0; index < fallback.size(); ++index) {
+    yyjson_val* component = yyjson_arr_get(value, index);
+    if (!yyjson_is_uint(component) || yyjson_get_uint(component) > 255) {
+      throw std::runtime_error(std::string("Package color is outside RGBA bounds: ") + key);
+    }
+    fallback[index] = static_cast<std::uint8_t>(yyjson_get_uint(component));
+  }
+  return fallback;
+}
+
 std::string read_file(const std::filesystem::path& path) {
   std::error_code error;
   const auto size = std::filesystem::file_size(path, error);
@@ -141,7 +159,8 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     validate_keys(manifest,
                   {"schemaVersion", "id", "title", "version", "runtimeVersion",
                    "entrypoint", "logicalResolution", "audience",
-                   "capabilities", "assetManifest", "titleScreen"});
+                   "capabilities", "assetManifest", "titleScreen",
+                   "libraryArtwork"});
 
     PackageManifest package{
         .schema_version = read_version(manifest, "schemaVersion"),
@@ -193,7 +212,8 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     if (yyjson_val* title_screen = yyjson_obj_get(manifest, "titleScreen")) {
       validate_keys(title_screen,
                     {"image", "dimensions", "fit", "titleRegion",
-                     "controlsRegion"});
+                     "controlsRegion", "controlsBackground",
+                     "controlsForeground"});
       const std::filesystem::path relative = read_text(title_screen, "image");
       if (relative.is_absolute() || relative.extension() != ".png") {
         throw std::runtime_error("Package title screen image should be a relative PNG file");
@@ -224,6 +244,49 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
           .fit = presentation_fit,
           .title_region = read_region(title_screen, "titleRegion"),
           .controls_region = read_region(title_screen, "controlsRegion"),
+          .controls_background = read_color(
+              title_screen, "controlsBackground", {255, 249, 225, 235}),
+          .controls_foreground = read_color(
+              title_screen, "controlsForeground", {37, 67, 53, 255}),
+      };
+    }
+
+    if (yyjson_val* artwork = yyjson_obj_get(manifest, "libraryArtwork")) {
+      validate_keys(artwork, {"image", "dimensions", "fit"});
+      const std::filesystem::path relative = read_text(artwork, "image");
+      if (relative.is_absolute() || relative.extension() != ".png") {
+        throw std::runtime_error(
+            "Package library artwork should be a relative PNG file");
+      }
+      const auto image = std::filesystem::canonical(root / relative, path_error);
+      if (path_error || !std::filesystem::is_regular_file(image) ||
+          !is_within(root, image)) {
+        throw std::runtime_error(
+            "Package library artwork escapes or is missing from its root");
+      }
+      yyjson_val* dimensions = required(artwork, "dimensions");
+      if (!yyjson_is_arr(dimensions) || yyjson_arr_size(dimensions) != 2) {
+        throw std::runtime_error(
+            "Package library artwork dimensions should contain width and height");
+      }
+      const std::string fit = read_text(artwork, "fit");
+      PresentationFit presentation_fit{};
+      if (fit == "cover") {
+        presentation_fit = PresentationFit::Cover;
+      } else if (fit == "contain") {
+        presentation_fit = PresentationFit::Contain;
+      } else {
+        throw std::runtime_error(
+            "Package library artwork fit should be cover or contain");
+      }
+      package.library_artwork = {
+          .enabled = true,
+          .image = image,
+          .image_width = read_dimension(yyjson_arr_get_first(dimensions),
+                                        "libraryArtwork.dimensions[0]"),
+          .image_height = read_dimension(yyjson_arr_get(dimensions, 1),
+                                         "libraryArtwork.dimensions[1]"),
+          .fit = presentation_fit,
       };
     }
 
