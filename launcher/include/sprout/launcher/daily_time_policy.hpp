@@ -9,6 +9,8 @@
 
 namespace sprout::launcher {
 
+inline constexpr std::uint32_t kDefaultChildDailyAllowanceSeconds = 45U * 60U;
+
 enum class DailyTimeNotice {
   TenMinutesRemaining,
   FiveMinutesRemaining,
@@ -47,6 +49,9 @@ class DailyTimePolicyStore {
 
   void set_daily_allowance(const std::string& profile_id,
                            std::uint32_t allowance_seconds);
+  [[nodiscard]] std::optional<std::uint32_t> find_daily_allowance_seconds(
+      const std::string& profile_id) const;
+  void remove_unused_daily_allowance(const std::string& profile_id);
   [[nodiscard]] DailyTimeStatus status(const std::string& profile_id,
                                        const TimePolicySample& sample);
   [[nodiscard]] DailyTimeDecision begin_session(

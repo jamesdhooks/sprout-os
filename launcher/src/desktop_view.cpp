@@ -98,6 +98,7 @@ std::array<std::uint8_t, 7> glyph(char raw_character) {
     case ':': return {0, 4, 4, 0, 4, 4, 0};
     case '>': return {16, 8, 4, 2, 4, 8, 16};
     case '*': return {0, 21, 14, 31, 14, 21, 0};
+    case '&': return {12, 18, 20, 8, 21, 18, 13};
     default: return {0, 0, 0, 0, 0, 0, 0};
   }
 }
@@ -210,9 +211,9 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
             56, 78, 2, color_from_rgb(profile->accent_rgb));
 
   const auto items = state.menu_items();
-  const int row_start = items.size() > 6 ? 108 : 118;
-  const int row_gap = items.size() > 6 ? 43 : 49;
-  const int row_height = items.size() > 6 ? 35 : 39;
+  const int row_start = items.size() > 7 ? 104 : (items.size() > 6 ? 108 : 118);
+  const int row_gap = items.size() > 7 ? 38 : (items.size() > 6 ? 43 : 49);
+  const int row_height = items.size() > 7 ? 31 : (items.size() > 6 ? 35 : 39);
   for (std::size_t index = 0; index < items.size(); ++index) {
     const SDL_Rect row{88, row_start + static_cast<int>(index) * row_gap, 464,
                        row_height};
@@ -303,6 +304,45 @@ void render_library(SDL_Renderer* renderer,
   }
   draw_centered_text(renderer, "ARROWS MOVE   A PLAY   B BACK", kWidth / 2, 450,
                      1, kMuted);
+  SDL_RenderPresent(renderer);
+}
+
+void render_profile_archive(SDL_Renderer* renderer,
+                            const ProfileArchivePresentation& archive) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+
+  draw_centered_text(renderer, archive.title(), kWidth / 2, 34, 3, kText);
+  draw_centered_text(renderer, archive.description(), kWidth / 2, 76, 1,
+                     kMuted);
+
+  const auto choices = archive.choices();
+  constexpr std::size_t visible_count = 6;
+  const std::size_t first = archive.focus_index() < visible_count
+                                ? 0
+                                : archive.focus_index() - visible_count + 1;
+  const std::size_t last = std::min(choices.size(), first + visible_count);
+  for (std::size_t index = first; index < last; ++index) {
+    const int row_number = static_cast<int>(index - first);
+    const SDL_Rect row{78, 120 + row_number * 48, 484, 38};
+    const bool focused = index == archive.focus_index();
+    fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
+    if (focused) {
+      outline_rect(renderer, row, 3, kFocus);
+      draw_text(renderer, ">", 94, row.y + 12, 2, kFocus);
+    }
+    draw_text(renderer, choices[index].substr(0, 34), 124, row.y + 12, 2,
+              kText);
+  }
+
+  if (!archive.notice().empty()) {
+    draw_centered_text(renderer,
+                       std::string(archive.notice()).substr(0, 68), kWidth / 2,
+                       414, 1,
+                       archive.notice_is_error() ? kFocus : kText);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   A SELECT   B BACK", kWidth / 2,
+                     450, 1, kMuted);
   SDL_RenderPresent(renderer);
 }
 

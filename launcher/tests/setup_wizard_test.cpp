@@ -11,6 +11,7 @@
 namespace {
 
 using sprout::launcher::ConfigurationStore;
+using sprout::launcher::DailyTimePolicyStore;
 using sprout::launcher::LocaleOverrides;
 using sprout::launcher::NewProfile;
 using sprout::launcher::ProfileRepository;
@@ -209,6 +210,24 @@ void rejects_out_of_order_and_conflicting_profile_data() {
          "conflicting profile should not advance setup");
 }
 
+void child_creation_persists_the_documented_default_allowance() {
+  TemporaryDirectory directory;
+  ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+  DailyTimePolicyStore time_policy(directory.path() / "time-policy.sqlite3");
+  ConfigurationStore store(directory.path() / "config");
+  SetupWizard wizard(store, profiles, &time_policy);
+  wizard.skip_current_step();
+  wizard.skip_current_step();
+  wizard.skip_current_step();
+  wizard.create_parent(parent());
+  wizard.skip_current_step();
+  wizard.create_child(child());
+
+  expect(time_policy.find_daily_allowance_seconds("child-alex") ==
+             sprout::launcher::kDefaultChildDailyAllowanceSeconds,
+         "child setup should persist the documented 45-minute default");
+}
+
 }  // namespace
 
 int main() {
@@ -217,6 +236,7 @@ int main() {
     allows_every_optional_step_to_be_skipped();
     resumes_after_profile_write_before_step_write();
     rejects_out_of_order_and_conflicting_profile_data();
+    child_creation_persists_the_documented_default_allowance();
   } catch (const std::exception& error) {
     std::cerr << "setup wizard test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

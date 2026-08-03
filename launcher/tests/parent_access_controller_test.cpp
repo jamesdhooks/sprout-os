@@ -122,6 +122,14 @@ void sensitive_actions_reauthenticate_and_manual_lock_revokes() {
   (void)fixture.controller.handle(Action::Down, kToday);
   (void)fixture.controller.handle(Action::Down, kToday);
   (void)fixture.controller.handle(Action::Confirm, kToday);
+  expect(fixture.controller.has_pin_prompt(),
+         "profile backup should require fresh authentication");
+  const auto backup = submit_pin(fixture.controller, "2468", kToday);
+  expect(backup.has_value() && backup->target == "Backup & Restore",
+         "fresh PIN should authorize the pending backup operation");
+
+  (void)fixture.controller.handle(Action::Down, kToday);
+  (void)fixture.controller.handle(Action::Confirm, kToday);
   expect(fixture.state.screen() == Screen::ProfileSelect &&
              !fixture.access.is_unlocked(kToday.utc_seconds, kToday.local_date),
          "manual lock should revoke immediately and leave parent mode");

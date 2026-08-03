@@ -3,6 +3,7 @@
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
+#include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/parent_pin_presentation.hpp"
 #include "sprout/launcher/setup_presentation.hpp"
 
@@ -21,5 +22,7 @@ void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin);
 void render_library(SDL_Renderer* renderer,
                     const LibraryPresentation& library);
+void render_profile_archive(SDL_Renderer* renderer,
+                            const ProfileArchivePresentation& archive);
 
 }  // namespace sprout::launcher

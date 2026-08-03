@@ -229,6 +229,24 @@ void invalid_inputs_and_newer_schema_are_rejected() {
                  "newer time-policy schema should be rejected");
 }
 
+void unused_allowance_can_be_compensated_safely() {
+  TemporaryDirectory directory;
+  DailyTimePolicyStore policy(directory.path() / "time-policy.sqlite3");
+  policy.set_daily_allowance("child-1", 45 * 60);
+  expect(policy.find_daily_allowance_seconds("child-1") == 45 * 60,
+         "configured allowance should be available to portable consumers");
+  policy.remove_unused_daily_allowance("child-1");
+  expect(!policy.find_daily_allowance_seconds("child-1").has_value(),
+         "unused allowance compensation should remove its policy row");
+
+  policy.set_daily_allowance("child-1", 45 * 60);
+  (void)policy.begin_session("child-1", "session-1", "game.gb",
+                             sample(0, 1'000));
+  (void)policy.pause_session("session-1", sample(1'000, 1'001));
+  expect_failure([&] { policy.remove_unused_daily_allowance("child-1"); },
+                 "policy with usage should not be removed as compensation");
+}
+
 }  // namespace
 
 int main() {
@@ -240,6 +258,7 @@ int main() {
     day_rollover_and_clock_rollback_fail_closed();
     active_midnight_transition_requires_normal_exit();
     invalid_inputs_and_newer_schema_are_rejected();
+    unused_allowance_can_be_compensated_safely();
   } catch (const std::exception& error) {
     std::cerr << "daily time policy test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

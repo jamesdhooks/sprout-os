@@ -10,6 +10,11 @@ add_library(
 )
 
 add_library(
+  sprout_managed_profile_images
+  src/managed_profile_image.cpp
+)
+
+add_library(
   sprout_configuration
   src/local_configuration.cpp
 )
@@ -33,6 +38,12 @@ add_library(
 )
 
 add_library(
+  sprout_profile_archive
+  src/profile_archive.cpp
+  src/profile_archive_presentation.cpp
+)
+
+add_library(
   sprout_onion_adapter
   src/demo_library.cpp
   src/library_presentation.cpp
@@ -45,6 +56,8 @@ target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
 target_compile_features(sprout_profile_store PUBLIC cxx_std_20)
 target_link_libraries(sprout_profile_store PRIVATE sprout_sqlite)
+target_include_directories(sprout_managed_profile_images PUBLIC include)
+target_compile_features(sprout_managed_profile_images PUBLIC cxx_std_20)
 target_include_directories(sprout_configuration PUBLIC include)
 target_compile_features(sprout_configuration PUBLIC cxx_std_20)
 target_link_libraries(sprout_configuration PRIVATE yyjson)
@@ -54,6 +67,7 @@ target_link_libraries(
   sprout_setup
   PRIVATE
     sprout_configuration
+    sprout_daily_time_policy
     sprout_profile_store
 )
 target_include_directories(sprout_parent_access PUBLIC include)
@@ -72,6 +86,21 @@ endif()
 target_include_directories(sprout_daily_time_policy PUBLIC include)
 target_compile_features(sprout_daily_time_policy PUBLIC cxx_std_20)
 target_link_libraries(sprout_daily_time_policy PRIVATE sprout_sqlite)
+target_include_directories(sprout_profile_archive PUBLIC include)
+target_compile_features(sprout_profile_archive PUBLIC cxx_std_20)
+target_include_directories(
+  sprout_profile_archive
+  SYSTEM PRIVATE "${argon2_SOURCE_DIR}/src/blake2"
+)
+target_link_libraries(
+  sprout_profile_archive
+  PRIVATE
+    sprout_argon2
+    sprout_daily_time_policy
+    sprout_managed_profile_images
+    sprout_profile_store
+    yyjson
+)
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
 
@@ -86,6 +115,7 @@ if(SPROUT_BUILD_ONION)
       sprout_launcher_core
       sprout_onion_adapter
       sprout_parent_access
+      sprout_profile_archive
       sprout_profile_store
       stdc++fs
   )
@@ -101,10 +131,12 @@ endif()
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_managed_profile_images PRIVATE /W4 /permissive-)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
   target_compile_options(sprout_daily_time_policy PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE /W4 /permissive-)
@@ -112,10 +144,12 @@ if(MSVC)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_managed_profile_images PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_daily_time_policy PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE -Wall -Wextra -Wpedantic)
@@ -134,6 +168,7 @@ if(SPROUT_BUILD_DESKTOP)
     sprout_profile_images
     PRIVATE
       sprout_profile_store
+      sprout_managed_profile_images
       sprout_launcher_core
       SDL2::SDL2-static
       SDL2_image
@@ -154,6 +189,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_profile_store
       sprout_profile_images
       sprout_parent_access
+      sprout_profile_archive
       sprout_onion_adapter
       sprout_setup
       SDL2_image
@@ -232,6 +268,21 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-daily-time-policy-test
                         PRIVATE sprout_daily_time_policy sprout_sqlite)
   add_test(NAME daily-time-policy COMMAND sprout-daily-time-policy-test)
+
+  add_executable(sprout-profile-archive-test tests/profile_archive_test.cpp)
+  target_compile_features(sprout-profile-archive-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-profile-archive-test
+                        PRIVATE sprout_profile_archive)
+  add_test(NAME profile-archive COMMAND sprout-profile-archive-test)
+
+  add_executable(sprout-profile-archive-presentation-test
+                 tests/profile_archive_presentation_test.cpp)
+  target_compile_features(sprout-profile-archive-presentation-test
+                          PRIVATE cxx_std_20)
+  target_link_libraries(sprout-profile-archive-presentation-test
+                        PRIVATE sprout_profile_archive)
+  add_test(NAME profile-archive-presentation
+           COMMAND sprout-profile-archive-presentation-test)
 
   add_executable(sprout-onion-launch-adapter-test
                  tests/onion_launch_adapter_test.cpp)

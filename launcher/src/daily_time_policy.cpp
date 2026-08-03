@@ -232,6 +232,18 @@ class DailyTimePolicyStore::Impl {
     return static_cast<std::uint64_t>(sqlite3_column_int64(statement.get(), 0));
   }
 
+  std::optional<std::uint64_t> find_allowance(
+      const std::string& profile_id) const {
+    Statement statement(database_,
+                        "SELECT allowance_milliseconds FROM daily_policy "
+                        "WHERE profile_id = ?");
+    bind_text(statement.get(), 1, profile_id);
+    if (sqlite3_step(statement.get()) != SQLITE_ROW) {
+      return std::nullopt;
+    }
+    return static_cast<std::uint64_t>(sqlite3_column_int64(statement.get(), 0));
+  }
+
   StoredUsage usage(const std::string& profile_id,
                     const std::string& local_date) const {
     Statement statement(database_,
@@ -385,6 +397,50 @@ void DailyTimePolicyStore::set_daily_allowance(const std::string& profile_id,
   bind_u64(statement.get(), 2,
            static_cast<std::uint64_t>(allowance_seconds) * kMillisecondsPerSecond);
   step_done(impl_->database_, statement.get());
+}
+
+std::optional<std::uint32_t>
+DailyTimePolicyStore::find_daily_allowance_seconds(
+    const std::string& profile_id) const {
+  validate_identifier(profile_id, "Profile ID");
+  const auto allowance = impl_->find_allowance(profile_id);
+  if (!allowance.has_value()) {
+    return std::nullopt;
+  }
+  return static_cast<std::uint32_t>(*allowance / kMillisecondsPerSecond);
+}
+
+void DailyTimePolicyStore::remove_unused_daily_allowance(
+    const std::string& profile_id) {
+  validate_identifier(profile_id, "Profile ID");
+  execute(impl_->database_, "BEGIN IMMEDIATE");
+  try {
+    Statement in_use(impl_->database_, R"sql(
+      SELECT
+        EXISTS(SELECT 1 FROM daily_usage WHERE profile_id = ?) OR
+        EXISTS(SELECT 1 FROM active_session WHERE profile_id = ?)
+    )sql");
+    bind_text(in_use.get(), 1, profile_id);
+    bind_text(in_use.get(), 2, profile_id);
+    if (sqlite3_step(in_use.get()) != SQLITE_ROW) {
+      throw std::runtime_error("Could not inspect daily time-policy usage");
+    }
+    if (sqlite3_column_int(in_use.get(), 0) != 0) {
+      throw std::invalid_argument("Daily allowance has usage or an active session");
+    }
+    Statement clock(impl_->database_,
+                    "DELETE FROM profile_clock WHERE profile_id = ?");
+    bind_text(clock.get(), 1, profile_id);
+    step_done(impl_->database_, clock.get());
+    Statement policy(impl_->database_,
+                     "DELETE FROM daily_policy WHERE profile_id = ?");
+    bind_text(policy.get(), 1, profile_id);
+    step_done(impl_->database_, policy.get());
+    execute(impl_->database_, "COMMIT");
+  } catch (...) {
+    execute(impl_->database_, "ROLLBACK");
+    throw;
+  }
 }
 
 DailyTimeStatus DailyTimePolicyStore::status(const std::string& profile_id,
