@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Playable Mouse & Cheese Maze and Blocks & Buttons Windows prototypes with
+  deterministic original pixel-art sprite sheets and reproducible asset
+  generation.
+- Strict package-local atlas, sprite-frame, animation, and tile-set manifests;
+  fixed-tick animation; compact tilemap submission; general sprite/animation
+  batch submission; lazy PNG texture caching; nearest-neighbor sampling; and
+  same-atlas SDL geometry batching.
 - A CI-exercised Windows Arcade lifecycle journey covering explicit native-package discovery, real runtime process start, structured play events, profile/package-isolated storage, normal exit, and launcher return, with a manual keyboard/controller/render evidence protocol.
 - Local Sprout Arcade discovery in the family launcher, manifest-based child audience controls, typed native launch handoff, profile-isolated game storage, clean launcher return, and a deterministic launcher-to-runtime Windows smoke check.
 - A committed Windows-only Sprout Arcade preview milestone that keeps physical Onion acceptance open while bounding native runtime work to one local packaged game and its verified launcher lifecycle.

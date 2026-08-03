@@ -32,6 +32,35 @@ struct DrawRect {
   std::uint8_t alpha{255};
 };
 
+struct DrawSprite {
+  std::size_t atlas{};
+  int source_x{};
+  int source_y{};
+  int source_width{};
+  int source_height{};
+  int x{};
+  int y{};
+  int width{};
+  int height{};
+  bool flip_x{};
+  bool flip_y{};
+  std::uint8_t red{255};
+  std::uint8_t green{255};
+  std::uint8_t blue{255};
+  std::uint8_t alpha{255};
+};
+
+enum class DrawCommandType {
+  Rectangle,
+  Sprite,
+};
+
+struct DrawCommand {
+  DrawCommandType type{DrawCommandType::Rectangle};
+  DrawRect rectangle;
+  DrawSprite sprite;
+};
+
 struct RuntimeEvent {
   std::string type;
   std::string value;
@@ -51,7 +80,7 @@ class Session {
   void start();
   void step(const Actions& actions);
   void stop();
-  const std::vector<DrawRect>& render();
+  const std::vector<DrawCommand>& render();
   std::vector<RuntimeEvent> drain_events();
   std::string snapshot() const;
 

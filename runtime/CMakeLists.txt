@@ -1,5 +1,6 @@
 add_library(
   sprout_runtime_package
+  src/assets.cpp
   src/package.cpp
 )
 target_include_directories(sprout_runtime_package PUBLIC include)
@@ -29,7 +30,7 @@ if(SPROUT_BUILD_DESKTOP)
   target_compile_features(sprout-runtime PRIVATE cxx_std_20)
   target_link_libraries(
     sprout-runtime
-    PRIVATE sprout_runtime_core SDL2::SDL2main SDL2::SDL2-static
+    PRIVATE sprout_runtime_core SDL2::SDL2main SDL2::SDL2-static SDL2_image
   )
   if(MSVC)
     target_compile_options(sprout-runtime PRIVATE /W4 /permissive-)
@@ -39,6 +40,8 @@ if(SPROUT_BUILD_DESKTOP)
 endif()
 
 if(BUILD_TESTING)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
   add_executable(sprout-runtime-test tests/runtime_test.cpp)
   target_compile_features(sprout-runtime-test PRIVATE cxx_std_20)
   target_compile_definitions(
@@ -46,12 +49,29 @@ if(BUILD_TESTING)
   )
   target_link_libraries(sprout-runtime-test PRIVATE sprout_runtime_core)
   add_test(NAME runtime-core COMMAND sprout-runtime-test)
+  add_test(
+    NAME arcade-asset-reproducibility
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/generate-arcade-assets.py" --check
+  )
 
   if(SPROUT_BUILD_DESKTOP)
     add_test(
       NAME arcade-snake-smoke
       COMMAND sprout-runtime --package "${PROJECT_SOURCE_DIR}/games/snake"
               --storage "${CMAKE_CURRENT_BINARY_DIR}/snake-smoke-data"
+              --seed 7 --smoke-test
+    )
+    add_test(
+      NAME arcade-mouse-maze-smoke
+      COMMAND sprout-runtime --package "${PROJECT_SOURCE_DIR}/games/mouse-maze"
+              --storage "${CMAKE_CURRENT_BINARY_DIR}/mouse-maze-smoke-data"
+              --seed 7 --smoke-test
+    )
+    add_test(
+      NAME arcade-blocks-buttons-smoke
+      COMMAND sprout-runtime --package "${PROJECT_SOURCE_DIR}/games/blocks-buttons"
+              --storage "${CMAKE_CURRENT_BINARY_DIR}/blocks-buttons-smoke-data"
               --seed 7 --smoke-test
     )
   endif()

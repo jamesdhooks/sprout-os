@@ -1,6 +1,6 @@
 # Arcade Asset Pipeline
 
-Status: **Foundation planned; first assets required with the first three games**
+Status: **First deterministic atlases and runtime pipeline implemented**
 
 Sprout Arcade uses small original pixel-art assets with deterministic runtime packing. Visual assets should make game state immediately readable at 320×240 without creating a large content-production dependency.
 
@@ -62,7 +62,8 @@ Example provenance entry:
 
 ## Build and validation routines
 
-Add routines only as the first assets arrive:
+The first reproducibility routine is implemented; the remaining names describe
+the intended tooling surface:
 
 - `asset-validate`: dimensions, grid alignment, palette, alpha, duplicate IDs, manifest coverage, and attribution presence.
 - `asset-pack`: deterministic atlas ordering and metadata export.
@@ -70,6 +71,17 @@ Add routines only as the first assets arrive:
 - `asset-audit`: source/license/provenance completeness and unused-asset detection.
 
 Generated atlas bytes must be reproducible from tracked source assets. CI validates and repacks; it fails on a dirty result. Visual review checks the actual runtime at 320×240, not only enlarged contact sheets.
+
+The implemented `tools/generate-arcade-assets.py --check` test verifies the
+Mouse Maze and Blocks & Buttons PNGs byte for byte. Their strict manifests
+validate atlas dimensions, source rectangles, animation clips, tile sets,
+palette name, source category, license, and generator. Windows captures check
+the actual runtime at 320×240.
+
+The general runtime contract and actual backend batching behavior are specified
+in [Runtime Assets v1](../specs/runtime-assets-v1.md). Atlas packing, preview
+contact sheets, and a broader unused-asset audit remain future tooling; they are
+not claimed complete.
 
 ## Safety and repository hygiene
 

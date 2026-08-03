@@ -27,6 +27,8 @@ extern "C" {
 namespace sprout::runtime {
 namespace {
 
+constexpr std::size_t kMaximumDrawCommands = 4096;
+
 bool has_capability(const PackageManifest& package, std::string_view capability) {
   return std::find(package.capabilities.begin(), package.capabilities.end(),
                    capability) != package.capabilities.end();
@@ -67,8 +69,9 @@ struct Session::Impl {
   lua_State* lua{};
   bool started{};
   bool stopped{};
+  std::uint64_t tick{};
   std::map<std::string, std::int64_t> storage;
-  std::vector<DrawRect> drawing;
+  std::vector<DrawCommand> drawing;
   std::vector<RuntimeEvent> events;
 
   Impl(PackageManifest loaded_package, std::filesystem::path storage_root,
@@ -136,7 +139,266 @@ struct Session::Impl {
         (lua_gettop(state) >= 8 && !valid_color(8))) {
       return luaL_error(state, "rectangle is outside the logical surface");
     }
-    runtime.drawing.push_back(rectangle);
+    if (runtime.drawing.size() >= kMaximumDrawCommands) {
+      return luaL_error(state, "frame draw-command limit exceeded");
+    }
+    runtime.drawing.push_back(
+        {.type = DrawCommandType::Rectangle, .rectangle = rectangle});
+    return 0;
+  }
+
+  static std::string identifier(lua_State* state, int argument) {
+    std::size_t length = 0;
+    const char* value = luaL_checklstring(state, argument, &length);
+    if (length == 0 || length > 128) {
+      luaL_argerror(state, argument, "asset id is outside bounds");
+    }
+    return {value, length};
+  }
+
+  static void append_sprite(lua_State* state, Impl& runtime,
+                            std::size_t sprite_index, int x, int y, int scale,
+                            bool flip_x, bool flip_y, int alpha) {
+    if (sprite_index >= runtime.package.assets.sprites.size()) {
+      luaL_error(state, "sprite index is outside bounds");
+      return;
+    }
+    if (scale < 1 || scale > 8 || alpha < 0 || alpha > 255) {
+      luaL_error(state, "sprite scale or alpha is outside bounds");
+      return;
+    }
+    const auto& frame = runtime.package.assets.sprites[sprite_index];
+    const int target_x = x - frame.pivot_x * scale;
+    const int target_y = y - frame.pivot_y * scale;
+    const int width = frame.width * scale;
+    const int height = frame.height * scale;
+    if (target_x < -width || target_y < -height ||
+        target_x >= runtime.package.logical_width ||
+        target_y >= runtime.package.logical_height) {
+      luaL_error(state, "sprite is outside the logical surface");
+      return;
+    }
+    if (runtime.drawing.size() >= kMaximumDrawCommands) {
+      luaL_error(state, "frame draw-command limit exceeded");
+      return;
+    }
+    runtime.drawing.push_back({
+        .type = DrawCommandType::Sprite,
+        .sprite = {.atlas = frame.atlas,
+                   .source_x = frame.x,
+                   .source_y = frame.y,
+                   .source_width = frame.width,
+                   .source_height = frame.height,
+                   .x = target_x,
+                   .y = target_y,
+                   .width = width,
+                   .height = height,
+                   .flip_x = flip_x,
+                   .flip_y = flip_y,
+                   .alpha = static_cast<std::uint8_t>(alpha)}});
+  }
+
+  static int sprite(lua_State* state) {
+    auto& runtime = self(state);
+    const std::string id = identifier(state, 1);
+    const auto found = runtime.package.assets.sprite_ids.find(id);
+    if (found == runtime.package.assets.sprite_ids.end()) {
+      return luaL_error(state, "unknown sprite id: %s", id.c_str());
+    }
+    append_sprite(state, runtime, found->second,
+                  static_cast<int>(luaL_checkinteger(state, 2)),
+                  static_cast<int>(luaL_checkinteger(state, 3)),
+                  static_cast<int>(luaL_optinteger(state, 4, 1)),
+                  lua_toboolean(state, 5) != 0,
+                  lua_toboolean(state, 6) != 0,
+                  static_cast<int>(luaL_optinteger(state, 7, 255)));
+    return 0;
+  }
+
+  static int animate(lua_State* state) {
+    auto& runtime = self(state);
+    const std::string id = identifier(state, 1);
+    const auto found = runtime.package.assets.animation_ids.find(id);
+    if (found == runtime.package.assets.animation_ids.end()) {
+      return luaL_error(state, "unknown animation id: %s", id.c_str());
+    }
+    const auto& animation = runtime.package.assets.animations[found->second];
+    const lua_Integer phase_value = luaL_optinteger(state, 4, 0);
+    if (phase_value < 0) return luaL_error(state, "animation phase should not be negative");
+    std::uint64_t position = runtime.tick + static_cast<std::uint64_t>(phase_value);
+    if (animation.loop) {
+      position %= animation.total_ticks;
+    } else if (position >= animation.total_ticks) {
+      position = animation.total_ticks - 1;
+    }
+    std::size_t sprite_index = animation.frames.back().sprite;
+    for (const auto& frame : animation.frames) {
+      if (position < frame.ticks) {
+        sprite_index = frame.sprite;
+        break;
+      }
+      position -= frame.ticks;
+    }
+    append_sprite(state, runtime, sprite_index,
+                  static_cast<int>(luaL_checkinteger(state, 2)),
+                  static_cast<int>(luaL_checkinteger(state, 3)),
+                  static_cast<int>(luaL_optinteger(state, 5, 1)),
+                  lua_toboolean(state, 6) != 0,
+                  lua_toboolean(state, 7) != 0,
+                  static_cast<int>(luaL_optinteger(state, 8, 255)));
+    return 0;
+  }
+
+  static lua_Integer table_integer(lua_State* state, int table_index,
+                                   const char* field, lua_Integer fallback,
+                                   bool required_value = false) {
+    lua_getfield(state, table_index, field);
+    lua_Integer result = fallback;
+    if (lua_isnil(state, -1)) {
+      if (required_value) {
+        lua_pop(state, 1);
+        luaL_error(state, "sprite batch item is missing field: %s", field);
+      }
+    } else if (!lua_isinteger(state, -1)) {
+      lua_pop(state, 1);
+      luaL_error(state, "sprite batch field should be an integer: %s", field);
+    } else {
+      result = lua_tointeger(state, -1);
+    }
+    lua_pop(state, 1);
+    return result;
+  }
+
+  static bool table_boolean(lua_State* state, int table_index,
+                            const char* field) {
+    lua_getfield(state, table_index, field);
+    if (!lua_isnil(state, -1) && !lua_isboolean(state, -1)) {
+      lua_pop(state, 1);
+      luaL_error(state, "sprite batch field should be boolean: %s", field);
+    }
+    const bool result = lua_toboolean(state, -1) != 0;
+    lua_pop(state, 1);
+    return result;
+  }
+
+  static std::string table_identifier(lua_State* state, int table_index,
+                                      const char* field) {
+    lua_getfield(state, table_index, field);
+    std::string result;
+    if (!lua_isnil(state, -1)) {
+      std::size_t length = 0;
+      const char* value = luaL_checklstring(state, -1, &length);
+      if (length == 0 || length > 128) {
+        lua_pop(state, 1);
+        luaL_error(state, "sprite batch asset id is outside bounds");
+      }
+      result.assign(value, length);
+    }
+    lua_pop(state, 1);
+    return result;
+  }
+
+  static int sprite_batch(lua_State* state) {
+    auto& runtime = self(state);
+    luaL_checktype(state, 1, LUA_TTABLE);
+    const std::size_t count = lua_rawlen(state, 1);
+    if (count == 0 || count > kMaximumDrawCommands ||
+        runtime.drawing.size() + count > kMaximumDrawCommands) {
+      return luaL_error(state, "sprite batch size is outside bounds");
+    }
+    for (std::size_t index = 1; index <= count; ++index) {
+      lua_geti(state, 1, static_cast<lua_Integer>(index));
+      if (!lua_istable(state, -1)) {
+        lua_pop(state, 1);
+        return luaL_error(state, "sprite batch item should be a table");
+      }
+      const int item = lua_gettop(state);
+      const std::string sprite_id = table_identifier(state, item, "sprite");
+      const std::string animation_id = table_identifier(state, item, "animation");
+      if (sprite_id.empty() == animation_id.empty()) {
+        lua_pop(state, 1);
+        return luaL_error(state,
+                          "sprite batch item should name one sprite or animation");
+      }
+      std::size_t sprite_index = 0;
+      if (!sprite_id.empty()) {
+        const auto found = runtime.package.assets.sprite_ids.find(sprite_id);
+        if (found == runtime.package.assets.sprite_ids.end()) {
+          lua_pop(state, 1);
+          return luaL_error(state, "unknown sprite id: %s", sprite_id.c_str());
+        }
+        sprite_index = found->second;
+      } else {
+        const auto found = runtime.package.assets.animation_ids.find(animation_id);
+        if (found == runtime.package.assets.animation_ids.end()) {
+          lua_pop(state, 1);
+          return luaL_error(state, "unknown animation id: %s",
+                            animation_id.c_str());
+        }
+        const auto& animation = runtime.package.assets.animations[found->second];
+        const lua_Integer phase = table_integer(state, item, "phase", 0);
+        if (phase < 0) {
+          lua_pop(state, 1);
+          return luaL_error(state, "animation phase should not be negative");
+        }
+        std::uint64_t position = runtime.tick + static_cast<std::uint64_t>(phase);
+        position = animation.loop
+                       ? position % animation.total_ticks
+                       : std::min<std::uint64_t>(position,
+                                                 animation.total_ticks - 1);
+        sprite_index = animation.frames.back().sprite;
+        for (const auto& frame : animation.frames) {
+          if (position < frame.ticks) {
+            sprite_index = frame.sprite;
+            break;
+          }
+          position -= frame.ticks;
+        }
+      }
+      append_sprite(
+          state, runtime, sprite_index,
+          static_cast<int>(table_integer(state, item, "x", 0, true)),
+          static_cast<int>(table_integer(state, item, "y", 0, true)),
+          static_cast<int>(table_integer(state, item, "scale", 1)),
+          table_boolean(state, item, "flipX"),
+          table_boolean(state, item, "flipY"),
+          static_cast<int>(table_integer(state, item, "alpha", 255)));
+      lua_pop(state, 1);
+    }
+    return 0;
+  }
+
+  static int tilemap(lua_State* state) {
+    auto& runtime = self(state);
+    const std::string id = identifier(state, 1);
+    const auto found = runtime.package.assets.tile_set_ids.find(id);
+    if (found == runtime.package.assets.tile_set_ids.end()) {
+      return luaL_error(state, "unknown tile-set id: %s", id.c_str());
+    }
+    std::size_t length = 0;
+    const auto* tiles = reinterpret_cast<const unsigned char*>(
+        luaL_checklstring(state, 2, &length));
+    const int columns = static_cast<int>(luaL_checkinteger(state, 3));
+    const int origin_x = static_cast<int>(luaL_checkinteger(state, 4));
+    const int origin_y = static_cast<int>(luaL_checkinteger(state, 5));
+    const int scale = static_cast<int>(luaL_optinteger(state, 6, 1));
+    if (length == 0 || length > kMaximumDrawCommands || columns <= 0 ||
+        columns > 256 || length % static_cast<std::size_t>(columns) != 0 ||
+        scale < 1 || scale > 8) {
+      return luaL_error(state, "tilemap dimensions are outside bounds");
+    }
+    const auto& tile_set = runtime.package.assets.tile_sets[found->second];
+    for (std::size_t tile = 0; tile < length; ++tile) {
+      if (tiles[tile] >= tile_set.sprites.size()) {
+        return luaL_error(state, "tilemap contains an unknown tile index");
+      }
+      const int column = static_cast<int>(tile % static_cast<std::size_t>(columns));
+      const int row = static_cast<int>(tile / static_cast<std::size_t>(columns));
+      append_sprite(state, runtime, tile_set.sprites[tiles[tile]],
+                    origin_x + column * tile_set.tile_width * scale,
+                    origin_y + row * tile_set.tile_height * scale,
+                    scale, false, false, 255);
+    }
     return 0;
   }
 
@@ -231,6 +493,10 @@ struct Session::Impl {
     };
     add("random", random);
     add("rect", rect);
+    add("sprite", sprite);
+    add("animate", animate);
+    add("sprite_batch", sprite_batch);
+    add("tilemap", tilemap);
     add("emit", emit);
     add("storage_get", storage_get);
     add("storage_set", storage_set);
@@ -380,6 +646,7 @@ void Session::step(const Actions& actions) {
   add("start", actions.start);
   add("back", actions.back);
   impl_->call("update", 1);
+  ++impl_->tick;
 }
 
 void Session::stop() {
@@ -392,7 +659,7 @@ void Session::stop() {
   }
 }
 
-const std::vector<DrawRect>& Session::render() {
+const std::vector<DrawCommand>& Session::render() {
   if (!impl_->started) {
     throw std::runtime_error("Native-game session has not started");
   }

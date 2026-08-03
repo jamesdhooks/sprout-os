@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "sprout.blocks-buttons",
+  "title": "Blocks & Buttons",
+  "version": "0.1.0",
+  "runtimeVersion": 1,
+  "entrypoint": "game.lua",
+  "assetManifest": "asset-manifest.json",
+  "logicalResolution": [320, 240],
+  "audience": "family",
+  "capabilities": ["events", "local-storage"]
+}

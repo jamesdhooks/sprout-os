@@ -1,14 +1,23 @@
 # Sprout Runtime
 
-Status: **Windows v1 prototype; reusable engine foundation planned**
+Status: **Windows v1 engine foundation in progress**
 
 Sprout Runtime is the portable host and reusable 2D game engine for Sprout Arcade packages. It owns platform integration, deterministic sessions, action input, rendering commands, asset access, profile-scoped persistence, structured events, and lifecycle control. Packages own game rules, content, progression tuning, and game-specific generators.
 
 ## Current implementation
 
-Runtime v1 provides a constrained Lua session, fixed 60 Hz stepping, action-level input, seeded randomness, rectangle rendering, bounded integer storage, two package events, deterministic snapshots, and a strict local manifest. One game uses it on Windows.
+Runtime v1 provides a constrained Lua session, fixed 60 Hz stepping,
+action-level input, seeded randomness, rectangle rendering, strict atlas and
+animation manifests, sprite and animation batches, compact tilemaps, lazy PNG
+texture caching, geometry-coalesced SDL rendering, bounded integer storage, two
+package events, deterministic snapshots, and strict local manifests. Mouse
+Maze, Blocks & Buttons, and Snake are discoverable Windows packages; the first
+two exercise the shared asset renderer.
 
-This is a useful kernel, not yet the reusable engine required by the first collection. The Snake prototype still contains its own text renderer, state transitions, and drawing helpers; suspend/restore and read-only package content are not implemented.
+The renderer/asset slice is implemented, but the broader first-collection
+engine is not complete. Snake still contains its own text renderer, state
+transitions, and drawing helpers; shared text, campaign content,
+suspend/restore, named RNG streams, and read-only package content remain open.
 
 ## Target structure
 
@@ -33,6 +42,7 @@ The platform host must not contain game rules. The engine must not contain a maz
 - [Engine systems](engine-systems.md): ownership, shared modules, and implementation order.
 - [Game lifecycle](game-lifecycle.md): deterministic update, save/restore, exit, and event contracts.
 - [Runtime Package v1](../specs/runtime-package-v1.md): currently implemented manifest and API.
+- [Runtime Assets v1](../specs/runtime-assets-v1.md): atlas, animation, tilemap, and batching contract.
 - [Events](../specs/events.md): shared vocabulary and ownership.
 - [Arcade content pipeline](../arcade/content-pipeline.md): offline generation and campaign build.
 - [Arcade assets](../arcade/assets.md): asset source, packing, and provenance.
