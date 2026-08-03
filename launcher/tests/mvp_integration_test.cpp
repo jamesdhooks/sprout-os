@@ -229,7 +229,7 @@ void complete_host_journey() {
     expect(state.screen() == Screen::ParentHome &&
                !controller.has_pin_prompt(),
            "persisted end-of-day grant should enter parent mode");
-    for (int index = 0; index < 7; ++index) {
+    for (int index = 0; index < 8; ++index) {
       (void)controller.handle(Action::Down, {1'000, "2026-08-02"});
     }
     (void)controller.handle(Action::Confirm, {1'000, "2026-08-02"});

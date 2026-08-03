@@ -30,7 +30,7 @@ Exact device paths are provisional until Onion integration and storage behavior 
 
 ## Profiles and images
 
-Profile creation supports built-in avatars and local image import. Imported images remain local by default, preserve the source when requested, respect orientation, and generate only required crop/thumbnail variants. Upload to a connector requires explicit consent. Archive and delete are separate lifecycle operations; permanent deletion requires a second confirmation.
+Profile creation supports a packaged collection of 32 built-in avatars and local image import. The first-run portrait step can assign built-ins to parent and child profiles. After setup, freshly authenticated parents use Profile Settings to select any active profile and assign a built-in or staged custom image. Imported images remain local by default, respect orientation, and generate only required crop/thumbnail variants; source paths are not retained. Upload to a connector requires explicit consent. Archive and delete are separate lifecycle operations; permanent deletion requires a second confirmation.
 
 ## Storage, migration, and recovery
 
@@ -38,7 +38,7 @@ SQLite is intended for transactional profile, activity, grant, and index state. 
 
 Configuration is validated before activation, written atomically, and snapshotted. After three unfinished starts, the desktop launcher presents validated last-known-good restore or launcher-only reset before opening ordinary user stores. Reset quarantines only the active configuration and preserves user data. See the [startup-health](../specs/startup-health.md) and [launcher recovery](../specs/launcher-recovery.md) specifications. Connector isolation and stock-Onion startup remain planned.
 
-The implemented schema-v1 core persists setup progress and household/device/profile locale overrides with strict validation, atomic activation, stale-writer protection, last-known-good restore, and collision-safe active-configuration quarantine. The desktop preview presents that flow, creates built-in parent/child profiles offline, assigns the blueprint's 45-minute child allowance, can import a staged parent portrait without persisting its source path, and stores only an opaque reference after secure PIN creation. Existing preview children without a concrete allowance receive that default idempotently at startup. See the [local configuration specification](../specs/local-configuration.md). Connector isolation and device boot recovery remain planned.
+The implemented schema-v1 core persists setup progress and household/device/profile locale overrides with strict validation, atomic activation, stale-writer protection, last-known-good restore, and collision-safe active-configuration quarantine. The desktop preview presents that flow, creates parent/child profiles offline, assigns the blueprint's 45-minute child allowance, exposes all 32 packaged portraits, can import and crop a staged custom image without persisting its source path, and stores only an opaque reference after secure PIN creation. Existing preview children without a concrete allowance receive that default idempotently at startup. See the [local configuration specification](../specs/local-configuration.md). Connector isolation and device boot recovery remain planned.
 
 ## Backup and restore
 

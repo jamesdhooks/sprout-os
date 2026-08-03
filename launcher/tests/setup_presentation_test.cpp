@@ -84,7 +84,9 @@ void completes_the_desktop_setup_path() {
   (void)fixture.presentation.handle(Action::Right);    // Skip PIN
   (void)fixture.presentation.handle(Action::Confirm);
   (void)fixture.presentation.handle(Action::Confirm);  // Add child
-  (void)fixture.presentation.handle(Action::Confirm);  // Avatars
+  (void)fixture.presentation.handle(Action::Right);
+  (void)fixture.presentation.handle(Action::Right);
+  (void)fixture.presentation.handle(Action::Confirm);  // Continue after avatars
   (void)fixture.presentation.handle(Action::Confirm);  // Library
   (void)fixture.presentation.handle(Action::Confirm);  // Defaults
   (void)fixture.presentation.handle(Action::Confirm);  // Connectors
@@ -97,7 +99,7 @@ void completes_the_desktop_setup_path() {
   expect(fixture.profiles.list_profiles().size() == 2,
          "desktop path should create parent and child profiles");
   expect(fixture.profiles.find_profile("parent-primary")->avatar_ref ==
-             "builtin:owl",
+             "builtin:moon-rabbit",
          "parent portrait choice should reach profile persistence");
 }
 
@@ -128,11 +130,19 @@ void requests_and_completes_available_parent_image_import() {
   (void)presentation.handle(Action::Confirm);  // Child
   expect(presentation.step() == SetupStep::Avatars,
          "custom image fixture should reach portrait setup");
-  expect(presentation.choices().size() == 2,
-         "available import should retain an explicit built-in fallback");
+  expect(presentation.choices().size() == 4,
+         "portrait setup should expose parent, child, custom, and continue choices");
+  expect(presentation.handle(Action::Confirm) ==
+             SetupPresentationEvent::ChooseParentAvatarRequested,
+         "first portrait choice should open the parent built-in catalogue");
+  (void)presentation.handle(Action::Right);
+  expect(presentation.handle(Action::Confirm) ==
+             SetupPresentationEvent::ChooseChildAvatarRequested,
+         "second portrait choice should open the child built-in catalogue");
+  (void)presentation.handle(Action::Right);
   expect(presentation.handle(Action::Confirm) ==
              SetupPresentationEvent::ImportParentImageRequested,
-         "first portrait choice should request the crop flow");
+         "third portrait choice should request the crop flow");
   expect(presentation.step() == SetupStep::Avatars,
          "requesting an import should not advance before activation");
   presentation.complete_avatar_step();

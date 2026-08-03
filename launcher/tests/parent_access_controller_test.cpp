@@ -121,6 +121,7 @@ void sensitive_actions_reauthenticate_and_manual_lock_revokes() {
 
   (void)fixture.controller.handle(Action::Down, kToday);
   (void)fixture.controller.handle(Action::Down, kToday);
+  (void)fixture.controller.handle(Action::Down, kToday);
   (void)fixture.controller.handle(Action::Confirm, kToday);
   expect(fixture.controller.has_pin_prompt(),
          "profile backup should require fresh authentication");

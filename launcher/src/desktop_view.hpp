@@ -4,6 +4,7 @@
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
 #include "sprout/launcher/profile_archive_presentation.hpp"
+#include "sprout/launcher/profile_avatar_presentation.hpp"
 #include "sprout/launcher/recovery_presentation.hpp"
 #include "sprout/launcher/parent_pin_presentation.hpp"
 #include "sprout/launcher/setup_presentation.hpp"
@@ -19,7 +20,11 @@ bool render_startup_splash(SDL_Renderer* renderer,
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
                      const std::filesystem::path& managed_image_root = {},
                      const std::filesystem::path& background_image = {},
-                     const std::filesystem::path& accent_atlas = {});
+                     const std::filesystem::path& accent_atlas = {},
+                     const std::filesystem::path& built_in_avatar_root = {});
+void render_profile_avatars(
+    SDL_Renderer* renderer, const ProfileAvatarPresentation& presentation,
+    const std::filesystem::path& built_in_avatar_root);
 void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup);
 void render_recovery(SDL_Renderer* renderer,
                      const RecoveryPresentation& recovery);
