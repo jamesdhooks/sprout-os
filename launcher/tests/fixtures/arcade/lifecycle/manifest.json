@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "sprout.lifecycle-fixture",
+  "title": "Arcade Lifecycle Fixture",
+  "version": "1.0.0",
+  "runtimeVersion": 1,
+  "entrypoint": "game.lua",
+  "logicalResolution": [320, 240],
+  "audience": "family",
+  "capabilities": ["events", "local-storage"]
+}

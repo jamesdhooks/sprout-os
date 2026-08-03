@@ -45,7 +45,9 @@ Run the noninteractive launcher-to-runtime verification with:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action arcade-smoke
 ```
 
-This discovers the first valid local package, creates isolated diagnostic-profile storage, launches it through the configured runtime, checks the runtime's start and normal-exit path, and returns a nonzero status on failure. It is deterministic Windows integration evidence and does not replace interactive or device testing.
+This discovers the requested checked-in package, creates isolated diagnostic-profile storage, launches it through the configured runtime, checks the runtime's start and normal-exit path, and returns a nonzero status on failure. It is deterministic Windows integration evidence and does not replace interactive or device testing.
+
+The standard `-Action test` command also runs explicit Snake and lifecycle-fixture launcher smoke journeys, including a profile-isolated storage assertion. Follow the [Arcade Windows evidence protocol](arcade-windows-evidence.md) for the automated matrix and manual keyboard/controller/render checklist.
 
 By default, recent, favorite, and all-game views use sanitized in-memory fixtures. To inspect filenames on an explicitly selected development-card or fixture root without executing games:
 

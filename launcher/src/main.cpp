@@ -436,6 +436,7 @@ int save_screenshot(SDL_Renderer* renderer, const char* path) {
 int main(int argc, char* argv[]) {
   bool smoke_test = false;
   bool arcade_smoke_test = false;
+  std::optional<std::string> arcade_smoke_item;
   bool screenshot = false;
   const char* screenshot_path = nullptr;
   std::string_view screenshot_screen;
@@ -449,6 +450,8 @@ int main(int argc, char* argv[]) {
       smoke_test = true;
     } else if (argument == "--arcade-smoke-test") {
       arcade_smoke_test = true;
+    } else if (argument == "--arcade-smoke-item" && index + 1 < argc) {
+      arcade_smoke_item = argv[++index];
     } else if (argument == "--screenshot" && index + 1 < argc) {
       screenshot = true;
       screenshot_path = argv[++index];
@@ -487,8 +490,19 @@ int main(int argc, char* argv[]) {
       std::cerr << "Arcade smoke test found no valid native packages\n";
       return EXIT_FAILURE;
     }
+    auto selected = entries.begin();
+    if (arcade_smoke_item.has_value()) {
+      selected = std::find_if(
+          entries.begin(), entries.end(),
+          [&](const auto& entry) { return entry.id == *arcade_smoke_item; });
+      if (selected == entries.end()) {
+        std::cerr << "Arcade smoke test did not find requested item: "
+                  << *arcade_smoke_item << '\n';
+        return EXIT_FAILURE;
+      }
+    }
     auto target = std::get<sprout::launcher::NativeLaunchTarget>(
-        entries.front().launch_target);
+        selected->launch_target);
     target.profile_id = "diagnostic-child";
     target.seed = 1;
     target.launch_allowed = true;
@@ -507,6 +521,11 @@ int main(int argc, char* argv[]) {
     }
     std::cout << '\n';
     return result.completed() ? EXIT_SUCCESS : EXIT_FAILURE;
+  }
+
+  if (arcade_smoke_item.has_value()) {
+    std::cerr << "--arcade-smoke-item requires --arcade-smoke-test\n";
+    return EXIT_FAILURE;
   }
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
