@@ -11,6 +11,9 @@ SproutOS startup art, launcher art, and per-game title art are distinct assets.
 A game title background is full-screen and theme-consistent with its gameplay
 art, while the runtime owns the title and simple Start/Continue/Back interface.
 This keeps text crisp, localized, and state-aware while allowing rich artwork.
+The launcher likewise renders profile and navigation UI over its own reviewed
+4:3 master and uses a standard `sprite-atlas.v1` sheet for small decorative
+accents. Neither launcher artwork nor its atlas is reused as a game title page.
 
 Status: **First deterministic atlases and runtime pipeline implemented**
 

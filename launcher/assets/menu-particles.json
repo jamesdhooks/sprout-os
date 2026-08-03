@@ -1,0 +1,454 @@
+{
+  "schema": "sprite-atlas.v1",
+  "id": "sprout-menu-particles",
+  "image": "sprout-menu-particles-atlas.png",
+  "size": {
+    "width": 1024,
+    "height": 1024
+  },
+  "scale": 1,
+  "frames": {
+    "leaf-01": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "width": 226,
+        "height": 211
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 143,
+        "y": 150,
+        "width": 226,
+        "height": 211
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "leaf-02": {
+      "frame": {
+        "x": 232,
+        "y": 2,
+        "width": 224,
+        "height": 210
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 144,
+        "y": 151,
+        "width": 224,
+        "height": 210
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "leaf-03": {
+      "frame": {
+        "x": 460,
+        "y": 2,
+        "width": 227,
+        "height": 210
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 142,
+        "y": 151,
+        "width": 227,
+        "height": 210
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "leaf-04": {
+      "frame": {
+        "x": 691,
+        "y": 2,
+        "width": 226,
+        "height": 211
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 143,
+        "y": 150,
+        "width": 226,
+        "height": 211
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "star-01": {
+      "frame": {
+        "x": 2,
+        "y": 217,
+        "width": 178,
+        "height": 175
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 167,
+        "y": 168,
+        "width": 178,
+        "height": 175
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "star-02": {
+      "frame": {
+        "x": 184,
+        "y": 217,
+        "width": 177,
+        "height": 175
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 167,
+        "y": 168,
+        "width": 177,
+        "height": 175
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "star-03": {
+      "frame": {
+        "x": 365,
+        "y": 217,
+        "width": 179,
+        "height": 175
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 166,
+        "y": 168,
+        "width": 179,
+        "height": 175
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "star-04": {
+      "frame": {
+        "x": 548,
+        "y": 217,
+        "width": 177,
+        "height": 175
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 167,
+        "y": 168,
+        "width": 177,
+        "height": 175
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "petal-01": {
+      "frame": {
+        "x": 729,
+        "y": 217,
+        "width": 212,
+        "height": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 150,
+        "y": 159,
+        "width": 212,
+        "height": 194
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "petal-02": {
+      "frame": {
+        "x": 2,
+        "y": 415,
+        "width": 212,
+        "height": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 150,
+        "y": 159,
+        "width": 212,
+        "height": 194
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "petal-03": {
+      "frame": {
+        "x": 218,
+        "y": 415,
+        "width": 214,
+        "height": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 149,
+        "y": 159,
+        "width": 214,
+        "height": 194
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "petal-04": {
+      "frame": {
+        "x": 436,
+        "y": 415,
+        "width": 214,
+        "height": 194
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 149,
+        "y": 159,
+        "width": 214,
+        "height": 194
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "seed-01": {
+      "frame": {
+        "x": 654,
+        "y": 415,
+        "width": 70,
+        "height": 61
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 221,
+        "y": 225,
+        "width": 70,
+        "height": 61
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "seed-02": {
+      "frame": {
+        "x": 728,
+        "y": 415,
+        "width": 69,
+        "height": 64
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 221,
+        "y": 224,
+        "width": 69,
+        "height": 64
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "seed-03": {
+      "frame": {
+        "x": 801,
+        "y": 415,
+        "width": 71,
+        "height": 61
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 220,
+        "y": 225,
+        "width": 71,
+        "height": 61
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    },
+    "seed-04": {
+      "frame": {
+        "x": 876,
+        "y": 415,
+        "width": 80,
+        "height": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 216,
+        "y": 217,
+        "width": 80,
+        "height": 77
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": []
+    }
+  },
+  "animations": {
+    "leaf": {
+      "frames": [
+        "leaf-01",
+        "leaf-02",
+        "leaf-03",
+        "leaf-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "star": {
+      "frames": [
+        "star-01",
+        "star-02",
+        "star-03",
+        "star-04"
+      ],
+      "fps": 10,
+      "loop": true
+    },
+    "petal": {
+      "frames": [
+        "petal-01",
+        "petal-02",
+        "petal-03",
+        "petal-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "seed": {
+      "frames": [
+        "seed-01",
+        "seed-02",
+        "seed-03",
+        "seed-04"
+      ],
+      "fps": 6,
+      "loop": true
+    }
+  }
+}

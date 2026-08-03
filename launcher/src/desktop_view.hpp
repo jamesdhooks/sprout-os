@@ -17,7 +17,9 @@ namespace sprout::launcher {
 bool render_startup_splash(SDL_Renderer* renderer,
                            const std::filesystem::path& image_path);
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
-                     const std::filesystem::path& managed_image_root = {});
+                     const std::filesystem::path& managed_image_root = {},
+                     const std::filesystem::path& background_image = {},
+                     const std::filesystem::path& accent_atlas = {});
 void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup);
 void render_recovery(SDL_Renderer* renderer,
                      const RecoveryPresentation& recovery);

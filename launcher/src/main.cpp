@@ -555,6 +555,10 @@ int main(int argc, char* argv[]) {
   const auto executable_root =
       std::filesystem::absolute(argv[0]).parent_path();
   const auto startup_splash = executable_root / "assets" / "startup-splash.png";
+  const auto launcher_background =
+      executable_root / "assets" / "launcher-family.png";
+  const auto launcher_accents =
+      executable_root / "assets" / "sprout-menu-particles-atlas.png";
 
   if (smoke_test) {
     const int result = run_smoke_test(renderer);
@@ -764,7 +768,8 @@ int main(int argc, char* argv[]) {
       (void)state.handle(Action::Right);
       (void)state.handle(Action::Confirm);
     }
-    sprout::launcher::render_launcher(renderer, state);
+    sprout::launcher::render_launcher(renderer, state, {}, launcher_background,
+                                      launcher_accents);
     const int result = save_screenshot(renderer, screenshot_path);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -1185,7 +1190,8 @@ int main(int argc, char* argv[]) {
         sprout::launcher::render_launcher(
             renderer, *state,
             data_root.has_value() ? *data_root / "data" / "profile-images"
-                                  : std::filesystem::path{});
+                                  : std::filesystem::path{},
+            launcher_background, launcher_accents);
       }
       if (recovery == nullptr && startup_attempt_id.has_value()) {
         try {

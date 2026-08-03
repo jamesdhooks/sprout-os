@@ -12,6 +12,7 @@
 #include <exception>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace sprout::launcher {
 namespace {
@@ -257,9 +258,42 @@ bool render_startup_splash(SDL_Renderer* renderer,
 }
 
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
-                     const std::filesystem::path& managed_image_root) {
+                     const std::filesystem::path& managed_image_root,
+                     const std::filesystem::path& background_image,
+                     const std::filesystem::path& accent_atlas) {
   set_color(renderer, kBackground);
   SDL_RenderClear(renderer);
+  if (!background_image.empty()) {
+    SDL_Texture* texture =
+        IMG_LoadTexture(renderer, path_as_utf8(background_image).c_str());
+    if (texture != nullptr) {
+      const SDL_Rect canvas{0, 0, kWidth, kHeight};
+      SDL_RenderCopy(renderer, texture, nullptr, &canvas);
+      SDL_DestroyTexture(texture);
+      SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+      fill_rect(renderer, canvas, {8, 26, 20, 128});
+    }
+  }
+
+  if (!accent_atlas.empty()) {
+    SDL_Texture* accents =
+        IMG_LoadTexture(renderer, path_as_utf8(accent_atlas).c_str());
+    if (accents != nullptr) {
+      SDL_SetTextureAlphaMod(accents, 220);
+      const std::array<std::pair<SDL_Rect, SDL_Rect>, 6> decorations{{
+          {{2, 2, 226, 211}, {18, 16, 44, 41}},
+          {{2, 217, 178, 175}, {578, 28, 30, 30}},
+          {{729, 217, 212, 194}, {22, 408, 35, 32}},
+          {{876, 415, 80, 77}, {596, 390, 18, 17}},
+          {{2, 217, 178, 175}, {44, 74, 18, 18}},
+          {{2, 2, 226, 211}, {568, 416, 34, 32}},
+      }};
+      for (const auto& [source, destination] : decorations) {
+        SDL_RenderCopy(renderer, accents, &source, &destination);
+      }
+      SDL_DestroyTexture(accents);
+    }
+  }
 
   if (state.screen() == Screen::ProfileSelect) {
     render_profile_select(renderer, state, managed_image_root);
