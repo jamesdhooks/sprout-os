@@ -309,6 +309,24 @@ if(BUILD_TESTING)
   add_test(NAME recovery-presentation
            COMMAND sprout-recovery-presentation-test)
 
+  add_executable(sprout-mvp-integration-test tests/mvp_integration_test.cpp)
+  target_compile_features(sprout-mvp-integration-test PRIVATE cxx_std_20)
+  target_link_libraries(
+    sprout-mvp-integration-test
+    PRIVATE
+      sprout_configuration
+      sprout_daily_time_policy
+      sprout_launcher_core
+      sprout_onion_adapter
+      sprout_parent_access
+      sprout_profile_archive
+      sprout_profile_store
+      sprout_recovery
+      sprout_setup
+      sprout_startup_health
+  )
+  add_test(NAME mvp-host-integration COMMAND sprout-mvp-integration-test)
+
   add_executable(sprout-profile-archive-test tests/profile_archive_test.cpp)
   target_compile_features(sprout-profile-archive-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-profile-archive-test
