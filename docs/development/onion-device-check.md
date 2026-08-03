@@ -40,7 +40,7 @@ chmod +x /mnt/SDCARD/sprout-dev/sprout-onion-check
   --data-dir /mnt/SDCARD/sprout-dev/check-data
 ```
 
-A successful run reports the Onion baseline, pinned compiler image, profile/configuration/parent-access/daily-time-policy checks, a one-profile archive round trip, Argon2 PIN setup time, and a typed launch-request identifier. Record the complete output and exit status. A crash, missing library, permission error, or unreasonable credential delay is a failed check; preserve the evidence before changing anything.
+A successful run reports the Onion baseline, pinned compiler image, profile/configuration/parent-access/daily-time-policy checks, a one-profile archive round trip, a startup-health transaction, Argon2 PIN setup time, and a typed launch-request identifier. Record the complete output and exit status. A crash, missing library, permission error, or unreasonable credential delay is a failed check; preserve the evidence before changing anything.
 
 To additionally exercise read-only filename discovery against the development card, use:
 

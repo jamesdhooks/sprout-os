@@ -38,6 +38,11 @@ add_library(
 )
 
 add_library(
+  sprout_startup_health
+  src/startup_health.cpp
+)
+
+add_library(
   sprout_profile_archive
   src/profile_archive.cpp
   src/profile_archive_presentation.cpp
@@ -86,6 +91,9 @@ endif()
 target_include_directories(sprout_daily_time_policy PUBLIC include)
 target_compile_features(sprout_daily_time_policy PUBLIC cxx_std_20)
 target_link_libraries(sprout_daily_time_policy PRIVATE sprout_sqlite)
+target_include_directories(sprout_startup_health PUBLIC include)
+target_compile_features(sprout_startup_health PUBLIC cxx_std_20)
+target_link_libraries(sprout_startup_health PRIVATE sprout_sqlite)
 target_include_directories(sprout_profile_archive PUBLIC include)
 target_compile_features(sprout_profile_archive PUBLIC cxx_std_20)
 target_include_directories(
@@ -117,6 +125,7 @@ if(SPROUT_BUILD_ONION)
       sprout_parent_access
       sprout_profile_archive
       sprout_profile_store
+      sprout_startup_health
       stdc++fs
   )
   target_link_options(sprout-onion-check PRIVATE -static-libgcc -static-libstdc++)
@@ -136,6 +145,7 @@ if(MSVC)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
   target_compile_options(sprout_daily_time_policy PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_startup_health PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_ONION)
@@ -149,6 +159,7 @@ else()
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_daily_time_policy PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_startup_health PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_ONION)
@@ -268,6 +279,12 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-daily-time-policy-test
                         PRIVATE sprout_daily_time_policy sprout_sqlite)
   add_test(NAME daily-time-policy COMMAND sprout-daily-time-policy-test)
+
+  add_executable(sprout-startup-health-test tests/startup_health_test.cpp)
+  target_compile_features(sprout-startup-health-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-startup-health-test
+                        PRIVATE sprout_startup_health sprout_sqlite)
+  add_test(NAME startup-health COMMAND sprout-startup-health-test)
 
   add_executable(sprout-profile-archive-test tests/profile_archive_test.cpp)
   target_compile_features(sprout-profile-archive-test PRIVATE cxx_std_20)

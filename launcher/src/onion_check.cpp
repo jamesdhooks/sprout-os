@@ -6,6 +6,7 @@
 #include "sprout/launcher/parent_access_store.hpp"
 #include "sprout/launcher/profile_archive.hpp"
 #include "sprout/launcher/profile_repository.hpp"
+#include "sprout/launcher/startup_health.hpp"
 
 #include <chrono>
 #include <cstdint>
@@ -148,6 +149,25 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("Profile archive round-trip check failed");
     }
 
+    const auto startup_health_path =
+        arguments.data_directory / "startup-health.sqlite3";
+    {
+      sprout::launcher::StartupHealthStore startup_health(startup_health_path);
+      const auto startup = startup_health.begin_startup();
+      if (startup.consecutive_failures != 0 || startup.recovery_required) {
+        throw std::runtime_error("Startup-health initial decision failed");
+      }
+    }
+    {
+      sprout::launcher::StartupHealthStore startup_health(startup_health_path);
+      const auto restarted = startup_health.begin_startup();
+      if (restarted.consecutive_failures != 1 ||
+          restarted.recovery_required) {
+        throw std::runtime_error("Startup-health restart decision failed");
+      }
+      startup_health.mark_ready(restarted.attempt_id);
+    }
+
     sprout::launcher::LauncherState state(
         sprout::launcher::make_demo_household());
     (void)state.handle(sprout::launcher::Action::Confirm);
@@ -164,6 +184,7 @@ int main(int argc, char* argv[]) {
     std::cout << "profile-store=ok\nconfiguration-store=ok\nparent-access=ok\n";
     std::cout << "daily-time-policy=ok\n";
     std::cout << "profile-archive=ok\n";
+    std::cout << "startup-health=ok\n";
     std::cout << "argon2-set-pin-ms="
               << std::chrono::duration_cast<std::chrono::milliseconds>(
                      hash_finished - hash_started)
