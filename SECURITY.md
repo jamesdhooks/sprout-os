@@ -24,7 +24,7 @@ Security-sensitive design requirements include:
 - native games cannot access shell execution, raw credentials, unrestricted filesystems, or another profile's data;
 - configuration and policy writes are validated, atomic, recoverable, and backed by a last-known-good state.
 
-The Windows runtime preview is not a hostile-package sandbox. It removes Lua file, operating-system, dynamic-loading, package, and debug libraries; accepts text entrypoints only; bounds lifecycle instructions; and isolates integer storage by package ID. It does not yet enforce a memory quota, verify signatures, install third-party archives, or provide profile-scoped native saves. Run only packages checked into this repository until the package threat model and verification pipeline are implemented.
+The Windows runtime preview is not a hostile-package sandbox. It removes Lua file, operating-system, dynamic-loading, package, and debug libraries; accepts text entrypoints only; bounds lifecycle instructions; and receives launcher-selected profile storage before adding the package ID. It does not yet enforce a memory quota, verify signatures, install third-party archives, or provide the planned versioned full-session checkpoint boundary. Run only packages checked into this repository until the package threat model and verification pipeline are implemented.
 
 Network integrations are optional. Core profile selection, local parental controls, launch policy, and recovery must not fail open when a server or connector is unavailable.
 

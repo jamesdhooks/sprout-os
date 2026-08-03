@@ -42,7 +42,7 @@ The current adapter validates canonical ROM and launcher paths, maps only the pi
 
 ### Native runtime
 
-Sprout Runtime is independently versioned from SproutOS. The Windows preview establishes only APIs exercised by one packaged microgame: deterministic stepping, action input, rendering, profile- and package-isolated local storage, structured events, and launcher handoff. The launcher discovers strict local manifests, applies the active-profile audience and time decision, invokes a fixed runtime executable, and restores its window on process return. Audio, achievements, broad SDK tooling, and additional platform adapters require concrete consumers. The runtime is not part of the launcher MVP, and Windows evidence does not establish device compatibility.
+Sprout Runtime is independently versioned from SproutOS. The Windows preview establishes APIs exercised by one packaged microgame: deterministic stepping, action input, rendering, profile- and package-isolated local storage, structured events, and launcher handoff. The next phase grows reusable engine services through Mouse Maze, Blocks & Buttons, and Snake as described in the [runtime overview](../runtime/README.md). Platform integration and bounded deterministic services belong to the runtime; rules, content, difficulty parameters, and game-specific generation remain in packages and offline tools. Audio, broader SDK tooling, and additional platform adapters require concrete consumers. The runtime is not part of the launcher MVP, and Windows evidence does not establish device compatibility.
 
 ### Connectors
 

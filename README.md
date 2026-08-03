@@ -18,13 +18,13 @@ Sprout is an open-source, family-oriented gaming platform for retro handhelds an
 | Component | Responsibility | Status |
 | --- | --- | --- |
 | SproutOS | Family launcher, profiles, policy, library, Onion integration, and recovery | First committed milestone |
-| Sprout Runtime | Portable native-game execution | Windows preview in progress |
-| Sprout Arcade | Native-game catalogue and package distribution | Local Windows game preview in progress; distribution planned later |
+| Sprout Runtime | Portable native-game execution and reusable 2D engine services | Windows engine development in progress |
+| Sprout Arcade | Native-game collection and eventual package distribution | First three local games committed; distribution planned later |
 | Sprout Studio | Game development and validation tools | Planned later |
 | Sprout Server | Optional sync, family management, and recommendations | Planned later |
 | Sprout SDK | Schemas, package contracts, and developer tooling | Planned as real consumers emerge |
 
-The initial **Sprout Family Launcher MVP** remains blocked on its development-card evidence: Onion launch, GameSwitcher return, lifecycle enforcement, safe boot, and device rendering are unverified. Work is proceeding independently on a bounded **Sprout Arcade Windows Preview** consisting of a deterministic native runtime, one local packaged microgame, launcher handoff, and automated Windows evidence. Catalogue hosting, downloads, signing infrastructure, and device support remain deferred. See the [roadmap](docs/roadmap.md).
+The initial **Sprout Family Launcher MVP** remains blocked on its development-card evidence: Onion launch, GameSwitcher return, lifecycle enforcement, safe boot, and device rendering are unverified. Its exact halt point is [documented and tagged](docs/development/launcher-mvp-halt.md). Independent Windows work is now growing the runtime through the first three concrete Arcade games without claiming device compatibility. Catalogue hosting, downloads, signing infrastructure, and device support remain deferred. See [Sprout Arcade](docs/arcade/README.md) and the [roadmap](docs/roadmap.md).
 
 ## Repository layout
 
@@ -41,7 +41,7 @@ Server and connector directories remain intentionally absent until a concrete mi
 
 ## Development
 
-Start with the [getting-started guide](docs/development/getting-started.md), [MVP evidence checklist](docs/development/mvp-evidence.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
+Start with the [getting-started guide](docs/development/getting-started.md), [Sprout Arcade guide](docs/arcade/README.md), [runtime guide](docs/runtime/README.md), [architecture overview](docs/architecture/overview.md), and relevant [architecture decisions](docs/decisions/).
 
 On Windows with Visual Studio C++ tools:
 

@@ -9,6 +9,7 @@ Statuses describe repository truth, not intent: **Not started**, **In progress**
 | Project foundation | Complete | Public documentation, governance, initial Onion research, local coordination, and a clean Git history exist |
 | [Sprout Family Launcher MVP](https://github.com/jamesdhooks/sprout-os/milestone/1) | Blocked | A development SD card completes the profile-to-launch-to-return vertical slice with local policy and recovery |
 | [Sprout Arcade Windows Preview](https://github.com/jamesdhooks/sprout-os/milestone/2) | In progress | The launcher discovers and starts one packaged native microgame through a deterministic Windows runtime, with automated package, lifecycle, and integration tests |
+| [Sprout Arcade Engine and First Three Games](https://github.com/jamesdhooks/sprout-os/milestone/3) | In progress | Mouse & Cheese Maze, Blocks & Buttons, and Sprout Snake are complete Windows packages using shared engine, content, asset, persistence, progression, and lifecycle systems |
 
 The launcher MVP includes a splash; resumable offline setup; one parent and one child; built-in and imported/cropped avatars; versioned configuration; child and parent modes; local recents/favorites test data; a small discovered ROM library; one Game Boy and one SNES launch through Onion; preserved GameSwitcher behavior; clean return; daily child time limits; persistent end-of-day parent unlock; manual lock; one profile export/restore; safe-mode entry to stock Onion; and integration-test documentation.
 
@@ -18,12 +19,14 @@ The exact pre-Arcade stopping point and hardware resume procedure are recorded i
 
 The Windows Arcade preview is a separate evidence track. It now establishes contracts exercised by a real local package and game: deterministic stepping, action input, rendering, profile-isolated local storage, structured events, strict package discovery, audience-based child visibility, launcher handoff, and clean process return. Live time-limit enforcement during an external game remains open. The milestone does not include a remote catalogue, downloads, signing infrastructure, publishing, arbitrary third-party code, or device compatibility claims.
 
+The next Arcade phase evolves that kernel through three concrete consumers. The committed requirements and completion gates are in [First Three Arcade Games](arcade/first-three-games.md); the remaining proposed catalogue stays deferred. Shared engine work follows [ADR 0011](decisions/0011-reusable-arcade-engine.md) and must not absorb game-specific rules or imply non-Windows support.
+
 ## Planned later
 
 | Milestone | Status | Dependency |
 | --- | --- | --- |
 | Portable Sprout Runtime beyond Windows | Deferred | Stable Windows runtime APIs and a real packaged game |
-| First native game collection | Deferred | Windows preview proves one complete game and package lifecycle |
+| Remaining first-collection candidates | Deferred | First three games and reusable engine are complete |
 | Signed package catalogue and updates | Deferred | Runtime/package consumers and threat model |
 | Optional sync and family server | Deferred | Stable local schemas and event journal |
 | Sprout Studio | Deferred | Stable runtime and package format |
