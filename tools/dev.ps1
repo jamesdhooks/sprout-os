@@ -1,7 +1,8 @@
 param(
-    [ValidateSet("configure", "build", "test", "run")]
+    [ValidateSet("configure", "build", "test", "run", "run-arcade")]
     [string]$Action = "build",
-    [string]$SdRoot
+    [string]$SdRoot,
+    [string]$ArcadePackage = "games\snake"
 )
 
 $ErrorActionPreference = "Stop"
@@ -109,6 +110,18 @@ try {
             $launcherArguments += @("--sd-root", $SdRoot)
         }
         & $executable @launcherArguments
+    }
+
+    if ($Action -eq "run-arcade") {
+        $executable = Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe"
+        if (-not (Test-Path -LiteralPath $executable)) {
+            throw "Runtime executable was not found at $executable."
+        }
+        $packageRoot = Join-Path $repoRoot $ArcadePackage
+        if (-not (Test-Path -LiteralPath $packageRoot -PathType Container)) {
+            throw "Arcade package was not found at $packageRoot."
+        }
+        & $executable --package $packageRoot --storage (Join-Path $repoRoot "out\arcade-preview-data")
     }
 } finally {
     Pop-Location

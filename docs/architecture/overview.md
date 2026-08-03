@@ -13,10 +13,11 @@ SproutOS (first committed milestone)
       ├── Onion adapter ────────┴── Onion launch/GameSwitcher
       └── Local configuration, journal, and recovery
 
-Sprout Runtime (planned)       Optional Sprout Server (planned)
-  Native game API                Sync, remote grants, recommendations
+Sprout Runtime (Windows preview) Optional Sprout Server (planned)
+  Native game lifecycle          Sync, remote grants, recommendations
 
-Sprout Arcade / Studio / SDK (planned after concrete consumers)
+Local Arcade package (Windows preview)
+Remote Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
 The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a versioned one-profile archive boundary, persisted daily child-time and startup-health decision cores, desktop configuration recovery, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Persisted recent/favorite activity, GameSwitcher and policy-lifecycle integration, hardware-validated Onion execution, safe boot to stock Onion, and device rendering do not exist yet.
@@ -41,7 +42,7 @@ The current adapter validates canonical ROM and launcher paths, maps only the pi
 
 ### Native runtime
 
-Sprout Runtime is independently versioned from SproutOS. A future game package targets runtime APIs for graphics, input, audio, storage, timing, deterministic randomness, achievements, and events rather than device-specific APIs. The runtime is not part of the launcher MVP.
+Sprout Runtime is independently versioned from SproutOS. The Windows preview establishes only APIs exercised by one packaged microgame: deterministic stepping, action input, rendering, local storage, structured events, and launcher handoff. Audio, achievements, broad SDK tooling, and additional platform adapters require concrete consumers. The runtime is not part of the launcher MVP, and Windows evidence does not establish device compatibility.
 
 ### Connectors
 
@@ -49,7 +50,7 @@ Core models see connector categories and capabilities, never provider-specific f
 
 ### Packages
 
-Future packages are immutable, versioned, integrity-checked units with declared compatibility and capabilities. Package installation, catalogues, and signing are deferred until the launcher vertical slice is reliable.
+The Windows preview uses a local, versioned package with declared runtime compatibility and capabilities. Remote installation, catalogue services, downloads, signing infrastructure, updates, and rollback are deferred until the runtime has a stable concrete consumer and the package threat model is accepted.
 
 ## Configuration and security
 

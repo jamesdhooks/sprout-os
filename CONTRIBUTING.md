@@ -43,14 +43,13 @@ Reviewers should check for scope expansion, duplicate abstractions, unused code,
 
 Update user or developer documentation whenever behavior, configuration, migration, or compatibility changes. Use current, planned, and exploratory language precisely.
 
-## Future packages and connectors
+## Packages and future connectors
 
-Native game packages and external-service connectors are not implemented yet. When their accepted specifications and validation tools exist:
+The Windows preview accepts only checked-in local packages following [Runtime Package v1](docs/specs/runtime-package-v1.md). A game contribution currently requires a milestone issue, original or compatibly licensed content, deterministic host tests, controller-only playability, declared capabilities, and an explicit license. Do not present a local preview directory as a signed or safely installable third-party package.
 
-- game packages must declare identity, version, runtime compatibility, capabilities, content metadata, assets, licenses, and integrity information;
-- connectors must declare provider-neutral capabilities, configuration requirements, credential references, health behavior, offline behavior, and per-profile permissions.
+Remote distribution and external-service connectors are not implemented. Future packages must add content and integrity metadata when those accepted specifications exist. Future connectors must declare provider-neutral capabilities, configuration requirements, credential references, health behavior, offline behavior, and per-profile permissions.
 
-Do not add a package or connector framework before a milestone issue establishes its first concrete consumer.
+Do not add distribution or connector frameworks before a milestone issue establishes a concrete consumer and threat model.
 
 ## Security
 

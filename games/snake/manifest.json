@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "sprout.snake",
+  "title": "Sprout Snake",
+  "version": "0.1.0",
+  "runtimeVersion": 1,
+  "entrypoint": "game.lua",
+  "logicalResolution": [320, 240],
+  "capabilities": ["events", "local-storage"]
+}

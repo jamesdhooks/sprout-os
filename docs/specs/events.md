@@ -22,4 +22,6 @@ Events are appendable offline and may be synchronized later. Consumers must tole
 
 The implemented [daily time-policy core](daily-time-policy.md) consumes equivalent local lifecycle calls but does not yet persist this event vocabulary. A verified Onion lifecycle adapter must establish when `GameStarted`, `GamePaused`, `GameResumed`, and `GameExited` are true before those events become an authoritative journal.
 
+For the Windows native-runtime preview, the runtime owns `GameStarted` and `GameExited`; package code may report only `AchievementUnlocked` and `LevelCompleted`. The preview does not yet persist these events or connect them to profile time accounting.
+
 Payload schemas, retention periods, journal compaction, and synchronization conflict handling remain unresolved until an implemented local journal requires them.
