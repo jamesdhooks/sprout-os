@@ -25,6 +25,7 @@ The current implementation proves one local Windows package, Sprout Snake, throu
 - [Content pipeline](content-pipeline.md): deterministic generation, solving, scoring, curation, and campaign export.
 - [Asset pipeline](assets.md): pixel-art constraints, provenance, generation, packing, and validation.
 - [Runtime overview](../runtime/README.md): reusable engine boundary and implementation sequence.
+- [Windows evidence](../development/arcade-windows-evidence.md): automated lifecycle matrix and manual input/render checklist.
 - [Roadmap](../roadmap.md): public milestone status.
 
 Remote catalogue browsing, downloads, purchases, package signing, publishing, and arbitrary third-party packages are outside the first collection. Only reviewed local packages are supported until those trust boundaries are designed and accepted.

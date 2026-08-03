@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A CI-exercised Windows Arcade lifecycle journey covering explicit native-package discovery, real runtime process start, structured play events, profile/package-isolated storage, normal exit, and launcher return, with a manual keyboard/controller/render evidence protocol.
 - Local Sprout Arcade discovery in the family launcher, manifest-based child audience controls, typed native launch handoff, profile-isolated game storage, clean launcher return, and a deterministic launcher-to-runtime Windows smoke check.
 - A committed Windows-only Sprout Arcade preview milestone that keeps physical Onion acceptance open while bounding native runtime work to one local packaged game and its verified launcher lifecycle.
 - A Windows-native Sprout Runtime preview with strict local manifests, sandboxed text Lua, deterministic fixed-step sessions, action input, rectangle rendering, structured events, atomic package storage, and lifecycle instruction limits.

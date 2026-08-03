@@ -71,6 +71,47 @@ function Add-NinjaToPath {
     $env:Path = "$(Split-Path -Parent $ninja);$env:Path"
 }
 
+function Invoke-ArcadeSmoke {
+    param(
+        [Parameter(Mandatory = $true)][string]$Launcher,
+        [Parameter(Mandatory = $true)][string]$Runtime,
+        [Parameter(Mandatory = $true)][string]$PackagesRoot,
+        [Parameter(Mandatory = $true)][string]$DataRoot,
+        [Parameter(Mandatory = $true)][string]$ExpectedItemId,
+        [string]$ExpectedEvent,
+        [string]$ExpectedStoragePath
+    )
+
+    $output = & $Launcher --arcade-smoke-test `
+        --arcade-smoke-item $ExpectedItemId `
+        --data-dir $DataRoot `
+        --arcade-root $PackagesRoot `
+        --runtime $Runtime 2>&1
+    $status = $LASTEXITCODE
+    $text = $output -join "`n"
+    $output | Write-Output
+    if ($status -ne 0) {
+        throw "Arcade smoke test failed with exit code $status."
+    }
+    if ($text -notmatch 'SPROUT_EVENT\s+GameStarted\s+fresh' -or
+        $text -notmatch 'SPROUT_EVENT\s+GameExited\s+normal' -or
+        $text -notmatch "arcade smoke result: $([regex]::Escape($ExpectedItemId)) outcome=0 exit=0") {
+        throw "Arcade smoke test did not report the required start, exit, and launcher-return evidence."
+    }
+    if ($ExpectedEvent -and $text -notmatch [regex]::Escape($ExpectedEvent)) {
+        throw "Arcade smoke test did not report expected event $ExpectedEvent."
+    }
+    if ($ExpectedStoragePath) {
+        if (-not (Test-Path -LiteralPath $ExpectedStoragePath -PathType Leaf)) {
+            throw "Arcade smoke test did not create expected storage at $ExpectedStoragePath."
+        }
+        $stored = Get-Content -Raw -LiteralPath $ExpectedStoragePath | ConvertFrom-Json
+        if ($stored.'smoke-written' -ne 1) {
+            throw "Arcade smoke storage did not contain the expected fixture value."
+        }
+    }
+}
+
 Initialize-Msvc
 Add-NinjaToPath
 $cmake = Find-CMake
@@ -97,6 +138,23 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "Tests failed with exit code $LASTEXITCODE."
         }
+        $launcher = Join-Path $repoRoot "out\build\windows-ninja-x64\launcher\Debug\sprout-launcher.exe"
+        $runtime = Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe"
+        Invoke-ArcadeSmoke `
+            -Launcher $launcher `
+            -Runtime $runtime `
+            -PackagesRoot (Join-Path $repoRoot "games") `
+            -DataRoot (Join-Path $repoRoot "out\arcade-smoke-data") `
+            -ExpectedItemId "arcade:sprout.snake"
+        $fixtureData = Join-Path $repoRoot "out\arcade-lifecycle-data"
+        Invoke-ArcadeSmoke `
+            -Launcher $launcher `
+            -Runtime $runtime `
+            -PackagesRoot (Join-Path $repoRoot "launcher\tests\fixtures\arcade") `
+            -DataRoot $fixtureData `
+            -ExpectedItemId "arcade:sprout.lifecycle-fixture" `
+            -ExpectedEvent "AchievementUnlocked`tlifecycle-smoke" `
+            -ExpectedStoragePath (Join-Path $fixtureData "data\native-games\diagnostic-child\sprout.lifecycle-fixture\storage.json")
         return
     }
 
@@ -129,15 +187,12 @@ try {
     }
 
     if ($Action -eq "arcade-smoke") {
-        $launcher = Join-Path $repoRoot "out\build\windows-ninja-x64\launcher\Debug\sprout-launcher.exe"
-        $runtime = Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe"
-        & $launcher --arcade-smoke-test `
-            --data-dir (Join-Path $repoRoot "out\arcade-smoke-data") `
-            --arcade-root (Join-Path $repoRoot "games") `
-            --runtime $runtime
-        if ($LASTEXITCODE -ne 0) {
-            throw "Arcade smoke test failed with exit code $LASTEXITCODE."
-        }
+        Invoke-ArcadeSmoke `
+            -Launcher (Join-Path $repoRoot "out\build\windows-ninja-x64\launcher\Debug\sprout-launcher.exe") `
+            -Runtime (Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe") `
+            -PackagesRoot (Join-Path $repoRoot "games") `
+            -DataRoot (Join-Path $repoRoot "out\arcade-smoke-data") `
+            -ExpectedItemId "arcade:sprout.snake"
     }
 } finally {
     Pop-Location
