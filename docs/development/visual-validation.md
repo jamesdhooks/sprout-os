@@ -16,13 +16,19 @@ The runtime accepts `--capture-state <name>` only together with `--capture`. It 
 
 | Game | Title | Gameplay | Win | Fail |
 | --- | --- | --- | --- | --- |
-| Sprout Snake | Captured | Captured | Not applicable: endless game | Captured: collision |
+| Snake | Captured | Captured | Not applicable: endless game | Captured: collision |
 | Mouse & Cheese Maze | Captured | Captured | Captured: cheese reached | Not applicable: no loss condition |
 | Blocks & Buttons | Captured | Captured | Captured: every crate placed | Captured: provable deadlock |
 
 Blocks & Buttons treats an off-button crate trapped against perpendicular walls as a provable deadlock. The calm retry view freezes movement and the primary action restarts the room.
 
 The runtime does not yet render a pause overlay. Pause and resume lifecycle behavior is tested independently, and `coverage.json` records the missing presentation explicitly.
+
+The launcher matrix also covers startup, setup, recovery, profile selection,
+profile image pages, the profile appearance chooser, the background catalogue,
+parent/child homes, libraries, and archive flows. Capture mode freezes ambient
+focus animation at a deterministic phase; ordinary profile selection uses a
+gentle bob, scale, and rotation treatment.
 
 ## Review standard
 

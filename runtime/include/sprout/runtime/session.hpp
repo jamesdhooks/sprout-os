@@ -51,15 +51,29 @@ struct DrawSprite {
   std::uint8_t alpha{255};
 };
 
+struct DrawLabel {
+  std::string text;
+  int x{};
+  int y{};
+  int width{};
+  int height{};
+  std::uint8_t red{};
+  std::uint8_t green{};
+  std::uint8_t blue{};
+  std::uint8_t alpha{255};
+};
+
 enum class DrawCommandType {
   Rectangle,
   Sprite,
+  Label,
 };
 
 struct DrawCommand {
   DrawCommandType type{DrawCommandType::Rectangle};
   DrawRect rectangle;
   DrawSprite sprite;
+  DrawLabel label;
 };
 
 struct RuntimeEvent {

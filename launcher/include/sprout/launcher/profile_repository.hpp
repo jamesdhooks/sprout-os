@@ -12,7 +12,7 @@
 namespace sprout::launcher {
 
 inline constexpr std::uint32_t kProfileSchemaVersion = 1;
-inline constexpr std::uint32_t kProfileDatabaseSchemaVersion = 1;
+inline constexpr std::uint32_t kProfileDatabaseSchemaVersion = 2;
 
 enum class ProfileLifecycle {
   Active,
@@ -28,6 +28,7 @@ struct NewProfile {
   std::optional<std::string> content_policy_ref;
   std::optional<std::string> time_policy_ref;
   std::string preferences_json{"{}"};
+  std::string background_ref{"builtin:garden-morning"};
 };
 
 struct ProfileRecord {
@@ -44,6 +45,7 @@ struct ProfileRecord {
   std::uint64_t local_revision;
   std::string created_at;
   std::string updated_at;
+  std::string background_ref;
 };
 
 class ProfileRepository {
@@ -64,6 +66,8 @@ class ProfileRepository {
 
   void create_profile(const NewProfile& profile);
   void set_avatar_ref(const std::string& id, const std::string& avatar_ref);
+  void set_background_ref(const std::string& id,
+                          const std::string& background_ref);
   void archive_profile(const std::string& id);
   void restore_profile(const std::string& id);
 

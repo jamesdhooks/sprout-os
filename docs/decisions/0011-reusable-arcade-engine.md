@@ -7,7 +7,7 @@
 
 The Windows preview established a constrained deterministic runtime and one playable Snake package. The prototype proves the process boundary but keeps text drawing, state transitions, input edges, and presentation helpers inside one game script. Copying that pattern across a larger collection would produce inconsistent saves, controls, rendering, difficulty, and lifecycle behavior.
 
-Designing systems for all proposed games now would create speculative engine scope. The first proposed collection has a natural initial sequence: Mouse & Cheese Maze, Blocks & Buttons, and Sprout Snake. Together they exercise deterministic grid content, solver-backed campaigns, and real-time endless play.
+Designing systems for all proposed games now would create speculative engine scope. The first proposed collection has a natural initial sequence: Mouse & Cheese Maze, Blocks & Buttons, and Snake. Together they exercise deterministic grid content, solver-backed campaigns, and real-time endless play.
 
 ## Decision
 

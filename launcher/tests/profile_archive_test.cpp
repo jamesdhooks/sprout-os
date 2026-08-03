@@ -84,6 +84,7 @@ NewProfile child_profile(std::string id = "child-alex",
       .content_policy_ref = "content-default",
       .time_policy_ref = "time-default",
       .preferences_json = R"({"theme":"sprout"})",
+      .background_ref = "builtin:firefly-evening",
   };
 }
 
@@ -151,7 +152,8 @@ void built_in_child_round_trips_with_daily_allowance() {
   const auto restored = target.archives.restore_profile(archive_path);
   const auto profile = target.profiles.find_profile(restored.profile_id);
   expect(profile.has_value() && profile->avatar_ref == "builtin:fox" &&
-             profile->preferences_json == R"({"theme":"sprout"})",
+             profile->preferences_json == R"({"theme":"sprout"})" &&
+             profile->background_ref == "builtin:firefly-evening",
          "built-in profile fields should round-trip");
   expect(target.time_policy.find_daily_allowance_seconds("child-alex") ==
              45 * 60,

@@ -52,8 +52,19 @@ ReadOnlyView<BuiltInAvatar> ProfileAvatarPresentation::avatars() const noexcept 
   return built_in_avatars();
 }
 
+ReadOnlyView<BuiltInBackground>
+ProfileAvatarPresentation::backgrounds() const noexcept {
+  return built_in_backgrounds();
+}
+
 std::size_t ProfileAvatarPresentation::focus_index() const noexcept {
-  return stage_ == ProfileAvatarStage::Profile ? profile_focus_ : avatar_focus_;
+  switch (stage_) {
+    case ProfileAvatarStage::Profile: return profile_focus_;
+    case ProfileAvatarStage::Appearance: return appearance_focus_;
+    case ProfileAvatarStage::Avatar: return avatar_focus_;
+    case ProfileAvatarStage::Background: return background_focus_;
+  }
+  return 0;
 }
 
 std::size_t ProfileAvatarPresentation::page_index() const noexcept {
@@ -91,8 +102,22 @@ std::optional<ProfileAvatarEvent> ProfileAvatarPresentation::handle(
     } else if (action == Action::Down || action == Action::Right) {
       move_profile_focus(1);
     } else if (action == Action::Confirm) {
-      stage_ = ProfileAvatarStage::Avatar;
-      avatar_focus_ = 0;
+      stage_ = ProfileAvatarStage::Appearance;
+      appearance_focus_ = 0;
+    }
+    return std::nullopt;
+  }
+
+  if (stage_ == ProfileAvatarStage::Appearance) {
+    if (action == Action::Back) {
+      stage_ = ProfileAvatarStage::Profile;
+    } else if (action == Action::Left || action == Action::Up) {
+      appearance_focus_ = (appearance_focus_ + 1U) % 2U;
+    } else if (action == Action::Right || action == Action::Down) {
+      appearance_focus_ = (appearance_focus_ + 1U) % 2U;
+    } else if (action == Action::Confirm) {
+      stage_ = appearance_focus_ == 0 ? ProfileAvatarStage::Avatar
+                                     : ProfileAvatarStage::Background;
     }
     return std::nullopt;
   }
@@ -101,7 +126,28 @@ std::optional<ProfileAvatarEvent> ProfileAvatarPresentation::handle(
     if (profile_locked_) {
       return ProfileAvatarEvent{ProfileAvatarEventType::BackRequested, {}};
     }
-    stage_ = ProfileAvatarStage::Profile;
+    stage_ = ProfileAvatarStage::Appearance;
+    return std::nullopt;
+  }
+  if (stage_ == ProfileAvatarStage::Background) {
+    if (action == Action::Left) move_background_focus(-1);
+    else if (action == Action::Right) move_background_focus(1);
+    else if (action == Action::Up) move_background_focus(-2);
+    else if (action == Action::Down) move_background_focus(2);
+    else if (action == Action::Confirm) {
+      const auto* profile = selected_profile();
+      const auto choices = built_in_backgrounds();
+      if (profile == nullptr || background_focus_ >= choices.size()) {
+        throw std::logic_error("Profile background selection lost its choice");
+      }
+      repository_.set_background_ref(
+          profile->id, built_in_background_ref(choices[background_focus_].id));
+      profiles_[profile_focus_].background_ref =
+          built_in_background_ref(choices[background_focus_].id);
+      notice_ = "BACKGROUND UPDATED";
+      return ProfileAvatarEvent{ProfileAvatarEventType::BackgroundAssigned,
+                                profile->id};
+    }
     return std::nullopt;
   }
   if (action == Action::Left) {
@@ -141,6 +187,13 @@ std::optional<ProfileAvatarEvent> ProfileAvatarPresentation::handle(
   notice_ = "PROFILE IMAGE UPDATED";
   return ProfileAvatarEvent{ProfileAvatarEventType::AvatarAssigned,
                             profile->id};
+}
+
+void ProfileAvatarPresentation::move_background_focus(int delta) {
+  const auto count = static_cast<long long>(built_in_backgrounds().size());
+  const auto current = static_cast<long long>(background_focus_);
+  background_focus_ = static_cast<std::size_t>(
+      (current + static_cast<long long>(delta) + count) % count);
 }
 
 void ProfileAvatarPresentation::move_profile_focus(int delta) {

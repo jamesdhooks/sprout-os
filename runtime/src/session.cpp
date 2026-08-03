@@ -148,6 +148,46 @@ struct Session::Impl {
     return 0;
   }
 
+  static int label(lua_State* state) {
+    auto& runtime = self(state);
+    std::size_t length = 0;
+    const char* value = luaL_checklstring(state, 1, &length);
+    DrawLabel command{
+        .text = std::string(value, length),
+        .x = static_cast<int>(luaL_checkinteger(state, 2)),
+        .y = static_cast<int>(luaL_checkinteger(state, 3)),
+        .width = static_cast<int>(luaL_checkinteger(state, 4)),
+        .height = static_cast<int>(luaL_checkinteger(state, 5)),
+        .red = static_cast<std::uint8_t>(luaL_checkinteger(state, 6)),
+        .green = static_cast<std::uint8_t>(luaL_checkinteger(state, 7)),
+        .blue = static_cast<std::uint8_t>(luaL_checkinteger(state, 8)),
+        .alpha = static_cast<std::uint8_t>(luaL_optinteger(state, 9, 255)),
+    };
+    const auto valid_color = [state](int index) {
+      const auto component = lua_tointeger(state, index);
+      return component >= 0 && component <= 255;
+    };
+    const bool printable = length > 0 && length <= 96 &&
+        std::all_of(command.text.begin(), command.text.end(),
+                    [](unsigned char character) {
+                      return character >= 32 && character <= 126;
+                    });
+    if (!printable || command.x < 0 || command.y < 0 || command.width <= 0 ||
+        command.height < 8 ||
+        command.x + command.width > runtime.package.logical_width ||
+        command.y + command.height > runtime.package.logical_height ||
+        !valid_color(6) || !valid_color(7) || !valid_color(8) ||
+        (lua_gettop(state) >= 9 && !valid_color(9))) {
+      return luaL_error(state, "label is outside the logical surface");
+    }
+    if (runtime.drawing.size() >= kMaximumDrawCommands) {
+      return luaL_error(state, "frame draw-command limit exceeded");
+    }
+    runtime.drawing.push_back(
+        {.type = DrawCommandType::Label, .label = std::move(command)});
+    return 0;
+  }
+
   static std::string identifier(lua_State* state, int argument) {
     std::size_t length = 0;
     const char* value = luaL_checklstring(state, argument, &length);
@@ -411,10 +451,30 @@ struct Session::Impl {
       }
       const int column = static_cast<int>(tile % static_cast<std::size_t>(columns));
       const int row = static_cast<int>(tile / static_cast<std::size_t>(columns));
-      append_sprite(state, runtime, tile_set.sprites[tiles[tile]],
-                    origin_x + column * tile_set.tile_width * scale,
-                    origin_y + row * tile_set.tile_height * scale,
-                    scale, false, false, 255);
+      const auto& frame =
+          runtime.package.assets.sprites[tile_set.sprites[tiles[tile]]];
+      const int target_x = origin_x + column * tile_set.tile_width * scale;
+      const int target_y = origin_y + row * tile_set.tile_height * scale;
+      const int target_width = tile_set.tile_width * scale;
+      const int target_height = tile_set.tile_height * scale;
+      if (target_x < 0 || target_y < 0 ||
+          target_x + target_width > runtime.package.logical_width ||
+          target_y + target_height > runtime.package.logical_height ||
+          runtime.drawing.size() >= kMaximumDrawCommands) {
+        return luaL_error(state, "tilemap is outside the logical surface");
+      }
+      runtime.drawing.push_back({
+          .type = DrawCommandType::Sprite,
+          .sprite = {.atlas = frame.atlas,
+                     .source_x = frame.x,
+                     .source_y = frame.y,
+                     .source_width = frame.width,
+                     .source_height = frame.height,
+                     .x = target_x,
+                     .y = target_y,
+                     .width = target_width,
+                     .height = target_height},
+      });
     }
     return 0;
   }
@@ -510,6 +570,7 @@ struct Session::Impl {
     };
     add("random", random);
     add("rect", rect);
+    add("label", label);
     add("sprite", sprite);
     add("animate", animate);
     add("sprite_batch", sprite_batch);

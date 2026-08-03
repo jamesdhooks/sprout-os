@@ -1,5 +1,6 @@
 add_library(
   sprout_launcher_core
+  src/built_in_background.cpp
   src/built_in_avatar.cpp
   src/demo_household.cpp
   src/launcher_state.cpp
@@ -248,7 +249,7 @@ if(SPROUT_BUILD_DESKTOP)
   )
 
   target_compile_features(sprout-launcher PRIVATE cxx_std_20)
-  target_include_directories(sprout-launcher PRIVATE src)
+  target_include_directories(sprout-launcher PRIVATE src ${PROJECT_SOURCE_DIR}/shared/include)
   target_link_libraries(
     sprout-launcher
     PRIVATE
@@ -272,6 +273,9 @@ if(SPROUT_BUILD_DESKTOP)
     TARGET sprout-launcher POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_CURRENT_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:sprout-launcher>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${PROJECT_SOURCE_DIR}/shared/assets
             $<TARGET_FILE_DIR:sprout-launcher>/assets
     COMMENT "Copying launcher visual assets"
   )

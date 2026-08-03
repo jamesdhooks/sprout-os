@@ -21,6 +21,7 @@ struct Profile {
   ProfileRole role;
   std::uint32_t accent_rgb;
   std::string avatar_ref;
+  std::string background_ref{"builtin:garden-morning"};
 };
 
 enum class Screen {

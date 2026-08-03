@@ -8,21 +8,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A cohesive storybook launcher and Arcade presentation with rounded Nunito
+  typography, illustrated startup art, four parent-assignable profile scenes,
+  simplified animated profile selection, high-resolution baked game-title art,
+  and deterministic Windows visual review coverage.
+- A shared runtime label primitive and high-resolution tile resampling so game
+  HUDs, terminal states, and rich source atlases do not require package-local
+  pixel fonts or low-resolution tile sources.
 - A 64-item built-in profile-avatar library with 512-pixel transparent masters,
   runtime thumbnails, paged parent-managed selection, and retained custom-image
   import support.
 - Playable Mouse & Cheese Maze and Blocks & Buttons Windows prototypes with
-  deterministic original pixel-art sprite sheets and reproducible asset
-  generation.
+  deterministic storybook sprite atlases and reproducible asset packing.
 - Strict package-local atlas, sprite-frame, animation, and tile-set manifests;
   fixed-tick animation; compact tilemap submission; general sprite/animation
-  batch submission; lazy PNG texture caching; nearest-neighbor sampling; and
+  batch submission; lazy PNG texture caching; target-aware resampling; and
   same-atlas SDL geometry batching.
 - A CI-exercised Windows Arcade lifecycle journey covering explicit native-package discovery, real runtime process start, structured play events, profile/package-isolated storage, normal exit, and launcher return, with a manual keyboard/controller/render evidence protocol.
 - Local Sprout Arcade discovery in the family launcher, manifest-based child audience controls, typed native launch handoff, profile-isolated game storage, clean launcher return, and a deterministic launcher-to-runtime Windows smoke check.
 - A committed Windows-only Sprout Arcade preview milestone that keeps physical Onion acceptance open while bounding native runtime work to one local packaged game and its verified launcher lifecycle.
 - A Windows-native Sprout Runtime preview with strict local manifests, sandboxed text Lua, deterministic fixed-step sessions, action input, rectangle rendering, structured events, atomic package storage, and lifecycle instruction limits.
-- Sprout Snake as the first local Arcade package, with deterministic D-pad play, immediate replay, best-score storage, original code-only presentation, and automated runtime coverage.
+- Snake as the first local Arcade package, with deterministic D-pad play, immediate replay, best-score storage, storybook presentation, and automated runtime coverage.
 - A pinned Onion artifact audit that records SHA-256, byte size, ARM EABI5 format, interpreter, and reviewed dynamic dependencies and fails before deployment on incompatible output.
 - A deterministic host integration journey and release-blocking evidence checklist spanning resumed setup, profiles, parent access, local GB/SNES selections, time expiry, profile portability, and repeated-start recovery while preserving hardware-only gates.
 - A controller-accessible desktop recovery flow after repeated unfinished starts, with validated last-known-good preview/restore, cancel-first launcher reset, collision-safe active-configuration quarantine, and readiness only after ordinary UI renders.

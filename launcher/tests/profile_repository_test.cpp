@@ -129,8 +129,8 @@ void creates_migrates_and_reloads_household() {
   TemporaryDatabase database;
   {
     ProfileRepository profiles(database.path());
-    expect(profiles.database_schema_version() == 1,
-           "empty version-zero database should migrate to version one");
+    expect(profiles.database_schema_version() == 2,
+           "empty version-zero database should migrate to version two");
     profiles.create_profile(parent());
     profiles.create_profile(child());
   }
@@ -144,6 +144,23 @@ void creates_migrates_and_reloads_household() {
          "parent role should survive reload");
   expect(reloaded.find_profile("child-alex")->content_policy_ref.has_value(),
          "child policy reference should survive reload");
+}
+
+void updates_profile_backgrounds() {
+  TemporaryDatabase database;
+  ProfileRepository profiles(database.path());
+  profiles.create_profile(parent());
+  expect(profiles.find_profile("parent-sam")->background_ref ==
+             "builtin:garden-morning",
+         "new profiles should start with the safe garden background");
+  profiles.set_background_ref("parent-sam", "builtin:treehouse-library");
+  const auto updated = profiles.find_profile("parent-sam");
+  expect(updated->background_ref == "builtin:treehouse-library" &&
+             updated->local_revision == 2,
+         "background update should persist and advance the revision");
+  expect_failure(
+      [&] { profiles.set_background_ref("parent-sam", "local:C:/image.png"); },
+      "profile backgrounds should be limited to the built-in catalogue");
 }
 
 void archives_and_restores_without_deleting() {
@@ -234,6 +251,38 @@ void rejects_newer_database_versions_without_mutation() {
          "rejected newer schema should remain unchanged");
 }
 
+void migrates_version_one_backgrounds_safely() {
+  TemporaryDatabase database;
+  with_raw_database(database.path(), [](sqlite3* raw) {
+    raw_execute(raw, R"sql(
+      CREATE TABLE profiles (
+        id TEXT PRIMARY KEY,
+        role TEXT NOT NULL,
+        lifecycle TEXT NOT NULL
+      );
+      PRAGMA user_version = 1;
+    )sql");
+  });
+  { ProfileRepository profiles(database.path()); }
+  expect(raw_schema_version(database.path()) == 2,
+         "version-one database should migrate to version two");
+  bool found_background = false;
+  with_raw_database(database.path(), [&](sqlite3* raw) {
+    sqlite3_stmt* statement = nullptr;
+    sqlite3_prepare_v2(raw, "PRAGMA table_info(profiles)", -1, &statement, nullptr);
+    while (sqlite3_step(statement) == SQLITE_ROW) {
+      const auto* name = sqlite3_column_text(statement, 1);
+      if (name != nullptr && std::string_view(reinterpret_cast<const char*>(name)) ==
+                                 "background_ref") {
+        found_background = true;
+      }
+    }
+    sqlite3_finalize(statement);
+  });
+  expect(found_background,
+         "version-one migration should add the background reference column");
+}
+
 void rolls_back_failed_migration() {
   TemporaryDatabase database;
   with_raw_database(database.path(), [](sqlite3* raw) {
@@ -288,7 +337,9 @@ int main() {
     protects_the_last_active_parent();
     rejects_invalid_profile_values();
     updates_only_managed_avatar_references();
+    updates_profile_backgrounds();
     rejects_newer_database_versions_without_mutation();
+    migrates_version_one_backgrounds_safely();
     rolls_back_failed_migration();
     schema_excludes_sensitive_profile_data();
   } catch (const std::exception& error) {

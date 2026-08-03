@@ -55,6 +55,7 @@ end
 
 function render()
   sprout.rect(10, 20, 30, 40, 80, 160, 90)
+  sprout.label("Ready", 50, 20, 100, 24, 30, 60, 45)
 end
 
 function capture_scenario(name)
@@ -91,9 +92,11 @@ int main() {
     first.step({.primary = true});
     const std::string first_snapshot = first.snapshot();
     const auto& drawing = first.render();
-    check(drawing.size() == 1 &&
+    check(drawing.size() == 2 &&
               drawing.front().type == sprout::runtime::DrawCommandType::Rectangle &&
-              drawing.front().rectangle.x == 10,
+              drawing.front().rectangle.x == 10 &&
+              drawing.back().type == sprout::runtime::DrawCommandType::Label &&
+              drawing.back().label.text == "Ready",
           "render command was not captured");
     auto changed = first.drain_events();
     check(changed.size() == 1 && changed.front().type == "AchievementUnlocked",
@@ -122,9 +125,9 @@ int main() {
         std::filesystem::path(SPROUT_SOURCE_DIR) / "games" / "snake";
     const auto snake_package = sprout::runtime::load_package(snake_path);
     check(snake_package.title_screen.enabled &&
-              snake_package.title_screen.image_width == 640 &&
-              snake_package.title_screen.image_height == 480,
-          "Snake title presentation was not loaded");
+              snake_package.title_screen.image_width == 1536 &&
+              snake_package.title_screen.image_height == 1152,
+          "Snake high-resolution title presentation was not loaded");
     check(snake_package.assets.atlases.size() == 2 &&
               snake_package.assets.sprites.size() == 32 &&
               snake_package.assets.animations.size() == 4,

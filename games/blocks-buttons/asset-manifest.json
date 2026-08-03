@@ -41,6 +41,6 @@
     ]}
   ],
   "tileSets": [
-    {"id": "room.tiles", "tileSize": [16, 16], "sprites": ["room.floor", "room.wall"]}
+    {"id": "room.tiles", "tileSize": [16, 16], "sprites": ["rich.floor-wood", "rich.wall-workshop"]}
   ]
 }

@@ -1,5 +1,6 @@
 #include "sprout/runtime/package.hpp"
 #include "sprout/runtime/session.hpp"
+#include "sprout/ui/font_metrics.hpp"
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <cctype>
 #include <cstdint>
+#include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
@@ -167,6 +169,9 @@ struct GeometryBuffers {
   std::vector<int> indices;
 };
 
+void draw_text(SDL_Renderer* renderer, const std::string& text,
+               const SDL_Rect& region, SDL_Color color);
+
 void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
                 TextureStore& textures, GeometryBuffers& geometry) {
   SDL_SetRenderDrawColor(renderer, 20, 24, 28, 255);
@@ -181,6 +186,14 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
       SDL_SetRenderDrawColor(renderer, rectangle.red, rectangle.green,
                              rectangle.blue, rectangle.alpha);
       SDL_RenderFillRect(renderer, &target);
+      ++command_index;
+      continue;
+    }
+    if (command.type == sprout::runtime::DrawCommandType::Label) {
+      const auto& label = command.label;
+      draw_text(renderer, label.text,
+                {label.x, label.y, label.width, label.height},
+                {label.red, label.green, label.blue, label.alpha});
       ++command_index;
       continue;
     }
@@ -295,6 +308,64 @@ SDL_Rect logical_region(const sprout::runtime::NormalizedRegion& region,
 
 void draw_text(SDL_Renderer* renderer, const std::string& text,
                const SDL_Rect& region, SDL_Color color) {
+  static SDL_Renderer* font_renderer = nullptr;
+  static SDL_Texture* font_texture = nullptr;
+  if (font_renderer != renderer) {
+    if (font_texture != nullptr) SDL_DestroyTexture(font_texture);
+    char* base = SDL_GetBasePath();
+    const std::filesystem::path path =
+        base == nullptr ? std::filesystem::path{}
+                        : std::filesystem::path(base) / "assets" / "fonts" /
+                              "nunito-semibold.png";
+    if (base != nullptr) SDL_free(base);
+    font_texture = path.empty() ? nullptr
+                                : IMG_LoadTexture(renderer, path.string().c_str());
+    if (font_texture != nullptr) {
+      SDL_SetTextureBlendMode(font_texture, SDL_BLENDMODE_BLEND);
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+      SDL_SetTextureScaleMode(font_texture, SDL_ScaleModeLinear);
+#endif
+    }
+    font_renderer = renderer;
+  }
+  if (font_texture != nullptr) {
+    const int height = std::max(10, std::min(18, region.h - 8));
+    const double ratio = static_cast<double>(height) / sprout::ui::kUiFontSourceSize;
+    const auto metric_for = [](char character) -> const sprout::ui::UiGlyphMetric& {
+      const unsigned char value = static_cast<unsigned char>(character);
+      const int codepoint = value >= sprout::ui::kUiFontFirstCodepoint &&
+                                    value <= sprout::ui::kUiFontLastCodepoint
+                                ? value
+                                : '?';
+      return sprout::ui::kUiFontRegularMetrics[
+          static_cast<std::size_t>(codepoint - sprout::ui::kUiFontFirstCodepoint)];
+    };
+    int width = 0;
+    for (const char character : text) {
+      width += static_cast<int>(std::round(metric_for(character).advance * ratio));
+    }
+    int x = region.x + (region.w - width) / 2;
+    const int baseline = region.y + (region.h - height) / 2;
+    SDL_SetTextureColorMod(font_texture, color.r, color.g, color.b);
+    SDL_SetTextureAlphaMod(font_texture, color.a);
+    for (const char character : text) {
+      const auto& metric = metric_for(character);
+      if (metric.width > 0 && metric.height > 0) {
+        const SDL_Rect source{metric.source_x, metric.source_y, metric.width,
+                              metric.height};
+        const SDL_Rect destination{
+            x + static_cast<int>(std::round(metric.bearing_x * ratio)),
+            baseline + static_cast<int>(std::round(
+                           (sprout::ui::kUiFontRegularAscent + metric.bearing_top) *
+                           ratio)),
+            std::max(1, static_cast<int>(std::round(metric.width * ratio))),
+            std::max(1, static_cast<int>(std::round(metric.height * ratio)))};
+        SDL_RenderCopy(renderer, font_texture, &source, &destination);
+      }
+      x += static_cast<int>(std::round(metric.advance * ratio));
+    }
+    return;
+  }
   const int units = std::max(1, static_cast<int>(text.size()) * 6 - 1);
   const int scale = std::max(1, std::min(region.w / units, region.h / 7));
   const int width = units * scale;
@@ -319,6 +390,28 @@ void draw_text(SDL_Renderer* renderer, const std::string& text,
   };
   pass(std::max(1, scale / 2), {12, 24, 19, 210});
   pass(0, color);
+}
+
+void fill_rounded_rect(SDL_Renderer* renderer, const SDL_Rect& rectangle,
+                       int radius, SDL_Color color) {
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+  SDL_Rect middle{rectangle.x + radius, rectangle.y,
+                  rectangle.w - radius * 2, rectangle.h};
+  SDL_Rect center{rectangle.x, rectangle.y + radius,
+                  rectangle.w, rectangle.h - radius * 2};
+  SDL_RenderFillRect(renderer, &middle);
+  SDL_RenderFillRect(renderer, &center);
+  for (int y = 0; y < radius; ++y) {
+    const int inset = radius - static_cast<int>(
+        std::sqrt(static_cast<double>(radius * radius - (radius - y) * (radius - y))));
+    SDL_Rect top{rectangle.x + inset, rectangle.y + y,
+                 rectangle.w - inset * 2, 1};
+    SDL_Rect bottom{rectangle.x + inset, rectangle.y + rectangle.h - 1 - y,
+                    rectangle.w - inset * 2, 1};
+    SDL_RenderFillRect(renderer, &top);
+    SDL_RenderFillRect(renderer, &bottom);
+  }
 }
 
 void draw_title_screen(SDL_Renderer* renderer,
@@ -351,19 +444,12 @@ void draw_title_screen(SDL_Renderer* renderer,
   }
   SDL_RenderCopy(renderer, texture, &source, &destination);
 
-  const SDL_Rect title = logical_region(package.title_screen.title_region,
-                                        package.logical_width,
-                                        package.logical_height);
   const SDL_Rect controls = logical_region(package.title_screen.controls_region,
                                            package.logical_width,
                                            package.logical_height);
-  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-  SDL_SetRenderDrawColor(renderer, 11, 32, 24, 178);
-  SDL_RenderFillRect(renderer, &title);
-  SDL_SetRenderDrawColor(renderer, 246, 236, 212, 226);
-  SDL_RenderFillRect(renderer, &controls);
-  draw_text(renderer, package.title, title, {247, 240, 215, 255});
-  draw_text(renderer, "A START   B BACK", controls, {28, 65, 48, 255});
+  fill_rounded_rect(renderer, controls, std::min(controls.h / 2, 12),
+                    {255, 249, 225, 235});
+  draw_text(renderer, "A Start    B Back", controls, {37, 67, 53, 255});
   SDL_RenderPresent(renderer);
 }
 

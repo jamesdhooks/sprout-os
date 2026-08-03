@@ -399,6 +399,7 @@ std::vector<sprout::launcher::Profile> load_launcher_profiles(
                           ? 0x70B77EU
                           : 0x8E7DBEU,
         .avatar_ref = stored.avatar_ref,
+        .background_ref = stored.background_ref,
     });
   }
   std::stable_sort(profiles.begin(), profiles.end(), [](const auto& left, const auto& right) {
@@ -556,11 +557,11 @@ int main(int argc, char* argv[]) {
   SDL_RenderSetLogicalSize(renderer, 640, 480);
   const auto executable_root =
       std::filesystem::absolute(argv[0]).parent_path();
-  const auto startup_splash = executable_root / "assets" / "startup-splash.png";
+  const auto startup_splash =
+      executable_root / "assets" / "sprout-startup-storybook.png";
   const auto launcher_background =
-      executable_root / "assets" / "launcher-family.png";
-  const auto launcher_accents =
-      executable_root / "assets" / "sprout-menu-particles-atlas.png";
+      executable_root / "assets" / "backgrounds" / "garden-morning.png";
+  const std::filesystem::path launcher_accents;
   const auto built_in_avatar_root = executable_root / "assets" / "avatars";
 
   if (smoke_test) {
@@ -836,6 +837,8 @@ int main(int argc, char* argv[]) {
         screenshot_screen == "profile-avatars-new" ||
         screenshot_screen == "profile-avatars-last" ||
         screenshot_screen == "profile-settings" ||
+        screenshot_screen == "profile-appearance" ||
+        screenshot_screen == "profile-backgrounds" ||
         sprout::launcher::starts_with(screenshot_screen,
                                       "profile-avatars-page-")) {
       TemporaryDirectory directory("profile-avatars-screenshot");
@@ -857,7 +860,9 @@ int main(int argc, char* argv[]) {
           .content_policy_ref = "content:child-default",
           .time_policy_ref = "time:child-default",
       });
-      const bool profile_selection = screenshot_screen == "profile-settings";
+      const bool profile_selection = screenshot_screen == "profile-settings" ||
+                                     screenshot_screen == "profile-appearance" ||
+                                     screenshot_screen == "profile-backgrounds";
       sprout::launcher::ProfileAvatarPresentation avatars(
           profiles, true,
           profile_selection ? std::nullopt
@@ -882,6 +887,12 @@ int main(int argc, char* argv[]) {
         }
       } else if (screenshot_screen == "profile-avatars-last") {
         static_cast<void>(avatars.handle(Action::Left));
+      } else if (screenshot_screen == "profile-appearance") {
+        static_cast<void>(avatars.handle(Action::Confirm));
+      } else if (screenshot_screen == "profile-backgrounds") {
+        static_cast<void>(avatars.handle(Action::Confirm));
+        static_cast<void>(avatars.handle(Action::Right));
+        static_cast<void>(avatars.handle(Action::Confirm));
       }
       sprout::launcher::render_profile_avatars(
           renderer, avatars, built_in_avatar_root);
@@ -1362,6 +1373,13 @@ int main(int argc, char* argv[]) {
         }
       }
     }
+
+    const bool animated_profile_focus =
+        state.has_value() && state->screen() == sprout::launcher::Screen::ProfileSelect &&
+        recovery == nullptr && parent_pin == nullptr && image_crop == nullptr &&
+        profile_avatars == nullptr && setup == nullptr && library == nullptr &&
+        archive == nullptr && SDL_getenv("SPROUT_STATIC_UI") == nullptr;
+    if (animated_profile_focus) dirty = true;
 
     if (dirty) {
       if (recovery != nullptr) {

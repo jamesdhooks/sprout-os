@@ -8,7 +8,7 @@ Status values describe repository truth: **Prototype**, **Planned**, **Deferred*
 | --- | --- | --- | --- | --- |
 | 1 | Mouse & Cheese Maze | 1,000 resolved campaign mazes plus seeded daily/endless levels | Grid, tilemap, edge-triggered movement, campaign content, BFS metrics | Prototype |
 | 2 | Blocks & Buttons | 1,000 offline-generated and solver-verified rooms | Occupancy, push rules, deadlock detection, solver metadata | Prototype |
-| 3 | Sprout Snake | Seeded endless and daily runs | Fixed-step movement, direction queue, free-cell selection, scoring | Prototype |
+| 3 | Snake | Seeded endless and daily runs | Fixed-step movement, direction queue, free-cell selection, scoring | Prototype |
 | 4 | Key & Door | Resolved generated campaign | Collectibles, conditional tiles, staged objectives | Deferred |
 | 5 | Paint the Floor | Resolved generated campaign | Mutable tiles, visited coverage, completion conditions | Deferred |
 | 6 | Ice Slide | Solver-verified campaign | Slide-until-collision, stop graphs, turn solver | Deferred |
@@ -40,7 +40,7 @@ The sequence intentionally grows from deterministic tile navigation, to solver-b
 | Offline content pipeline | [#42](https://github.com/jamesdhooks/sprout-os/issues/42) |
 | Mouse & Cheese Maze | [#43](https://github.com/jamesdhooks/sprout-os/issues/43) |
 | Blocks & Buttons | [#44](https://github.com/jamesdhooks/sprout-os/issues/44) |
-| Sprout Snake completion | [#45](https://github.com/jamesdhooks/sprout-os/issues/45) |
+| Snake completion | [#45](https://github.com/jamesdhooks/sprout-os/issues/45) |
 | End-to-end first-three evidence | [#46](https://github.com/jamesdhooks/sprout-os/issues/46) |
 
 ## Common game contract

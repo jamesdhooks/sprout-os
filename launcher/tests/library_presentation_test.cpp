@@ -101,7 +101,7 @@ void filters_and_recent_order_are_deterministic() {
   auto native_entries = entries();
   native_entries.push_back(LibraryEntry{
       .id = "arcade:sprout.snake",
-      .title = "Sprout Snake",
+      .title = "Snake",
       .platform_label = "ARCADE",
       .launch_target = NativeLaunchTarget{
           .item_id = "arcade:sprout.snake",

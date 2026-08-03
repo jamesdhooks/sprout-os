@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "sprout.snake",
-  "title": "Sprout Snake",
+  "title": "Snake",
   "version": "0.1.0",
   "runtimeVersion": 1,
   "entrypoint": "game.lua",
@@ -9,7 +9,7 @@
   "logicalResolution": [320, 240],
   "titleScreen": {
     "image": "assets/title.png",
-    "dimensions": [640, 480],
+    "dimensions": [1536, 1152],
     "fit": "cover",
     "titleRegion": [30, 30, 940, 210],
     "controlsRegion": [160, 840, 680, 120]

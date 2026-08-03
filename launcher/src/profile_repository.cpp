@@ -129,18 +129,25 @@ ProfileRecord read_profile(sqlite3_stmt* statement) {
       .local_revision = static_cast<std::uint64_t>(sqlite3_column_int64(statement, 10)),
       .created_at = column_text(statement, 11),
       .updated_at = column_text(statement, 12),
+      .background_ref = column_text(statement, 13),
   };
 }
 
 constexpr std::string_view kProfileColumns =
     "schema_version, id, display_name, role, avatar_ref, save_namespace, "
     "content_policy_ref, time_policy_ref, preferences_json, lifecycle, "
-    "local_revision, created_at, updated_at";
+    "local_revision, created_at, updated_at, background_ref";
 
 void validate_avatar_ref(std::string_view avatar_ref) {
   if (!starts_with(avatar_ref, "builtin:") &&
       !starts_with(avatar_ref, "local:")) {
     throw std::invalid_argument("Avatar reference must use builtin: or local:");
+  }
+}
+
+void validate_background_ref(std::string_view background_ref) {
+  if (!starts_with(background_ref, "builtin:")) {
+    throw std::invalid_argument("Background reference must use builtin:");
   }
 }
 
@@ -151,6 +158,7 @@ void validate_profile(const NewProfile& profile) {
         "Profile ID, display name, avatar, and save namespace are required");
   }
   validate_avatar_ref(profile.avatar_ref);
+  validate_background_ref(profile.background_ref);
   if (profile.role == ProfileRole::Child &&
       (!profile.content_policy_ref.has_value() ||
        !profile.time_policy_ref.has_value())) {
@@ -206,13 +214,11 @@ class ProfileRepository::Impl {
     if (version > kProfileDatabaseSchemaVersion) {
       throw std::runtime_error("Profile database schema is newer than this Sprout build");
     }
-    if (version == kProfileDatabaseSchemaVersion) {
-      return;
-    }
+    if (version == kProfileDatabaseSchemaVersion) return;
 
     execute(database_, "BEGIN IMMEDIATE");
     try {
-      execute(database_, R"sql(
+      if (version == 0) execute(database_, R"sql(
         CREATE TABLE IF NOT EXISTS profiles (
           schema_version INTEGER NOT NULL CHECK (schema_version = 1),
           id TEXT PRIMARY KEY NOT NULL CHECK (length(id) > 0),
@@ -230,16 +236,23 @@ class ProfileRepository::Impl {
           local_revision INTEGER NOT NULL DEFAULT 1 CHECK (local_revision > 0),
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL,
+          background_ref TEXT NOT NULL DEFAULT 'builtin:garden-morning'
+            CHECK (background_ref LIKE 'builtin:%'),
           CHECK (
             role = 'parent' OR
             (content_policy_ref IS NOT NULL AND time_policy_ref IS NOT NULL)
           )
         )
       )sql");
+      if (version == 1) {
+        execute(database_,
+                "ALTER TABLE profiles ADD COLUMN background_ref TEXT NOT NULL "
+                "DEFAULT 'builtin:garden-morning' CHECK (background_ref LIKE 'builtin:%')");
+      }
       execute(database_,
               "CREATE INDEX IF NOT EXISTS profiles_lifecycle_index "
               "ON profiles(lifecycle, role)");
-      execute(database_, "PRAGMA user_version = 1");
+      execute(database_, "PRAGMA user_version = 2");
       execute(database_, "COMMIT");
     } catch (...) {
       try {
@@ -304,10 +317,10 @@ void ProfileRepository::create_profile(const NewProfile& profile) {
     INSERT INTO profiles (
       schema_version, id, display_name, role, avatar_ref, save_namespace,
       content_policy_ref, time_policy_ref, preferences_json, lifecycle,
-      local_revision, created_at, updated_at
+      local_revision, created_at, updated_at, background_ref
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1,
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
-              strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+              strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?)
   )sql");
   sqlite3_bind_int64(statement.get(), 1, kProfileSchemaVersion);
   bind_text(statement.get(), 2, profile.id);
@@ -318,8 +331,28 @@ void ProfileRepository::create_profile(const NewProfile& profile) {
   bind_optional_text(statement.get(), 7, profile.content_policy_ref);
   bind_optional_text(statement.get(), 8, profile.time_policy_ref);
   bind_text(statement.get(), 9, profile.preferences_json);
+  bind_text(statement.get(), 10, profile.background_ref);
   if (sqlite3_step(statement.get()) != SQLITE_DONE) {
     throw std::runtime_error(sqlite3_errmsg(impl_->database()));
+  }
+}
+
+void ProfileRepository::set_background_ref(
+    const std::string& id, const std::string& background_ref) {
+  validate_background_ref(background_ref);
+  Statement statement(impl_->database(), R"sql(
+    UPDATE profiles
+    SET background_ref = ?, local_revision = local_revision + 1,
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    WHERE id = ?
+  )sql");
+  bind_text(statement.get(), 1, background_ref);
+  bind_text(statement.get(), 2, id);
+  if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+    throw std::runtime_error(sqlite3_errmsg(impl_->database()));
+  }
+  if (sqlite3_changes(impl_->database()) == 0) {
+    throw std::invalid_argument("Profile does not exist");
   }
 }
 

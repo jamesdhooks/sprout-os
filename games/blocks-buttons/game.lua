@@ -108,9 +108,8 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 15, 31, 24)
-  sprout.rect(0, 0, 320, 36, 29, 55, 43)
-  sprout.rect(76, 52, 168, 136, 70, 132, 84)
+  sprout.rect(0, 0, 320, 240, 247, 240, 211)
+  sprout.rect(76, 52, 168, 136, 126, 165, 95)
   sprout.tilemap("room.tiles", tiles, columns, origin_x, origin_y)
   local sprites = {}
   for _, button in ipairs(buttons) do
@@ -130,13 +129,13 @@ function render()
   sprites[#sprites + 1] = {animation = "rich.hero-walk-" .. rich_direction[direction],
       x = origin_x + player_x * 16 + 8, y = origin_y + (player_y + 1) * 16,
       scale = rich_scale}
-  sprites[#sprites + 1] = {sprite = "retry", x = 16, y = 8}
   sprout.sprite_batch(sprites)
   if complete then
-    sprout.rect(104, 8, 112, 20, 83, 198, 126)
+    sprout.rect(86, 7, 148, 25, 255, 249, 225)
+    sprout.label("Puzzle solved!", 92, 8, 136, 22, 37, 67, 53)
   elseif deadlocked then
-    sprout.rect(104, 8, 112, 20, 235, 173, 78)
-    sprout.sprite("retry", 152, 10)
+    sprout.rect(68, 7, 184, 25, 255, 249, 225)
+    sprout.label("No moves - A retry", 74, 8, 172, 22, 122, 66, 47)
   end
 end
 

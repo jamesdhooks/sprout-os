@@ -1,6 +1,6 @@
 # Profile Model
 
-Status: **implemented persistence schema v1**. The broader profile contract remains provisional where noted.
+Status: **implemented profile schema v1 on database schema v2**. The broader profile contract remains provisional where noted.
 
 ## Fields
 
@@ -11,6 +11,7 @@ Status: **implemented persistence schema v1**. The broader profile contract rema
 | `displayName` | User-visible name | Required; validation limits unresolved |
 | `role` | Selects policy defaults and administrative capabilities | At minimum `parent` and `child` |
 | `avatarRef` | References a built-in avatar or managed local image | Optional until setup assigns one |
+| `backgroundRef` | References a reviewed built-in home scene | Defaults to `builtin:garden-morning`; parent-managed |
 | `saveNamespace` | Isolates compatible game and application data | Required and immutable after data exists |
 | `contentPolicyRef` | References the effective content allowlist/rules | Required for child profiles |
 | `timePolicyRef` | References daily/session rules | Required for child profiles |
@@ -23,11 +24,11 @@ PIN hashes, connector credentials, active grants, play history, favorites, recen
 
 Daily allowance and usage are likewise separate profile-scoped records. The implemented boundary is described in the [daily time-policy specification](daily-time-policy.md). First-run child creation persists the documented 45-minute default when a policy store is available.
 
-## Persistence schema v1
+## Persistence
 
-The launcher implements profiles in a SQLite `profiles` table with database schema version 1. Each row stores the fields above except optional synchronization identity and conflict state, which have no current consumer. `localRevision` advances on lifecycle changes. Profile preferences are validated JSON but remain an empty object until a preference feature establishes concrete keys.
+The launcher implements profile records at schema version 1 in a SQLite `profiles` table. Database schema version 2 adds `backgroundRef` without changing the portable profile identity contract. Each row stores the fields above except optional synchronization identity and conflict state, which have no current consumer. `localRevision` advances on lifecycle, avatar, and background changes. Profile preferences are validated JSON but remain an empty object until a preference feature establishes concrete keys.
 
-Opening an empty version-zero database creates schema version 1 inside one transaction. A database with a newer version is rejected without modification. A failed migration rolls back its schema and version changes. There is no destructive migration or permanent-delete operation in v1.
+Opening an empty version-zero database creates database schema version 2 inside one transaction. Opening version 1 adds the background reference with the safe garden default. A database with a newer version is rejected without modification. A failed migration rolls back its schema and version changes. There is no destructive migration or permanent-delete operation.
 
 Built-in avatars use `builtin:<id>` references validated against the packaged
 64-item catalogue. Authenticated Profile Settings can replace the reference for
@@ -35,7 +36,13 @@ any active profile. The implemented import core uses revisioned `local:<id>`
 references for managed PNG variants; image bytes and source filesystem paths
 are not stored in the profile row. See the [profile image pipeline](profile-images.md).
 
-The implemented [portable profile archive](profile-archive.md) exports one active profile with its concrete child allowance and optional normalized managed avatar. It intentionally omits lifecycle history, local revisions, timestamps, credentials, grants, usage, saves, and library activity. Restore accepts only a new identity and save namespace; schema v1 does not merge or remap.
+Built-in backgrounds use validated `builtin:<id>` references. Authenticated
+Profile Settings presents Profile Image and Home Background as separate choices.
+The initial catalogue contains Garden Morning, Firefly Evening, Sunny Cove, and
+Treehouse Library. The profile-select screen always uses the neutral household
+scene; the active profile's choice is applied after selection.
+
+The implemented [portable profile archive](profile-archive.md) exports one active profile with its selected background, concrete child allowance, and optional normalized managed avatar. Older archives without `backgroundRef` restore to the safe garden default. It intentionally omits lifecycle history, local revisions, timestamps, credentials, grants, usage, saves, and library activity. Restore accepts only a new identity and save namespace; schema v1 does not merge or remap.
 
 ## Invariants
 

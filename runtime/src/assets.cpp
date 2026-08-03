@@ -284,10 +284,6 @@ AssetCatalogue load_assets(const std::filesystem::path& package_root,
         if (!yyjson_is_str(entry)) throw std::runtime_error("Tile-set sprite id should be text");
         const std::string id(yyjson_get_str(entry), yyjson_get_len(entry));
         const std::size_t sprite_index = lookup(result.sprite_ids, id, "Tile set");
-        const auto& sprite = result.sprites[sprite_index];
-        if (sprite.width != tile_set.tile_width || sprite.height != tile_set.tile_height) {
-          throw std::runtime_error("Tile-set sprite dimensions do not match tile size: " + id);
-        }
         tile_set.sprites.push_back(sprite_index);
       }
       result.tile_sets.push_back(std::move(tile_set));

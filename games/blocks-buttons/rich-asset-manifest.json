@@ -868,8 +868,8 @@
         16
       ],
       "sprites": [
-        "room.floor",
-        "room.wall"
+        "rich.floor-wood",
+        "rich.wall-workshop"
       ]
     }
   ]

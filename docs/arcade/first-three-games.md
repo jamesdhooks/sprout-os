@@ -52,7 +52,7 @@ The shipped campaign contains 1,000 curated rooms. Early levels use one crate, m
 - Automated playthrough fixtures cover legal pushes, blocked pushes, win, deadlock, retry, save, and restore.
 - Windows keyboard and controller checks cover the complete room lifecycle and return.
 
-## 3. Sprout Snake
+## 3. Snake
 
 ### Player experience
 

@@ -9,7 +9,7 @@
   "logicalResolution": [320, 240],
   "titleScreen": {
     "image": "assets/title.png",
-    "dimensions": [640, 480],
+    "dimensions": [1536, 1152],
     "fit": "cover",
     "titleRegion": [30, 30, 940, 210],
     "controlsRegion": [160, 840, 680, 120]

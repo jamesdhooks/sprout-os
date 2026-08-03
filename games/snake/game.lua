@@ -7,22 +7,6 @@ local move_interval = 8
 local half_cell = 7
 local rich_scale = cell / 512
 
-local glyphs = {
-  ["0"] = "111101101101111", ["1"] = "010110010010111",
-  ["2"] = "111001111100111", ["3"] = "111001111001111",
-  ["4"] = "101101111001001", ["5"] = "111100111001111",
-  ["6"] = "111100111101111", ["7"] = "111001001001001",
-  ["8"] = "111101111101111", ["9"] = "111101111001111",
-  A = "010101111101101", B = "110101110101110",
-  C = "111100100100111", D = "110101101101110",
-  E = "111100110100111", K = "101101110101101",
-  N = "101111111111101", O = "111101101101111",
-  P = "110101110100100", R = "110101110101101",
-  S = "111100111001111", T = "111010010010010",
-  U = "101101101101111", V = "101101101101010",
-  [" "] = "000000000000000"
-}
-
 local snake = {}
 local direction = {x = 1, y = 0}
 local queued = {x = 1, y = 0}
@@ -32,21 +16,6 @@ local score = 0
 local best = 0
 local ended = false
 local restart_down = false
-
-local function draw_text(text, x, y, scale, red, green, blue)
-  for index = 1, #text do
-    local glyph = glyphs[string.sub(text, index, index)] or glyphs[" "]
-    for pixel = 1, 15 do
-      if string.sub(glyph, pixel, pixel) == "1" then
-        local column = (pixel - 1) % 3
-        local row = math.floor((pixel - 1) / 3)
-        sprout.rect(x + column * scale, y + row * scale, scale, scale,
-                    red, green, blue)
-      end
-    end
-    x = x + scale * 4
-  end
-end
 
 local function occupies(x, y)
   for _, part in ipairs(snake) do
@@ -179,18 +148,25 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 17, 31, 26)
-  sprout.rect(0, 0, 320, 29, 29, 55, 43)
-  draw_text("SPROUT SNAKE", 8, 8, 2, 119, 225, 158)
-  draw_text("SCORE " .. string.format("%02d", score), 176, 5, 2, 242, 214, 133)
-  draw_text("BEST " .. string.format("%02d", best), 200, 17, 1, 166, 197, 175)
+  sprout.rect(0, 0, 320, 240, 247, 240, 211)
+  sprout.label("Snake", 8, 3, 108, 24, 37, 67, 53)
+  sprout.label("Score " .. string.format("%02d", score), 176, 3, 136, 20, 37, 67, 53)
+  sprout.label("Best " .. string.format("%02d", best), 216, 19, 96, 12, 91, 109, 94)
 
   sprout.rect(board_x - 2, board_y - 2, width * cell + 4, height * cell + 4,
-              50, 83, 65)
-  sprout.rect(board_x, board_y, width * cell, height * cell, 36, 70, 48)
-  local sprites = {{sprite = "rich.fruit-apple",
+              91, 124, 79)
+  sprout.rect(board_x, board_y, width * cell, height * cell, 147, 181, 105)
+  local sprites = {}
+  for y = 0, height - 1 do
+    for x = 0, width - 1 do
+      sprites[#sprites + 1] = {sprite = "rich.grass-plain",
+        x = board_x + x * cell + half_cell,
+        y = board_y + (y + 1) * cell, scale = rich_scale}
+    end
+  end
+  sprites[#sprites + 1] = {sprite = "rich.fruit-apple",
     x = board_x + fruit.x * cell + half_cell,
-    y = board_y + (fruit.y + 1) * cell, scale = rich_scale}}
+    y = board_y + (fruit.y + 1) * cell, scale = rich_scale}
   for index, part in ipairs(snake) do
     sprites[#sprites + 1] = {sprite = body_sprite(index),
       x = board_x + part.x * cell + half_cell,
@@ -199,10 +175,9 @@ function render()
   sprout.sprite_batch(sprites)
 
   if ended then
-    sprout.rect(72, 101, 176, 47, 29, 55, 43)
-    sprout.rect(74, 103, 172, 43, 15, 27, 23)
-    draw_text("ROUND OVER", 84, 109, 2, 242, 214, 133)
-    draw_text("PRESS A", 116, 132, 1, 166, 197, 175)
+    sprout.rect(72, 101, 176, 47, 255, 249, 225)
+    sprout.label("Round over", 82, 106, 156, 23, 122, 66, 47)
+    sprout.label("Press A to try again", 82, 128, 156, 14, 37, 67, 53)
   end
 end
 

@@ -62,9 +62,8 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 15, 31, 24)
-  sprout.rect(0, 0, 320, 36, 29, 55, 43)
-  sprout.rect(36, 44, 248, 184, 70, 132, 84)
+  sprout.rect(0, 0, 320, 240, 247, 240, 211)
+  sprout.rect(36, 44, 248, 184, 126, 165, 95)
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y)
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal", x = origin_x + 13 * 16 + 8,
@@ -74,8 +73,8 @@ function render()
       scale = rich_scale}
   })
   if complete then
-    sprout.rect(104, 8, 112, 20, 239, 166, 60)
-    sprout.sprite("rich.cheese-goal", 160, 28, rich_scale)
+    sprout.rect(88, 7, 144, 25, 255, 249, 225)
+    sprout.label("Cheese found!", 94, 8, 132, 22, 37, 67, 53)
   end
 end
 

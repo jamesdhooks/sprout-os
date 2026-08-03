@@ -17,7 +17,7 @@ The manifest has five required sections:
 | `atlases` | Stable atlas ID, relative PNG path, and declared pixel dimensions |
 | `sprites` | Stable frame ID, atlas, source rectangle, and anchor pivot |
 | `animations` | Ordered sprite frames with fixed tick durations and loop behavior |
-| `tileSets` | Ordered, same-sized sprite frames addressable by byte index |
+| `tileSets` | Ordered sprite frames addressable by byte index and resampled to an explicit logical tile size |
 
 IDs are package-local. Atlas images are loaded lazily, decoded once, checked
 against their declared dimensions, retained for the session, alpha blended,
@@ -36,6 +36,7 @@ edges to 4,096 pixels, and each rendered frame to 4,096 commands.
 | `sprout.animate(id, x, y, phase?, scale?, flipX?, flipY?, alpha?)` | Resolve one declared animation with the same fractional scale contract |
 | `sprout.sprite_batch(items)` | Submit many sprite or animation items in one Lua-to-host call |
 | `sprout.tilemap(tileSet, bytes, columns, x, y, scale?)` | Submit a dense tile grid in one Lua-to-host call |
+| `sprout.label(text, x, y, width, height, r, g, b, a?)` | Submit one bounded shared-font label without a package-specific glyph atlas |
 
 A batch item names exactly one `sprite` or `animation` and supplies integer
 `x` and `y`. Optional fields are `phase`, `scale`, `flipX`, `flipY`, and
@@ -46,6 +47,9 @@ Sprite scale is a finite number from 1/64 through 64. This permits a dense
 source frame to render on a compact logical canvas without discarding its
 higher-density source or forcing every future game to share one pixel scale.
 Tilemaps retain integer scale because adjacent tile geometry must stay exact.
+Source frames may be larger than the logical tile. The host resamples each frame
+to the declared tile size, allowing one rich atlas to serve 320×240, 640×480,
+and future higher-density packages without baking a low-resolution source grid.
 
 Tilemap bytes are zero-based indices into the declared tile set. This compact
 representation avoids one Lua call per tile and makes invalid tile values fail

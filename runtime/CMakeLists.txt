@@ -28,9 +28,17 @@ endif()
 if(SPROUT_BUILD_DESKTOP)
   add_executable(sprout-runtime src/main.cpp)
   target_compile_features(sprout-runtime PRIVATE cxx_std_20)
+  target_include_directories(sprout-runtime PRIVATE ${PROJECT_SOURCE_DIR}/shared/include)
   target_link_libraries(
     sprout-runtime
     PRIVATE sprout_runtime_core SDL2::SDL2main SDL2::SDL2-static SDL2_image
+  )
+  add_custom_command(
+    TARGET sprout-runtime POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${PROJECT_SOURCE_DIR}/shared/assets
+            $<TARGET_FILE_DIR:sprout-runtime>/assets
+    COMMENT "Copying shared runtime visual assets"
   )
   if(MSVC)
     target_compile_options(sprout-runtime PRIVATE /W4 /permissive-)

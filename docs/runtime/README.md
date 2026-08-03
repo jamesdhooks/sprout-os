@@ -47,4 +47,4 @@ The platform host must not contain game rules. The engine must not contain a maz
 - [Arcade content pipeline](../arcade/content-pipeline.md): offline generation and campaign build.
 - [Arcade assets](../arcade/assets.md): asset source, packing, and provenance.
 
-The API evolves in versioned slices driven by Mouse Maze, Blocks & Buttons, and Sprout Snake. Compatibility migrations must be explicit; packages never silently receive changed deterministic behavior.
+The API evolves in versioned slices driven by Mouse Maze, Blocks & Buttons, and Snake. Compatibility migrations must be explicit; packages never silently receive changed deterministic behavior.

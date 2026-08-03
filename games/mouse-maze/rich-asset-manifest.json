@@ -840,8 +840,8 @@
         16
       ],
       "sprites": [
-        "maze.floor",
-        "maze.wall"
+        "rich.floor-plain",
+        "rich.hedge-t"
       ]
     }
   ]

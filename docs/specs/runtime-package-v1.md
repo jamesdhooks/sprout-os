@@ -2,7 +2,7 @@
 
 Status: implemented Windows preview contract
 
-This specification records the local package boundary exercised by Sprout Snake. It is not the future signed `.sprout` distribution format.
+This specification records the local package boundary exercised by Snake. It is not the future signed `.sprout` distribution format.
 
 The reusable engine direction and planned lifecycle evolution are documented under [Sprout Runtime](../runtime/README.md). Those documents distinguish current v1 behavior from proposed versioned slices; this file remains authoritative for implemented v1 packages.
 
@@ -31,7 +31,7 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `assetManifest` | Optional relative `.json` asset manifest contained by the package root |
 | `audience` | `family` for child-visible packages or `parent` for parent-only packages |
 | `logicalResolution` | Per-game logical width and height, each 64–4096; independent of the physical display target |
-| `titleScreen` | Optional full-screen art plus normalized title/control regions; runtime text and controls remain separate from artwork |
+| `titleScreen` | Optional full-screen art with a baked game title plus a normalized runtime-control region |
 | `capabilities` | Unique subset of `events` and `local-storage` |
 
 ## Lifecycle
@@ -47,12 +47,13 @@ Each lifecycle call has a 100,000-instruction limit. The Windows host calls `upd
 
 The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `secondary`, `start`, and `back` fields. Games target actions rather than keyboard keys or controller button numbers.
 
-## API exercised by Sprout Snake
+## API exercised by Snake
 
 | Function | Behavior |
 | --- | --- |
 | `sprout.random(maximum)` | Returns a deterministic integer from 1 through `maximum` |
 | `sprout.rect(x, y, width, height, r, g, b, a?)` | Submits an in-bounds rectangle on the logical surface |
+| `sprout.label(text, x, y, width, height, r, g, b, a?)` | Centers bounded printable text using the shared rounded UI font |
 | `sprout.sprite(...)` | Submits one declared atlas frame |
 | `sprout.animate(...)` | Resolves a declared animation from the fixed session tick |
 | `sprout.sprite_batch(items)` | Submits many sprite or animation records in one host call |
@@ -74,14 +75,16 @@ choose a denser logical surface without changing existing packages.
 
 An optional `titleScreen` contains a relative PNG, declared pixel dimensions,
 `cover` or `contain` fit, and normalized `[x, y, width, height]` regions on a
-0–1000 canvas. The host renders the package title and `A Start / B Back`
-controls in those regions. Illustrated artwork must not bake in button labels,
-profile state, localization, or resume state.
+0–1000 canvas. The illustration bakes in the exact game title so its lettering
+belongs to the game's art direction. Game titles must not be prefixed with
+`Sprout`. The host owns the separate `A Start / B Back` control pill so input,
+localization, profile state, and resume behavior remain dynamic.
 
-High-resolution editable masters are retained outside the runtime package.
-Packages contain reviewed target derivatives appropriate to their supported
-devices. This keeps low-memory devices efficient without preventing new target
-profiles or higher-fidelity games.
+Title art is stored at the highest reviewed practical resolution and scaled by
+the runtime for the active target. The first three packages use 1536×1152 title
+images while rendering cleanly at 640×480. Device packaging may later add
+explicit lower-memory variants; the package contract does not impose a
+640×480 asset ceiling.
 
 The complete manifest, bounds, deterministic animation, and backend batching
 contract is [Runtime Assets v1](runtime-assets-v1.md).

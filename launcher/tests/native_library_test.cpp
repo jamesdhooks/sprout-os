@@ -57,7 +57,7 @@ class TemporaryPackages {
 
 void discovers_valid_packages_and_audience() {
   TemporaryPackages packages;
-  packages.add("snake", "sprout.snake", "Sprout Snake", "family");
+  packages.add("snake", "sprout.snake", "Snake", "family");
   packages.add("tools", "sprout.parent-tools", "Parent Tools", "parent");
   std::filesystem::create_directories(packages.root() / "broken");
   std::ofstream(packages.root() / "broken" / "manifest.json") << "{}";

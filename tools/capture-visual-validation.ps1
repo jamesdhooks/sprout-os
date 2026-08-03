@@ -38,6 +38,7 @@ $launcherScreens = @(
     "profile-select", "child-home", "parent-home",
     "library-recent", "library-favorites", "library-all", "library-arcade",
     "library-empty", "library-unavailable", "profile-settings",
+    "profile-appearance", "profile-backgrounds",
     "profile-avatars-page-01", "profile-avatars-page-02", "profile-avatars-page-03",
     "profile-avatars-page-04", "profile-avatars-page-05", "profile-avatars-page-06",
     "profile-avatars-page-07", "profile-avatars-page-08", "profile-avatars-page-09",
@@ -48,8 +49,10 @@ $launcherScreens = @(
 
 $previousVideoDriver = $env:SDL_VIDEODRIVER
 $previousRenderDriver = $env:SDL_RENDER_DRIVER
+$previousStaticUi = $env:SPROUT_STATIC_UI
 $env:SDL_VIDEODRIVER = "dummy"
 $env:SDL_RENDER_DRIVER = "software"
+$env:SPROUT_STATIC_UI = "1"
 $records = [System.Collections.Generic.List[object]]::new()
 try {
     foreach ($screen in $launcherScreens) {
@@ -86,6 +89,7 @@ try {
 } finally {
     $env:SDL_VIDEODRIVER = $previousVideoDriver
     $env:SDL_RENDER_DRIVER = $previousRenderDriver
+    $env:SPROUT_STATIC_UI = $previousStaticUi
 }
 
 $records.Add([pscustomobject]@{ area = "snake"; view = "win"; status = "not-applicable"; reason = "Snake is endless; it has no win condition." })

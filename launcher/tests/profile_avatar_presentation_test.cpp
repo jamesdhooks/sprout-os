@@ -67,6 +67,9 @@ void assigns_a_catalogue_avatar_to_a_selected_profile() {
   expect(presentation.stage() == ProfileAvatarStage::Profile,
          "settings should begin with profile selection");
   (void)presentation.handle(Action::Confirm);
+  expect(presentation.stage() == ProfileAvatarStage::Appearance,
+         "profile selection should offer appearance categories");
+  (void)presentation.handle(Action::Confirm);
   expect(presentation.stage() == ProfileAvatarStage::Avatar &&
              presentation.avatars().size() == 64,
          "profile selection should expose all 64 built-in avatars");
@@ -78,6 +81,26 @@ void assigns_a_catalogue_avatar_to_a_selected_profile() {
   expect(profiles.find_profile("parent-primary")->avatar_ref ==
              "builtin:sunflower",
          "assignment should persist the selected built-in reference");
+}
+
+void assigns_a_background_from_the_built_in_library() {
+  TemporaryDirectory directory;
+  ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+  add_profiles(profiles);
+  ProfileAvatarPresentation presentation(profiles, false);
+  (void)presentation.handle(Action::Confirm);
+  (void)presentation.handle(Action::Right);
+  (void)presentation.handle(Action::Confirm);
+  expect(presentation.stage() == ProfileAvatarStage::Background &&
+             presentation.backgrounds().size() == 4,
+         "appearance settings should expose the built-in background library");
+  (void)presentation.handle(Action::Right);
+  const auto assigned = presentation.handle(Action::Confirm);
+  expect(assigned.has_value() &&
+             assigned->type == ProfileAvatarEventType::BackgroundAssigned &&
+             profiles.find_profile("parent-primary")->background_ref ==
+                 "builtin:firefly-evening",
+         "background assignment should persist the selected reference");
 }
 
 void exposes_custom_import_as_a_final_paged_choice() {
@@ -105,6 +128,7 @@ int main() {
   try {
     assigns_a_catalogue_avatar_to_a_selected_profile();
     exposes_custom_import_as_a_final_paged_choice();
+    assigns_a_background_from_the_built_in_library();
   } catch (const std::exception& error) {
     std::cerr << "profile avatar presentation test failed: " << error.what()
               << '\n';

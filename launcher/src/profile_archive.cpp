@@ -323,6 +323,8 @@ std::string serialize_payload(
   }
   yyjson_mut_obj_add_strcpy(document, value, "preferencesJson",
                            profile.preferences_json.c_str());
+  yyjson_mut_obj_add_strcpy(document, value, "backgroundRef",
+                           profile.background_ref.c_str());
   yyjson_mut_val* avatar = yyjson_mut_obj(document);
   if (portrait.has_value() && thumbnail.has_value()) {
     const auto portrait_text = base64_encode(portrait->data(), portrait->size());
@@ -443,7 +445,7 @@ ParsedArchive parse_archive(std::string encoded) {
     yyjson_val* value = required(root, "profile");
     validate_keys(value, {"id", "displayName", "role", "saveNamespace",
                           "contentPolicyRef", "timePolicyRef", "preferencesJson",
-                          "avatar"});
+                          "backgroundRef", "avatar"});
     const std::string id = read_string(value, "id");
     const std::string display_name = read_string(value, "displayName");
     const auto role = parse_role(read_string(value, "role"));
@@ -451,6 +453,18 @@ ParsedArchive parse_archive(std::string encoded) {
     const auto content_policy = read_optional_string(value, "contentPolicyRef");
     const auto time_policy = read_optional_string(value, "timePolicyRef");
     const std::string preferences = read_string(value, "preferencesJson", 64 * 1024);
+    std::string background_ref = "builtin:garden-morning";
+    if (yyjson_val* background = yyjson_obj_get(value, "backgroundRef");
+        background != nullptr) {
+      if (!yyjson_is_str(background) || yyjson_get_len(background) == 0 ||
+          yyjson_get_len(background) > 256) {
+        throw std::runtime_error("Archive profile background reference is invalid");
+      }
+      background_ref = yyjson_get_str(background);
+      if (!starts_with(background_ref, "builtin:")) {
+        throw std::runtime_error("Archive profile background reference is invalid");
+      }
+    }
     validate_portable_text(id, "id");
     validate_portable_text(display_name, "displayName");
     validate_portable_text(save_namespace, "saveNamespace");
@@ -517,6 +531,7 @@ ParsedArchive parse_archive(std::string encoded) {
             .content_policy_ref = content_policy,
             .time_policy_ref = time_policy,
             .preferences_json = preferences,
+            .background_ref = background_ref,
         },
         .daily_allowance_seconds = daily_allowance,
         .portrait = std::move(portrait),

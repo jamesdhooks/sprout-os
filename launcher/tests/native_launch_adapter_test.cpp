@@ -35,7 +35,7 @@ class Fixture {
     std::ofstream(package_ / "manifest.json") << R"({
   "schemaVersion": 1,
   "id": "sprout.snake",
-  "title": "Sprout Snake",
+  "title": "Snake",
   "version": "1.0.0",
   "runtimeVersion": 1,
   "entrypoint": "game.lua",

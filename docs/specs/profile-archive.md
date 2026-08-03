@@ -11,6 +11,7 @@ Schema v1 includes:
 - stable profile ID, display name, role, and save namespace;
 - content- and time-policy references;
 - validated profile preferences JSON;
+- the selected built-in home-background reference;
 - one concrete daily allowance for a child profile; and
 - either a built-in avatar reference or, after explicit consent, the managed portrait and thumbnail PNGs.
 
@@ -29,7 +30,7 @@ The outer JSON object is strict and contains:
 | `payloadChecksum` | Lowercase checksum of the decoded payload |
 | `payload` | Base64-encoded canonical JSON payload |
 
-The payload contains its own schema version, `profile`, and `dailyAllowanceSeconds`. The profile contains the portable fields above and an `avatar` object whose kind is `builtin` or `managedPng`. Unknown or duplicate fields, malformed Base64, unsupported versions, noncanonical identifiers, oversized input, and checksum mismatches fail before restore.
+The payload contains its own schema version, `profile`, and `dailyAllowanceSeconds`. The profile contains the portable fields above and an `avatar` object whose kind is `builtin` or `managedPng`. `backgroundRef` is an additive schema-v1 field: readers accept an older archive without it and restore the safe Garden Morning default. Unknown or duplicate fields, malformed Base64, unsupported versions, noncanonical identifiers, oversized input, and checksum mismatches fail before restore.
 
 The current caps are 8 MiB per archive, 6 MiB decoded payload, 1 MiB portrait, and 256 KiB thumbnail. Embedded images must have a PNG signature and valid IHDR dimensions matching the managed 256×256 portrait and 96×96 thumbnail contract.
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sprout/launcher/built_in_avatar.hpp"
+#include "sprout/launcher/built_in_background.hpp"
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 
@@ -12,12 +13,15 @@ namespace sprout::launcher {
 
 enum class ProfileAvatarStage {
   Profile,
+  Appearance,
   Avatar,
+  Background,
 };
 
 enum class ProfileAvatarEventType {
   BackRequested,
   AvatarAssigned,
+  BackgroundAssigned,
   ImportRequested,
 };
 
@@ -36,6 +40,7 @@ class ProfileAvatarPresentation {
   [[nodiscard]] ReadOnlyView<ProfileRecord> profiles() const noexcept;
   [[nodiscard]] const ProfileRecord* selected_profile() const noexcept;
   [[nodiscard]] ReadOnlyView<BuiltInAvatar> avatars() const noexcept;
+  [[nodiscard]] ReadOnlyView<BuiltInBackground> backgrounds() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] std::size_t page_index() const noexcept;
   [[nodiscard]] std::size_t page_count() const noexcept;
@@ -48,6 +53,7 @@ class ProfileAvatarPresentation {
  private:
   void move_profile_focus(int delta);
   void move_avatar_focus(int delta);
+  void move_background_focus(int delta);
 
   ProfileRepository& repository_;
   std::vector<ProfileRecord> profiles_;
@@ -56,6 +62,8 @@ class ProfileAvatarPresentation {
   ProfileAvatarStage stage_{ProfileAvatarStage::Profile};
   std::size_t profile_focus_{0};
   std::size_t avatar_focus_{0};
+  std::size_t appearance_focus_{0};
+  std::size_t background_focus_{0};
   std::string notice_;
 };
 

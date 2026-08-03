@@ -12,7 +12,7 @@ From a Windows checkout with the required C++ tools:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test
 ```
 
-The command configures and builds the launcher/runtime, runs every CTest target, launches the checked-in Sprout Snake package through the real launcher adapter, then launches a reviewed lifecycle fixture through the same boundary.
+The command configures and builds the launcher/runtime, runs every CTest target, launches the checked-in Snake package through the real launcher adapter, then launches a reviewed lifecycle fixture through the same boundary.
 
 Required output includes:
 
@@ -46,7 +46,7 @@ The fixture lives under `launcher/tests/fixtures/arcade/` and is never scanned b
 
 - This evidence slice adds no build or runtime dependency.
 - The runtime continues to use the pinned Lua source and retained notice described in [Dependency Decisions](dependencies.md).
-- Sprout Snake retains its package `LICENSE`; its current presentation is original code and rectangles with no external art asset.
+- Snake retains its package `LICENSE`; its current presentation uses original project artwork and the shared runtime renderer.
 - The lifecycle fixture is repository test code, carries no bundled media, and is not catalogue content.
 - Future accepted game assets must pass the [Arcade asset provenance workflow](../arcade/assets.md) before entering a package.
 
@@ -56,7 +56,7 @@ Record the commit, Windows version, build command, input device, profile, packag
 
 1. Run `tools/dev.ps1 -Action run` and complete or resume local setup.
 2. Activate a child profile and open **Sprout Arcade**.
-3. Confirm Sprout Snake is visible because its manifest audience is `family`.
+3. Confirm Snake is visible because its manifest audience is `family`.
 4. Launch it and confirm the launcher window yields focus to the game.
 5. With keyboard, steer using the arrow keys or WASD, reach at least one fruit, collide, restart with primary action, and exit with Escape.
 6. Repeat with an SDL-compatible controller using D-pad, A, and the controller Back button.

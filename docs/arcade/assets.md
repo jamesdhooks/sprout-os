@@ -8,9 +8,10 @@ not a global game canvas. Each package independently declares its logical
 resolution, and asset scale/density metadata must remain explicit.
 
 SproutOS startup art, launcher art, and per-game title art are distinct assets.
-A game title background is full-screen and theme-consistent with its gameplay
-art, while the runtime owns the title and simple Start/Continue/Back interface.
-This keeps text crisp, localized, and state-aware while allowing rich artwork.
+A game title page is full-screen and theme-consistent with its gameplay art.
+Its exact game title is part of the illustration; the runtime owns only the
+simple Start/Continue/Back control surface. No game title uses `Sprout` as a
+prefix.
 The launcher likewise renders profile and navigation UI over its own reviewed
 4:3 master and uses a standard `sprite-atlas.v1` sheet for small decorative
 accents. Neither launcher artwork nor its atlas is reused as a game title page.
@@ -32,13 +33,13 @@ games/<game>/
 └── ATTRIBUTION.md    required when any source needs attribution
 ```
 
-`assets-src/` may contain layered originals, palette files, SVG source, or reviewed generated concepts. Runtime packages contain normalized raster output only. Temporary generations and rejected variants remain outside Git.
+`assets-src/` may contain layered originals, palette files, SVG source, or other reviewed project artwork. Runtime packages contain normalized raster output only. Temporary production material and rejected variants remain outside Git.
 
 ## First-collection visual standard
 
-- Base grid: 8×8 or 16×16 pixels; larger sprites use exact multiples.
-- Integer nearest-neighbor scaling only.
-- A small named palette with sufficient contrast for foreground, background, focus, success, and danger states.
+- Source art retains the highest practical reviewed resolution; atlas cells and runtime target sizes are explicit rather than inferred from one global grid.
+- Texture filtering follows the declared art profile. Storybook raster art uses smooth resampling; deliberately pixel-based packages may request nearest-neighbor scaling later.
+- A coherent named palette provides sufficient contrast for foreground, background, focus, success, and danger states.
 - Shape and animation distinguish important state; color alone is insufficient.
 - One- or two-frame idle art is acceptable. Animation must serve input feedback or state readability.
 - Text uses one shared engine font/atlas; games do not embed private glyph tables.
@@ -50,7 +51,7 @@ Initial asset sets are intentionally small:
 | --- | --- |
 | Mouse Maze | Mouse in four directions, cheese, wall/floor tiles, goal celebration marks |
 | Blocks & Buttons | Player, crate, button, crate-on-button, wall/floor, deadlock/retry marker |
-| Sprout Snake | Head/body/tail turns, fruit, board tiles, collision/end treatment |
+| Snake | Head/body/tail turns, fruit, board tiles, collision/end treatment |
 
 ## Creation and sourcing
 
@@ -98,4 +99,4 @@ not claimed complete.
 
 ## Safety and repository hygiene
 
-Do not commit model credentials, private references, raw prompt transcripts, bulk rejected generations, or assets with unclear rights. Package licenses cover original game assets unless a more specific compatible license and attribution is recorded.
+Do not commit production credentials, private references, working-session transcripts, bulk rejected drafts, or assets with unclear rights. Package licenses cover original game assets unless a more specific compatible license and attribution is recorded.

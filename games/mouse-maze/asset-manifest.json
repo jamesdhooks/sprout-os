@@ -41,6 +41,6 @@
     ]}
   ],
   "tileSets": [
-    {"id": "maze.tiles", "tileSize": [16, 16], "sprites": ["maze.floor", "maze.wall"]}
+    {"id": "maze.tiles", "tileSize": [16, 16], "sprites": ["rich.floor-plain", "rich.hedge-t"]}
   ]
 }
