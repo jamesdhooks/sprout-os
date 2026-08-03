@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, a persisted daily child-time decision core, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution or policy lifecycle, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, persisted daily child-time and startup-health decision cores, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, policy lifecycle, safe-boot integration, or deployable SD-card image.
 
 ## Tools
 
@@ -51,7 +51,7 @@ Configure and build the command-line device diagnostic:
 powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action build
 ```
 
-This produces `out/build/onion-arm/launcher/sprout-onion-check`. It verifies that portable launcher storage, parent access, daily-time policy, a built-in-avatar profile archive round trip, library presentation, and typed launch-request code compile and link against Onion's ARM sysroot. It does not provide a device renderer, install a startup launcher, or execute a game. Follow the [development-card device check](onion-device-check.md) before running it on hardware.
+This produces `out/build/onion-arm/launcher/sprout-onion-check`. It verifies that portable launcher storage, parent access, daily-time policy, a built-in-avatar profile archive round trip, startup-health persistence, library presentation, and typed launch-request code compile and link against Onion's ARM sysroot. It does not provide a device renderer, install a startup launcher, select a safe-mode action, or execute a game. Follow the [development-card device check](onion-device-check.md) before running it on hardware.
 
 ## Development cards
 
@@ -71,7 +71,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting and decisions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
+The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting, restart-based startup-health decisions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
 
 ## Configuration and secrets
 

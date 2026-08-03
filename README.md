@@ -2,7 +2,7 @@
 
 Sprout is an open-source, family-oriented gaming platform for retro handhelds and small computers. It aims to provide family profiles, parental controls, an Onion-compatible emulation foundation, and a portable native-game runtime without making basic use depend on a server.
 
-> **Status: early development.** This repository contains the project foundation and a Windows desktop launcher preview with resumable offline setup, versioned local profiles, parent access, portable one-profile backup/restore, daily-time policy storage, and local GB/SNES library views. These host implementations are not a device build.
+> **Status: early development.** This repository contains the project foundation and a Windows desktop launcher preview with resumable offline setup, versioned local profiles, parent access, portable one-profile backup/restore, daily-time policy storage, startup-health persistence, and local GB/SNES library views. These host implementations are not a device build.
 
 ## Principles
 
@@ -24,7 +24,7 @@ Sprout is an open-source, family-oriented gaming platform for retro handhelds an
 | Sprout Server | Optional sync, family management, and recommendations | Planned later |
 | Sprout SDK | Schemas, package contracts, and developer tooling | Planned as real consumers emerge |
 
-The initial milestone is the **Sprout Family Launcher MVP**: a development-card vertical slice from profile selection through Onion launch, GameSwitcher return, time accounting, parent control, profile portability, and safe recovery. A pinned ARM command-line diagnostic, persisted daily-time decision core, and versioned one-profile archive now build, but device execution, lifecycle enforcement, and the launcher renderer remain unverified. See the [roadmap](docs/roadmap.md).
+The initial milestone is the **Sprout Family Launcher MVP**: a development-card vertical slice from profile selection through Onion launch, GameSwitcher return, time accounting, parent control, profile portability, and safe recovery. A pinned ARM command-line diagnostic plus persisted daily-time, profile-archive, and startup-health cores now build, but device execution, lifecycle enforcement, recovery integration, and the launcher renderer remain unverified. See the [roadmap](docs/roadmap.md).
 
 ## Repository layout
 
