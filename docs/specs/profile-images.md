@@ -24,7 +24,7 @@ Each import writes a new profile-revision generation beneath managed image stora
 
 After a successful profile update, the prior managed generation is removed only when its reference has the expected safe identifier and its directory contains regular `portrait.png` and `thumbnail.png` files only. Unknown files, links, and malformed references stop cleanup rather than broadening it. Managed files request owner read/write permissions; physical SD-card access remains outside the parental-control security boundary.
 
-The source image is not preserved in v1. Backup/export and orphan recovery require their own concrete consumer before changing retention behavior.
+The source image is not preserved in v1. A portable profile export can include only the normalized managed portrait and thumbnail after explicit parent consent. These PNGs are stored unencrypted in the archive; source metadata and source paths remain excluded. See the [portable profile archive specification](profile-archive.md). Orphan recovery remains deferred.
 
 ## Setup presentation
 

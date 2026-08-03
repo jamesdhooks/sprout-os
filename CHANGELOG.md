@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A controller-accessible, parent-reauthenticated one-profile export and restore flow with versioned checksummed archives, conflict preflight, explicit unencrypted-portrait consent, and no secrets, usage, saves, or library activity.
 - A profile-scoped daily-time-policy core with monotonic active accounting, persisted usage and one-time warnings, bounded restart recovery, rollback checks, and explicit launch-block/save-and-exit decisions.
 - A reproducible Onion ARM cross-build, pinned compiler/sysroot and CMake inputs, CI coverage, isolated device diagnostic, and development-card validation protocol.
 - Deterministic local Onion GB/SNES discovery plus controller-driven recent, favorite, and all-game views with fail-closed unavailable states.

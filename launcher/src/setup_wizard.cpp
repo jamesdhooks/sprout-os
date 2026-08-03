@@ -21,9 +21,11 @@ bool matches(const ProfileRecord& existing, const NewProfile& requested) {
 }  // namespace
 
 SetupWizard::SetupWizard(ConfigurationStore& configuration_store,
-                         ProfileRepository& profiles)
+                         ProfileRepository& profiles,
+                         DailyTimePolicyStore* time_policy)
     : configuration_store_(configuration_store),
       profiles_(profiles),
+      time_policy_(time_policy),
       configuration_(configuration_store_.has_active()
                          ? configuration_store_.load_active()
                          : configuration_store_.save(LocalConfiguration{})) {}
@@ -111,6 +113,11 @@ void SetupWizard::create_child(std::optional<NewProfile> child) {
       throw std::invalid_argument("Child setup step accepts only a child profile");
     }
     ensure_profile(*child);
+    if (time_policy_ != nullptr &&
+        !time_policy_->find_daily_allowance_seconds(child->id).has_value()) {
+      time_policy_->set_daily_allowance(
+          child->id, kDefaultChildDailyAllowanceSeconds);
+    }
   }
   advance_to(SetupStep::Avatars);
 }

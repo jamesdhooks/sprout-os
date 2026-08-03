@@ -38,15 +38,15 @@ SQLite is intended for transactional profile, activity, grant, and index state. 
 
 Configuration is validated before activation, written atomically, and snapshotted. Repeated startup failure or invalid configuration must offer last-known-good rollback, connector isolation, launcher-only reset, and stock-Onion recovery without deleting saves.
 
-The implemented schema-v1 core persists setup progress and household/device/profile locale overrides with strict validation, atomic activation, stale-writer protection, and last-known-good restore. The desktop preview presents that flow, creates built-in parent/child profiles offline, can import a staged parent portrait without persisting its source path, and stores only an opaque reference after secure PIN creation. See the [local configuration specification](../specs/local-configuration.md). Connector isolation, launcher reset, and boot-failure recovery remain planned.
+The implemented schema-v1 core persists setup progress and household/device/profile locale overrides with strict validation, atomic activation, stale-writer protection, and last-known-good restore. The desktop preview presents that flow, creates built-in parent/child profiles offline, assigns the blueprint's 45-minute child allowance, can import a staged parent portrait without persisting its source path, and stores only an opaque reference after secure PIN creation. Existing preview children without a concrete allowance receive that default idempotently at startup. See the [local configuration specification](../specs/local-configuration.md). Connector isolation, launcher reset, and boot-failure recovery remain planned.
 
 ## Backup and restore
 
-- **Household export:** profiles, policies, library metadata, connector definitions without secrets, preferences, and favorites.
-- **Profile export:** one profile's portable configuration and selected progress data.
-- **Full encrypted backup:** may include saves, states, profile images, credentials, and history when explicitly selected.
+- **Profile export (implemented):** one active profile's portable configuration, concrete child allowance, and optional managed portrait. It excludes secrets, usage, saves, states, library activity, and source paths. See the [portable profile archive specification](../specs/profile-archive.md).
+- **Household export (planned):** profiles, policies, library metadata, connector definitions without secrets, preferences, and favorites.
+- **Full encrypted backup (planned):** may include saves, states, profile images, credentials, and history when explicitly selected.
 
-Archives require a versioned manifest, checksums, validation before restore, and a local no-service-required path. Partial restore must identify conflicts before modifying active state.
+The implemented profile archive has a versioned manifest, a BLAKE2b-256 payload checksum, strict validation, and a local no-service-required path. Restore identifies profile, save-namespace, policy, and image conflicts before mutation and does not merge or overwrite.
 
 ## Connectors and secrets
 

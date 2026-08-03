@@ -1,4 +1,5 @@
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/managed_profile_image.hpp"
 #include "sprout/launcher/string_compat.hpp"
 
 #include <SDL.h>
@@ -294,16 +295,6 @@ std::string asset_id(const ProfileRecord& profile) {
   return result;
 }
 
-bool safe_asset_id(std::string_view value) {
-  if (value.empty()) {
-    return false;
-  }
-  return std::all_of(value.begin(), value.end(), [](unsigned char character) {
-    return (character >= '0' && character <= '9') ||
-           (character >= 'a' && character <= 'f') || character == '-' || character == 'r';
-  });
-}
-
 void synchronize_file(const std::filesystem::path& path) {
   FILE* file = nullptr;
 #ifdef _WIN32
@@ -365,14 +356,12 @@ void remove_new_asset(const std::filesystem::path& directory) {
 }
 
 void remove_old_asset(const std::filesystem::path& root, std::string_view reference) {
-  if (!starts_with(reference, "local:")) {
+  const std::string avatar_ref(reference);
+  if (!is_managed_profile_image_reference(avatar_ref)) {
     return;
   }
-  const std::string_view id = reference.substr(6);
-  if (!safe_asset_id(id)) {
-    return;
-  }
-  const std::filesystem::path directory = root / id;
+  const auto paths = resolve_managed_profile_image(root, avatar_ref);
+  const std::filesystem::path& directory = paths.directory;
   std::error_code error;
   if (std::filesystem::symlink_status(directory, error).type() !=
       std::filesystem::file_type::directory) {
@@ -509,20 +498,14 @@ std::filesystem::path ProfileImageImporter::resolve_thumbnail(
 std::filesystem::path ProfileImageImporter::resolve_portrait_at(
     const std::filesystem::path& managed_image_root,
     const std::string& avatar_ref) {
-  if (!starts_with(avatar_ref, "local:") ||
-      !safe_asset_id(std::string_view(avatar_ref).substr(6))) {
-    throw std::invalid_argument("Avatar reference is not a managed local image");
-  }
-  return managed_image_root / std::string_view(avatar_ref).substr(6) / "portrait.png";
+  return resolve_managed_profile_image(managed_image_root, avatar_ref).portrait;
 }
 
 std::filesystem::path ProfileImageImporter::resolve(
     const std::string& avatar_ref, const char* filename) const {
-  if (!starts_with(avatar_ref, "local:") ||
-      !safe_asset_id(std::string_view(avatar_ref).substr(6))) {
-    throw std::invalid_argument("Avatar reference is not a managed local image");
-  }
-  return root_ / std::string_view(avatar_ref).substr(6) / filename;
+  const auto paths = resolve_managed_profile_image(root_, avatar_ref);
+  return std::string_view(filename) == "portrait.png" ? paths.portrait
+                                                      : paths.thumbnail;
 }
 
 }  // namespace sprout::launcher

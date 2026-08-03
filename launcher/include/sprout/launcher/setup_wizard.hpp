@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sprout/launcher/daily_time_policy.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 
@@ -11,7 +12,8 @@ namespace sprout::launcher {
 class SetupWizard {
  public:
   SetupWizard(ConfigurationStore& configuration_store,
-              ProfileRepository& profiles);
+              ProfileRepository& profiles,
+              DailyTimePolicyStore* time_policy = nullptr);
 
   [[nodiscard]] SetupStep current_step() const noexcept;
   [[nodiscard]] const LocalConfiguration& configuration() const noexcept;
@@ -31,6 +33,7 @@ class SetupWizard {
 
   ConfigurationStore& configuration_store_;
   ProfileRepository& profiles_;
+  DailyTimePolicyStore* time_policy_;
   LocalConfiguration configuration_;
 };
 

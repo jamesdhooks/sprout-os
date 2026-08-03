@@ -4,6 +4,7 @@
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/local_library.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
+#include "sprout/launcher/profile_archive.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 
 #include <chrono>
@@ -74,6 +75,16 @@ int main(int argc, char* argv[]) {
         .time_policy_ref = std::nullopt,
         .preferences_json = "{}",
     });
+    profiles.create_profile(sprout::launcher::NewProfile{
+        .id = "diagnostic-child",
+        .display_name = "Diagnostic Child",
+        .role = sprout::launcher::ProfileRole::Child,
+        .avatar_ref = "builtin:sprout",
+        .save_namespace = "diagnostic-child-saves",
+        .content_policy_ref = "content:child-default",
+        .time_policy_ref = "time:child-default",
+        .preferences_json = "{}",
+    });
 
     sprout::launcher::ConfigurationStore configuration(
         arguments.data_directory / "config");
@@ -116,6 +127,27 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("Daily time-policy check failed");
     }
 
+    sprout::launcher::ProfileArchiveService archives(
+        profiles, time_policy, arguments.data_directory / "profile-images");
+    const auto archive_path =
+        arguments.data_directory / "diagnostic-child.sprout-profile";
+    (void)archives.export_profile("diagnostic-child", archive_path);
+    const auto restore_directory = arguments.data_directory / "restore-check";
+    std::filesystem::create_directories(restore_directory);
+    sprout::launcher::ProfileRepository restored_profiles(
+        restore_directory / "profiles.sqlite3");
+    sprout::launcher::DailyTimePolicyStore restored_time_policy(
+        restore_directory / "time-policy.sqlite3");
+    sprout::launcher::ProfileArchiveService restored_archives(
+        restored_profiles, restored_time_policy,
+        restore_directory / "profile-images");
+    (void)restored_archives.restore_profile(archive_path);
+    if (!restored_profiles.find_profile("diagnostic-child").has_value() ||
+        restored_time_policy.find_daily_allowance_seconds("diagnostic-child") !=
+            45U * 60U) {
+      throw std::runtime_error("Profile archive round-trip check failed");
+    }
+
     sprout::launcher::LauncherState state(
         sprout::launcher::make_demo_household());
     (void)state.handle(sprout::launcher::Action::Confirm);
@@ -131,6 +163,7 @@ int main(int argc, char* argv[]) {
     std::cout << "toolchain=arm-linux-gnueabihf-gcc-8.3.0@sha256:a8da1021449c80c0ccb75e263f1dfc75b5a004278fefa8a54151e55698a352f4\n";
     std::cout << "profile-store=ok\nconfiguration-store=ok\nparent-access=ok\n";
     std::cout << "daily-time-policy=ok\n";
+    std::cout << "profile-archive=ok\n";
     std::cout << "argon2-set-pin-ms="
               << std::chrono::duration_cast<std::chrono::milliseconds>(
                      hash_finished - hash_started)

@@ -1,8 +1,11 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/daily_time_policy.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/local_library.hpp"
+#include "sprout/launcher/profile_archive.hpp"
+#include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
 #include "sprout/launcher/parent_access_controller.hpp"
@@ -193,7 +196,9 @@ int run_smoke_test(SDL_Renderer* renderer) {
   sprout::launcher::ConfigurationStore configuration(directory.path() / "config");
   sprout::launcher::ProfileRepository profiles(directory.path() / "data" /
                                                 "profiles.sqlite3");
-  sprout::launcher::SetupWizard wizard(configuration, profiles);
+  sprout::launcher::DailyTimePolicyStore time_policy(
+      directory.path() / "data" / "time-policy.sqlite3");
+  sprout::launcher::SetupWizard wizard(configuration, profiles, &time_policy);
   const auto source_path = directory.path() / "profile-image.bmp";
   SDL_Surface* source =
       SDL_CreateRGBSurfaceWithFormat(0, 8, 4, 32, SDL_PIXELFORMAT_RGBA32);
@@ -283,6 +288,26 @@ int run_smoke_test(SDL_Renderer* renderer) {
     std::cerr << "Library smoke test did not emit a typed launch request\n";
     return EXIT_FAILURE;
   }
+  sprout::launcher::ProfileArchiveService archives(profiles, time_policy,
+                                                    image_root);
+  sprout::launcher::ProfileArchivePresentation archive(
+      profiles, archives, directory.path() / "exports",
+      directory.path() / "imports");
+  sprout::launcher::render_profile_archive(renderer, archive);
+  (void)archive.handle(Action::Confirm);
+  for (std::size_t index = 0;
+       index < archive.choices().size() &&
+       archive.choices()[archive.focus_index()] != "Alex";
+       ++index) {
+    (void)archive.handle(Action::Down);
+  }
+  sprout::launcher::render_profile_archive(renderer, archive);
+  (void)archive.handle(Action::Confirm);
+  if (archive.notice_is_error() || archive.notice() != "EXPORTED Alex") {
+    std::cerr << "Profile archive smoke test did not export the child profile\n";
+    return EXIT_FAILURE;
+  }
+  sprout::launcher::render_profile_archive(renderer, archive);
   return EXIT_SUCCESS;
 }
 
@@ -522,6 +547,35 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
+    if (screenshot_screen == "profile-archive") {
+      TemporaryDirectory directory("profile-archive-screenshot");
+      sprout::launcher::ProfileRepository profiles(
+          directory.path() / "profiles.sqlite3");
+      profiles.create_profile(sprout::launcher::NewProfile{
+          .id = "child-alex",
+          .display_name = "Alex",
+          .role = sprout::launcher::ProfileRole::Child,
+          .avatar_ref = "builtin:sprout",
+          .save_namespace = "saves-child-alex",
+          .content_policy_ref = "content:child-default",
+          .time_policy_ref = "time:child-default",
+      });
+      sprout::launcher::DailyTimePolicyStore time_policy(
+          directory.path() / "time-policy.sqlite3");
+      time_policy.set_daily_allowance(
+          "child-alex", sprout::launcher::kDefaultChildDailyAllowanceSeconds);
+      sprout::launcher::ProfileArchiveService archives(
+          profiles, time_policy, directory.path() / "profile-images");
+      sprout::launcher::ProfileArchivePresentation archive(
+          profiles, archives, directory.path() / "exports",
+          directory.path() / "imports");
+      sprout::launcher::render_profile_archive(renderer, archive);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     LauncherState state(sprout::launcher::make_demo_household());
     if (screenshot_screen == "child") {
       (void)state.handle(Action::Confirm);
@@ -549,6 +603,9 @@ int main(int argc, char* argv[]) {
 
   std::unique_ptr<sprout::launcher::ConfigurationStore> configuration;
   std::unique_ptr<sprout::launcher::ProfileRepository> profiles;
+  std::unique_ptr<sprout::launcher::DailyTimePolicyStore> daily_time_policy;
+  std::unique_ptr<sprout::launcher::ProfileArchiveService> profile_archives;
+  std::unique_ptr<sprout::launcher::ProfileArchivePresentation> archive;
   std::unique_ptr<sprout::launcher::SetupWizard> wizard;
   std::unique_ptr<sprout::launcher::SetupPresentation> setup;
   std::unique_ptr<sprout::launcher::ProfileImageImporter> image_importer;
@@ -571,13 +628,31 @@ int main(int argc, char* argv[]) {
           *data_root / "config");
       profiles = std::make_unique<sprout::launcher::ProfileRepository>(
           *data_root / "data" / "profiles.sqlite3");
+      daily_time_policy =
+          std::make_unique<sprout::launcher::DailyTimePolicyStore>(
+              *data_root / "data" / "time-policy.sqlite3");
+      for (const auto& profile : profiles->list_profiles(false)) {
+        if (profile.role == sprout::launcher::ProfileRole::Child &&
+            profile.time_policy_ref == "time:child-default" &&
+            !daily_time_policy->find_daily_allowance_seconds(profile.id)
+                 .has_value()) {
+          daily_time_policy->set_daily_allowance(
+              profile.id,
+              sprout::launcher::kDefaultChildDailyAllowanceSeconds);
+        }
+      }
       image_importer = std::make_unique<sprout::launcher::ProfileImageImporter>(
           *data_root / "data" / "profile-images", *profiles);
+      profile_archives =
+          std::make_unique<sprout::launcher::ProfileArchiveService>(
+              *profiles, *daily_time_policy,
+              *data_root / "data" / "profile-images");
       parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
           *data_root / "data" / "security.sqlite3",
           *data_root / "secrets" / "device-access.key");
       image_source = pending_profile_image(*data_root);
-      wizard = std::make_unique<sprout::launcher::SetupWizard>(*configuration, *profiles);
+      wizard = std::make_unique<sprout::launcher::SetupWizard>(
+          *configuration, *profiles, daily_time_policy.get());
       parent_credential_ref = wizard->configuration().parent_credential_ref;
       if (wizard->current_step() == sprout::launcher::SetupStep::Complete) {
         state.emplace(load_launcher_profiles(*profiles));
@@ -686,6 +761,29 @@ int main(int argc, char* argv[]) {
         return true;
       }
 
+      if (archive != nullptr) {
+        if (!access_controller->ensure_active_profile_access(
+                current_access_time())) {
+          archive.reset();
+          return true;
+        }
+        const auto archive_event = archive->handle(action);
+        if (!archive_event.has_value()) {
+          return true;
+        }
+        if (*archive_event ==
+            sprout::launcher::ProfileArchivePresentationEvent::BackRequested) {
+          archive.reset();
+        } else {
+          archive.reset();
+          state.emplace(load_launcher_profiles(*profiles));
+          access_controller =
+              std::make_unique<sprout::launcher::ParentAccessController>(
+                  *state, parent_access.get(), parent_credential_ref);
+        }
+        return true;
+      }
+
       const auto session_event =
           access_controller->handle(action, current_access_time());
       if (!session_event.has_value()) {
@@ -710,6 +808,14 @@ int main(int argc, char* argv[]) {
         }
         library = std::make_unique<sprout::launcher::LibraryPresentation>(
             std::move(entries), *section);
+        return true;
+      }
+      if (session_event->target == "Backup & Restore" &&
+          profile_archives != nullptr && data_root.has_value()) {
+        archive =
+            std::make_unique<sprout::launcher::ProfileArchivePresentation>(
+                *profiles, *profile_archives, *data_root / "exports",
+                *data_root / "imports");
         return true;
       }
       std::cout << "preview action: " << session_event->target << " ("
@@ -754,6 +860,8 @@ int main(int argc, char* argv[]) {
         sprout::launcher::render_setup(renderer, *setup);
       } else if (library != nullptr) {
         sprout::launcher::render_library(renderer, *library);
+      } else if (archive != nullptr) {
+        sprout::launcher::render_profile_archive(renderer, *archive);
       } else {
         sprout::launcher::render_launcher(
             renderer, *state,
