@@ -18,7 +18,15 @@ Docker must be running and network access is required when the pinned image, CMa
 powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action build
 ```
 
-The output is `out/build/onion-arm/launcher/sprout-onion-check`. Before copying it, record its SHA-256, size, ELF interpreter, and dynamic dependencies. The expected architecture is 32-bit ARM EABI5 with `/lib/ld-linux-armhf.so.3`; `libstdc++` and `libgcc` should not be dynamic dependencies.
+The output is `out/build/onion-arm/launcher/sprout-onion-check`. A successful build ends with a structured audit containing its relative path, exact byte size, SHA-256, ELF format, interpreter, and dynamic dependencies. The audit fails unless the artifact is a stripped 32-bit ARM EABI5 executable using `/lib/ld-linux-armhf.so.3` and only the reviewed pthread, math, libc, and loader dependencies.
+
+To re-audit the existing artifact without configuring or rebuilding:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action audit
+```
+
+Retain the complete audit output with the Sprout commit. Passing it proves artifact format and linkage only; it does not prove that the target kernel can load or run the binary.
 
 ## Record the target baseline
 

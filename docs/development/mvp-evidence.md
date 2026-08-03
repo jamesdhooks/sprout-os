@@ -38,9 +38,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action build
 | Repeated-start recovery | Three unfinished attempts route the fourth to validated recovery; readiness clears failures only after the recovery action |
 | Migrations and corruption | Focused configuration, profile, access, policy, archive, and startup-health tests reject newer or invalid state without adoption |
 | Controller and rendering traversal | Presentation tests and `launcher-desktop-smoke` pass under SDL's dummy video/audio drivers |
-| Onion-compatible compilation | The pinned ARM build produces `out/build/onion-arm/launcher/sprout-onion-check` without adding a device-behavior claim |
+| Onion-compatible compilation | The pinned ARM build produces `out/build/onion-arm/launcher/sprout-onion-check` and its structured audit confirms the hash, byte size, stripped ARM EABI5 format, hard-float interpreter, and reviewed dependencies without adding a device-behavior claim |
 
-The Windows run must report all tests passed, including `mvp-host-integration`. The ARM command must complete successfully. A skipped, missing, flaky, or unexpectedly shortened gate is a failure until explained and rerun.
+The Windows run must report all tests passed, including `mvp-host-integration`. The ARM command and its artifact audit must complete successfully. Re-run only the existing artifact audit with `powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action audit`. A skipped, missing, flaky, or unexpectedly shortened gate is a failure until explained and rerun.
 
 Automated tests create temporary synthetic fixtures and remove them on success or failure. Build products remain under ignored `out/`; they are not release evidence unless their commit and hashes are recorded.
 

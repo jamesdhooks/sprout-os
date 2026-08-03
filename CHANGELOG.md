@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A pinned Onion artifact audit that records SHA-256, byte size, ARM EABI5 format, interpreter, and reviewed dynamic dependencies and fails before deployment on incompatible output.
 - A deterministic host integration journey and release-blocking evidence checklist spanning resumed setup, profiles, parent access, local GB/SNES selections, time expiry, profile portability, and repeated-start recovery while preserving hardware-only gates.
 - A controller-accessible desktop recovery flow after repeated unfinished starts, with validated last-known-good preview/restore, cancel-first launcher reset, collision-safe active-configuration quarantine, and readiness only after ordinary UI renders.
 - A clock-independent launcher startup-health store that transactionally counts unfinished attempts, rejects stale readiness acknowledgements, and requests recovery after three consecutive failures.
