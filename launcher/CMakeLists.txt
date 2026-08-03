@@ -28,6 +28,11 @@ add_library(
 )
 
 add_library(
+  sprout_daily_time_policy
+  src/daily_time_policy.cpp
+)
+
+add_library(
   sprout_onion_adapter
   src/demo_library.cpp
   src/library_presentation.cpp
@@ -64,6 +69,9 @@ target_link_libraries(
 if(WIN32)
   target_link_libraries(sprout_parent_access PRIVATE bcrypt)
 endif()
+target_include_directories(sprout_daily_time_policy PUBLIC include)
+target_compile_features(sprout_daily_time_policy PUBLIC cxx_std_20)
+target_link_libraries(sprout_daily_time_policy PRIVATE sprout_sqlite)
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
 
@@ -74,6 +82,7 @@ if(SPROUT_BUILD_ONION)
     sprout-onion-check
     PRIVATE
       sprout_configuration
+      sprout_daily_time_policy
       sprout_launcher_core
       sprout_onion_adapter
       sprout_parent_access
@@ -95,6 +104,7 @@ if(MSVC)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_daily_time_policy PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE /W4 /permissive-)
@@ -105,6 +115,7 @@ else()
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_daily_time_policy PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_ONION)
     target_compile_options(sprout-onion-check PRIVATE -Wall -Wextra -Wpedantic)
@@ -214,6 +225,13 @@ if(BUILD_TESTING)
                         PRIVATE sprout_parent_access)
   add_test(NAME parent-access-controller
            COMMAND sprout-parent-access-controller-test)
+
+  add_executable(sprout-daily-time-policy-test
+                 tests/daily_time_policy_test.cpp)
+  target_compile_features(sprout-daily-time-policy-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-daily-time-policy-test
+                        PRIVATE sprout_daily_time_policy sprout_sqlite)
+  add_test(NAME daily-time-policy COMMAND sprout-daily-time-policy-test)
 
   add_executable(sprout-onion-launch-adapter-test
                  tests/onion_launch_adapter_test.cpp)

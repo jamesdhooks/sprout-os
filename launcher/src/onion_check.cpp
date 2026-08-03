@@ -1,4 +1,5 @@
 #include "sprout/launcher/launcher_state.hpp"
+#include "sprout/launcher/daily_time_policy.hpp"
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/local_library.hpp"
@@ -93,6 +94,28 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("Parent PIN verification failed");
     }
 
+    sprout::launcher::DailyTimePolicyStore time_policy(
+        arguments.data_directory / "time-policy.sqlite3");
+    time_policy.set_daily_allowance("diagnostic-child", 45 * 60);
+    const auto time_started = time_policy.begin_session(
+        "diagnostic-child", "diagnostic-session", "diagnostic-game",
+        sprout::launcher::TimePolicySample{
+            .monotonic_milliseconds = 1'000,
+            .utc_seconds = 1'000,
+            .local_date = "2026-01-01",
+        });
+    const auto time_paused = time_policy.pause_session(
+        "diagnostic-session",
+        sprout::launcher::TimePolicySample{
+            .monotonic_milliseconds = 2'000,
+            .utc_seconds = 1'001,
+            .local_date = "2026-01-01",
+        });
+    if (!time_started.launch_allowed ||
+        time_paused.status.used_milliseconds != 1'000) {
+      throw std::runtime_error("Daily time-policy check failed");
+    }
+
     sprout::launcher::LauncherState state(
         sprout::launcher::make_demo_household());
     (void)state.handle(sprout::launcher::Action::Confirm);
@@ -107,6 +130,7 @@ int main(int argc, char* argv[]) {
     std::cout << "onion-baseline=v4.3.1-1@7dfc008b851398dcfe57819519efe5f958c77f65\n";
     std::cout << "toolchain=arm-linux-gnueabihf-gcc-8.3.0@sha256:a8da1021449c80c0ccb75e263f1dfc75b5a004278fefa8a54151e55698a352f4\n";
     std::cout << "profile-store=ok\nconfiguration-store=ok\nparent-access=ok\n";
+    std::cout << "daily-time-policy=ok\n";
     std::cout << "argon2-set-pin-ms="
               << std::chrono::duration_cast<std::chrono::milliseconds>(
                      hash_finished - hash_started)
