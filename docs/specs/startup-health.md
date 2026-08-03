@@ -1,18 +1,18 @@
 # Launcher Startup Health
 
-Status: **implemented decision and persistence core v1; launcher and device startup integration pending**.
+Status: **implemented decision, persistence, and desktop launcher integration v1; device startup integration pending**.
 
 ## Purpose
 
-The startup-health store gives the future Sprout startup adapter a durable, clock-independent signal after repeated launcher failures. It does not select a recovery action, watch a process, install a boot hook, or prove that stock Onion can be reached.
+The startup-health store gives Sprout a durable, clock-independent signal after repeated launcher failures. The desktop launcher now uses that signal to select its [configuration recovery flow](launcher-recovery.md). It does not watch a process, install a device boot hook, or prove that stock Onion can be reached.
 
 The intended call sequence is:
 
 1. Call `begin_startup()` before normal launcher initialization.
 2. If the decision requests recovery, route to the reviewed recovery surface instead of ordinary profile navigation.
-3. Call `mark_ready(attemptId)` only after required local stores are open, the selected normal or recovery state is constructed, the first interactive frame rendered successfully, and the input loop can accept actions.
+3. Call `mark_ready(attemptId)` only after required local stores are open, ordinary setup or profile state is constructed, its first interactive frame rendered successfully, and the input loop can accept actions.
 
-An exit or process loss before step 3 deliberately leaves the attempt active.
+Merely rendering the recovery menu is not ready. An exit, rejected recovery action, initialization failure, or process loss before step 3 deliberately leaves the attempt active.
 
 ## Decision semantics
 
@@ -44,7 +44,7 @@ Issue 9 remains open. The following still require source and development-card ev
 
 - which physical boot action safely bypasses Sprout;
 - where the Sprout startup hook can coexist with Onion's runtime;
-- how repeated-failure recovery presents last-known-good restore and launcher-only reset;
+- how the desktop-tested recovery surface is started on the device;
 - whether stock Onion starts without changing ROMs, saves, states, profiles, or backups; and
 - how a failed recovery surface avoids its own boot loop.
 

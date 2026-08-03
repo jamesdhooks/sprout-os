@@ -43,6 +43,11 @@ add_library(
 )
 
 add_library(
+  sprout_recovery
+  src/recovery_presentation.cpp
+)
+
+add_library(
   sprout_profile_archive
   src/profile_archive.cpp
   src/profile_archive_presentation.cpp
@@ -94,6 +99,12 @@ target_link_libraries(sprout_daily_time_policy PRIVATE sprout_sqlite)
 target_include_directories(sprout_startup_health PUBLIC include)
 target_compile_features(sprout_startup_health PUBLIC cxx_std_20)
 target_link_libraries(sprout_startup_health PRIVATE sprout_sqlite)
+target_include_directories(sprout_recovery PUBLIC include)
+target_compile_features(sprout_recovery PUBLIC cxx_std_20)
+target_link_libraries(
+  sprout_recovery
+  PRIVATE sprout_configuration sprout_launcher_core
+)
 target_include_directories(sprout_profile_archive PUBLIC include)
 target_compile_features(sprout_profile_archive PUBLIC cxx_std_20)
 target_include_directories(
@@ -146,6 +157,7 @@ if(MSVC)
   target_compile_options(sprout_parent_access PRIVATE /W4 /permissive-)
   target_compile_options(sprout_daily_time_policy PRIVATE /W4 /permissive-)
   target_compile_options(sprout_startup_health PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_recovery PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_ONION)
@@ -160,6 +172,7 @@ else()
   target_compile_options(sprout_parent_access PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_daily_time_policy PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_startup_health PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_recovery PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_ONION)
@@ -203,6 +216,8 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_profile_archive
       sprout_onion_adapter
       sprout_setup
+      sprout_recovery
+      sprout_startup_health
       SDL2_image
       SDL2::SDL2main
       SDL2::SDL2-static
@@ -285,6 +300,14 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-startup-health-test
                         PRIVATE sprout_startup_health sprout_sqlite)
   add_test(NAME startup-health COMMAND sprout-startup-health-test)
+
+  add_executable(sprout-recovery-presentation-test
+                 tests/recovery_presentation_test.cpp)
+  target_compile_features(sprout-recovery-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-recovery-presentation-test
+                        PRIVATE sprout_recovery sprout_configuration)
+  add_test(NAME recovery-presentation
+           COMMAND sprout-recovery-presentation-test)
 
   add_executable(sprout-profile-archive-test tests/profile_archive_test.cpp)
   target_compile_features(sprout-profile-archive-test PRIVATE cxx_std_20)

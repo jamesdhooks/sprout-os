@@ -5,6 +5,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace sprout::launcher {
 
@@ -50,6 +51,8 @@ struct LocalConfiguration {
   std::optional<std::string> parent_credential_ref;
 };
 
+[[nodiscard]] std::string_view setup_step_name(SetupStep step);
+
 [[nodiscard]] ResolvedLocale resolve_locale(
     const ResolvedLocale& platform_defaults,
     const LocalConfiguration& configuration,
@@ -64,8 +67,11 @@ class ConfigurationStore {
   [[nodiscard]] bool has_active() const;
   [[nodiscard]] bool has_last_known_good() const;
   [[nodiscard]] LocalConfiguration load_active() const;
+  [[nodiscard]] LocalConfiguration load_last_known_good() const;
   [[nodiscard]] LocalConfiguration save(LocalConfiguration configuration);
   [[nodiscard]] LocalConfiguration restore_last_known_good();
+  [[nodiscard]] std::optional<std::filesystem::path> quarantine_active(
+      std::uint64_t startup_attempt_id);
 
   [[nodiscard]] const std::filesystem::path& active_path() const noexcept;
   [[nodiscard]] const std::filesystem::path& last_known_good_path() const noexcept;

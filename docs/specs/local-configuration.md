@@ -1,6 +1,6 @@
 # Local Configuration Schema
 
-Status: **implemented schema v1 and desktop setup preview**.
+Status: **implemented schema v1, desktop setup preview, and recovery actions**.
 
 ## Boundary
 
@@ -33,6 +33,8 @@ Library-item overrides and temporary grants join the hierarchy only when their i
 The store validates the complete typed document before writing. It durably flushes a same-directory pending file and atomically replaces the destination. Before replacing an existing active file, it atomically snapshots that validated revision as last known good. Stale revisions are rejected so two writers cannot silently overwrite each other.
 
 Parsing is strict: required types, duplicate keys, unknown keys, invalid UTF-8, invalid credential references, and unsupported schema versions fail closed. Schema v1 does not silently discard unknown data. Last-known-good restore validates the snapshot before activation and never snapshots a corrupt active file over it.
+
+Recovery may validate and inspect the last-known-good revision without changing active bytes. Launcher reset moves only a regular, non-linked active file to `config/recovery/sprout.failed-startup-<attemptId>.json` using a no-overwrite rename. A missing active file is a valid fresh-start case; linked or irregular paths and target collisions fail without replacement. The [launcher recovery specification](launcher-recovery.md) defines the user-visible flow and readiness boundary.
 
 ## Setup progress
 

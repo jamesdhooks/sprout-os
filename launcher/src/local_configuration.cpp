@@ -20,16 +20,12 @@
 #include <io.h>
 #else
 #include <fcntl.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #endif
 
 namespace sprout::launcher {
-namespace {
-
-constexpr std::string_view kActiveFilename = "sprout.json";
-constexpr std::string_view kLastKnownGoodFilename = "sprout.last-good.json";
-
-std::string_view step_name(SetupStep step) {
+std::string_view setup_step_name(SetupStep step) {
   switch (step) {
     case SetupStep::Welcome:
       return "welcome";
@@ -59,13 +55,18 @@ std::string_view step_name(SetupStep step) {
   throw std::runtime_error("Unsupported setup step");
 }
 
+namespace {
+
+constexpr std::string_view kActiveFilename = "sprout.json";
+constexpr std::string_view kLastKnownGoodFilename = "sprout.last-good.json";
+
 SetupStep parse_step(std::string_view value) {
   for (const SetupStep step :
        {SetupStep::Welcome, SetupStep::Locale, SetupStep::Network,
         SetupStep::Parent, SetupStep::ParentPin, SetupStep::Child,
         SetupStep::Avatars, SetupStep::Library, SetupStep::ChildDefaults,
         SetupStep::Connectors, SetupStep::Review, SetupStep::Complete}) {
-    if (step_name(step) == value) {
+    if (setup_step_name(step) == value) {
       return step;
     }
   }
@@ -108,7 +109,8 @@ std::string serialize(const LocalConfiguration& configuration) {
                          configuration.schema_version);
   yyjson_mut_obj_add_uint(document, root, "revision", configuration.revision);
   yyjson_mut_obj_add_strcpy(document, root, "nextSetupStep",
-                           std::string(step_name(configuration.next_setup_step)).c_str());
+                           std::string(setup_step_name(
+                               configuration.next_setup_step)).c_str());
 
   yyjson_mut_val* household = yyjson_mut_obj(document);
   yyjson_mut_obj_add_strcpy(document, household, "id",
@@ -334,6 +336,31 @@ void replace_file(const std::filesystem::path& pending,
 #endif
 }
 
+void move_new_file(const std::filesystem::path& source,
+                   const std::filesystem::path& destination) {
+#ifdef _WIN32
+  if (!MoveFileExW(source.c_str(), destination.c_str(), MOVEFILE_WRITE_THROUGH)) {
+    throw std::runtime_error(
+        "Could not quarantine active launcher configuration");
+  }
+#else
+#ifndef RENAME_NOREPLACE
+#define RENAME_NOREPLACE (1U << 0U)
+#endif
+  if (syscall(SYS_renameat2, AT_FDCWD, source.c_str(), AT_FDCWD,
+              destination.c_str(), RENAME_NOREPLACE) != 0) {
+    throw std::runtime_error(
+        "Could not quarantine active launcher configuration");
+  }
+  const int directory =
+      open(destination.parent_path().c_str(), O_RDONLY | O_DIRECTORY);
+  if (directory >= 0) {
+    (void)fsync(directory);
+    close(directory);
+  }
+#endif
+}
+
 void atomic_write(const std::filesystem::path& destination,
                   std::string_view contents) {
   std::filesystem::path pending = destination;
@@ -414,6 +441,13 @@ LocalConfiguration ConfigurationStore::load_active() const {
   return parse(read_file(active_path_));
 }
 
+LocalConfiguration ConfigurationStore::load_last_known_good() const {
+  if (!has_last_known_good()) {
+    throw std::runtime_error("No last-known-good configuration is available");
+  }
+  return parse(read_file(last_known_good_path_));
+}
+
 LocalConfiguration ConfigurationStore::save(LocalConfiguration configuration) {
   validate_configuration(configuration);
   std::filesystem::create_directories(directory_);
@@ -446,6 +480,51 @@ LocalConfiguration ConfigurationStore::restore_last_known_good() {
   LocalConfiguration configuration = parse(contents);
   atomic_write(active_path_, contents);
   return configuration;
+}
+
+std::optional<std::filesystem::path> ConfigurationStore::quarantine_active(
+    std::uint64_t startup_attempt_id) {
+  if (startup_attempt_id == 0) {
+    throw std::invalid_argument("Startup attempt identity is required");
+  }
+  std::error_code error;
+  const auto active_status = std::filesystem::symlink_status(active_path_, error);
+  if (active_status.type() == std::filesystem::file_type::not_found) {
+    return std::nullopt;
+  }
+  if (error || active_status.type() != std::filesystem::file_type::regular) {
+    throw std::runtime_error(
+        "Active launcher configuration is missing, linked, or irregular");
+  }
+
+  const auto recovery_directory = directory_ / "recovery";
+  error.clear();
+  auto recovery_status =
+      std::filesystem::symlink_status(recovery_directory, error);
+  if (recovery_status.type() == std::filesystem::file_type::not_found) {
+    error.clear();
+    if (!std::filesystem::create_directory(recovery_directory, error) || error) {
+      throw std::runtime_error("Could not create configuration recovery directory");
+    }
+    recovery_status =
+        std::filesystem::symlink_status(recovery_directory, error);
+  }
+  if (error || recovery_status.type() != std::filesystem::file_type::directory) {
+    throw std::runtime_error(
+        "Configuration recovery path is linked or not a directory");
+  }
+
+  const auto destination =
+      recovery_directory /
+      ("sprout.failed-startup-" + std::to_string(startup_attempt_id) + ".json");
+  error.clear();
+  const auto destination_status =
+      std::filesystem::symlink_status(destination, error);
+  if (destination_status.type() != std::filesystem::file_type::not_found) {
+    throw std::runtime_error("Configuration recovery destination already exists");
+  }
+  move_new_file(active_path_, destination);
+  return destination;
 }
 
 const std::filesystem::path& ConfigurationStore::active_path() const noexcept {
