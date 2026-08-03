@@ -30,7 +30,8 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `entrypoint` | Relative `.lua` file contained by the package root |
 | `assetManifest` | Optional relative `.json` asset manifest contained by the package root |
 | `audience` | `family` for child-visible packages or `parent` for parent-only packages |
-| `logicalResolution` | Width 64–640 and height 64–480 |
+| `logicalResolution` | Per-game logical width and height, each 64–4096; independent of the physical display target |
+| `titleScreen` | Optional full-screen art plus normalized title/control regions; runtime text and controls remain separate from artwork |
 | `capabilities` | Unique subset of `events` and `local-storage` |
 
 ## Lifecycle
@@ -63,6 +64,24 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 Storage keys are bounded ASCII identifiers. The launcher gives the runtime a profile-specific storage root, and the runtime adds the package ID, producing `<launcher-data>/native-games/<profile-id>/<package-id>/storage.json`. Direct runtime development commands use their explicitly supplied storage root and remain separate from launcher profile data.
 
 The runtime, not package code, emits `GameStarted` and `GameExited`. Packages cannot forge policy, time, recommendation, or parent-control events.
+
+## Presentation and resolution
+
+`logicalResolution` belongs to each game. The runtime scales that surface to
+the active display, so the Miyoo Mini Plus 640×480 panel is a target profile,
+not an engine-wide coordinate system or fidelity ceiling. A future game may
+choose a denser logical surface without changing existing packages.
+
+An optional `titleScreen` contains a relative PNG, declared pixel dimensions,
+`cover` or `contain` fit, and normalized `[x, y, width, height]` regions on a
+0–1000 canvas. The host renders the package title and `A Start / B Back`
+controls in those regions. Illustrated artwork must not bake in button labels,
+profile state, localization, or resume state.
+
+High-resolution editable masters are retained outside the runtime package.
+Packages contain reviewed target derivatives appropriate to their supported
+devices. This keeps low-memory devices efficient without preventing new target
+profiles or higher-fidelity games.
 
 The complete manifest, bounds, deterministic animation, and backend batching
 contract is [Runtime Assets v1](runtime-assets-v1.md).

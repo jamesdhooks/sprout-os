@@ -4,6 +4,8 @@ local cell = 14
 local board_x = 20
 local board_y = 36
 local move_interval = 8
+local half_cell = 7
+local rich_scale = cell / 512
 
 local glyphs = {
   ["0"] = "111101101101111", ["1"] = "010110010010111",
@@ -67,6 +69,43 @@ local function place_fruit()
   if #available > 0 then
     fruit = available[sprout.random(#available)]
   end
+end
+
+local function cardinal(dx, dy)
+  if dy < 0 then return "north" end
+  if dx > 0 then return "east" end
+  if dy > 0 then return "south" end
+  return "west"
+end
+
+local function body_sprite(index)
+  if index == 1 then
+    return "rich.snake-head-" .. cardinal(direction.x, direction.y)
+  end
+  if index == #snake then
+    local previous_part = snake[index - 1]
+    local tail = snake[index]
+    return "rich.snake-tail-" .. cardinal(previous_part.x - tail.x,
+                                           previous_part.y - tail.y)
+  end
+  local previous_part = snake[index - 1]
+  local part = snake[index]
+  local next_part = snake[index + 1]
+  local first = cardinal(previous_part.x - part.x, previous_part.y - part.y)
+  local second = cardinal(next_part.x - part.x, next_part.y - part.y)
+  if first == "north" and second == "south" or
+      first == "south" and second == "north" then
+    return "rich.snake-body-vertical"
+  end
+  if first == "east" and second == "west" or
+      first == "west" and second == "east" then
+    return "rich.snake-body-horizontal"
+  end
+  local pair = first .. ":" .. second
+  if pair == "north:east" or pair == "east:north" then return "rich.snake-corner-ne" end
+  if pair == "east:south" or pair == "south:east" then return "rich.snake-corner-es" end
+  if pair == "south:west" or pair == "west:south" then return "rich.snake-corner-sw" end
+  return "rich.snake-corner-wn"
 end
 
 local function reset()
@@ -148,14 +187,16 @@ function render()
 
   sprout.rect(board_x - 2, board_y - 2, width * cell + 4, height * cell + 4,
               50, 83, 65)
-  sprout.rect(board_x, board_y, width * cell, height * cell, 21, 41, 33)
-  sprout.rect(board_x + fruit.x * cell + 3, board_y + fruit.y * cell + 3,
-              8, 8, 242, 166, 75)
+  sprout.rect(board_x, board_y, width * cell, height * cell, 36, 70, 48)
+  local sprites = {{sprite = "rich.fruit-apple",
+    x = board_x + fruit.x * cell + half_cell,
+    y = board_y + (fruit.y + 1) * cell, scale = rich_scale}}
   for index, part in ipairs(snake) do
-    local shade = ended and 105 or math.max(120, 226 - index * 5)
-    sprout.rect(board_x + part.x * cell + 1, board_y + part.y * cell + 1,
-                12, 12, 79, shade, ended and 116 or 139)
+    sprites[#sprites + 1] = {sprite = body_sprite(index),
+      x = board_x + part.x * cell + half_cell,
+      y = board_y + (part.y + 1) * cell, scale = rich_scale}
   end
+  sprout.sprite_batch(sprites)
 
   if ended then
     sprout.rect(72, 101, 176, 47, 29, 55, 43)

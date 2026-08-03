@@ -552,6 +552,9 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   SDL_RenderSetLogicalSize(renderer, 640, 480);
+  const auto executable_root =
+      std::filesystem::absolute(argv[0]).parent_path();
+  const auto startup_splash = executable_root / "assets" / "startup-splash.png";
 
   if (smoke_test) {
     const int result = run_smoke_test(renderer);
@@ -562,6 +565,21 @@ int main(int argc, char* argv[]) {
   }
 
   if (screenshot) {
+    if (screenshot_screen == "startup") {
+      if (!sprout::launcher::render_startup_splash(renderer, startup_splash)) {
+        std::cerr << "Startup splash could not be loaded from "
+                  << startup_splash << '\n';
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+      }
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     if (screenshot_screen == "recovery") {
       TemporaryDirectory directory("recovery-screenshot");
       sprout::launcher::ConfigurationStore configuration(
@@ -752,6 +770,10 @@ int main(int argc, char* argv[]) {
     SDL_DestroyWindow(window);
     SDL_Quit();
     return result;
+  }
+
+  if (sprout::launcher::render_startup_splash(renderer, startup_splash)) {
+    SDL_Delay(900);
   }
 
   SDL_GameController* controller = nullptr;

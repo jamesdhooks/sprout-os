@@ -11,9 +11,12 @@ local layout = {
   "##########"
 }
 local tiles = ""
+local rich_scale = 3 / 64
+local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
-    tiles = tiles .. string.char(layout[row]:sub(column, column) == "#" and 1 or 0)
+    local wall = layout[row]:sub(column, column) == "#"
+    tiles = tiles .. string.char(wall and 1 or 0)
   end
 end
 
@@ -102,18 +105,21 @@ function render()
   local sprites = {}
   for _, button in ipairs(buttons) do
     sprites[#sprites + 1] = {
-      sprite = crate_at(button.x, button.y) and "button.down" or "button.up",
-      x = origin_x + button.x * 16, y = origin_y + button.y * 16
+      sprite = crate_at(button.x, button.y) and "rich.button-down" or "rich.button-up",
+      x = origin_x + button.x * 16 + 8, y = origin_y + (button.y + 1) * 16,
+      scale = rich_scale
     }
   end
   for _, crate in ipairs(crates) do
     sprites[#sprites + 1] = {
-      sprite = button_at(crate.x, crate.y) and "crate.on-button" or "crate",
-      x = origin_x + crate.x * 16, y = origin_y + crate.y * 16
+      sprite = button_at(crate.x, crate.y) and "rich.crate-solved" or "rich.crate-idle",
+      x = origin_x + crate.x * 16 + 8, y = origin_y + (crate.y + 1) * 16,
+      scale = rich_scale
     }
   end
-  sprites[#sprites + 1] = {animation = "player.walk." .. direction,
-      x = origin_x + player_x * 16, y = origin_y + player_y * 16}
+  sprites[#sprites + 1] = {animation = "rich.hero-walk-" .. rich_direction[direction],
+      x = origin_x + player_x * 16 + 8, y = origin_y + (player_y + 1) * 16,
+      scale = rich_scale}
   sprites[#sprites + 1] = {sprite = "retry", x = 16, y = 8}
   sprout.sprite_batch(sprites)
   if complete then sprout.rect(104, 8, 112, 20, 83, 198, 126) end

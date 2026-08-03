@@ -5,7 +5,15 @@
   "version": "0.1.0",
   "runtimeVersion": 1,
   "entrypoint": "game.lua",
+  "assetManifest": "rich-asset-manifest.json",
   "logicalResolution": [320, 240],
+  "titleScreen": {
+    "image": "assets/title.png",
+    "dimensions": [640, 480],
+    "fit": "cover",
+    "titleRegion": [30, 30, 940, 210],
+    "controlsRegion": [160, 840, 680, 120]
+  },
   "audience": "family",
   "capabilities": ["events", "local-storage"]
 }

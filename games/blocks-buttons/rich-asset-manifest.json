@@ -1,0 +1,876 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "original-project-artwork",
+    "license": "GPL-3.0-or-later",
+    "generator": "tools/import-sprite-atlases.py",
+    "palette": "sprout-storybook-1"
+  },
+  "atlases": [
+    {
+      "id": "main",
+      "image": "assets/sprites.png",
+      "size": [
+        128,
+        64
+      ]
+    },
+    {
+      "id": "rich-character",
+      "image": "assets/rich-character.png",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "id": "rich-world",
+      "image": "assets/rich-world.png",
+      "size": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "sprites": [
+    {
+      "id": "room.floor",
+      "atlas": "main",
+      "rect": [
+        0,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "room.wall",
+      "atlas": "main",
+      "rect": [
+        16,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "button.up",
+      "atlas": "main",
+      "rect": [
+        32,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "button.down",
+      "atlas": "main",
+      "rect": [
+        48,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "crate",
+      "atlas": "main",
+      "rect": [
+        64,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "crate.on-button",
+      "atlas": "main",
+      "rect": [
+        80,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "retry",
+      "atlas": "main",
+      "rect": [
+        96,
+        0,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.down.0",
+      "atlas": "main",
+      "rect": [
+        0,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.down.1",
+      "atlas": "main",
+      "rect": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.up.0",
+      "atlas": "main",
+      "rect": [
+        32,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.up.1",
+      "atlas": "main",
+      "rect": [
+        48,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.left.0",
+      "atlas": "main",
+      "rect": [
+        64,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.left.1",
+      "atlas": "main",
+      "rect": [
+        80,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.right.0",
+      "atlas": "main",
+      "rect": [
+        96,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "player.right.1",
+      "atlas": "main",
+      "rect": [
+        112,
+        16,
+        16,
+        16
+      ],
+      "pivot": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "rich.hero-north-01",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        2,
+        321,
+        263
+      ],
+      "pivot": [
+        161,
+        263
+      ]
+    },
+    {
+      "id": "rich.hero-north-02",
+      "atlas": "rich-character",
+      "rect": [
+        327,
+        2,
+        322,
+        281
+      ],
+      "pivot": [
+        161,
+        281
+      ]
+    },
+    {
+      "id": "rich.hero-north-03",
+      "atlas": "rich-character",
+      "rect": [
+        653,
+        2,
+        320,
+        368
+      ],
+      "pivot": [
+        160,
+        368
+      ]
+    },
+    {
+      "id": "rich.hero-north-04",
+      "atlas": "rich-character",
+      "rect": [
+        977,
+        2,
+        330,
+        253
+      ],
+      "pivot": [
+        165,
+        253
+      ]
+    },
+    {
+      "id": "rich.hero-east-01",
+      "atlas": "rich-character",
+      "rect": [
+        1311,
+        2,
+        324,
+        264
+      ],
+      "pivot": [
+        162,
+        264
+      ]
+    },
+    {
+      "id": "rich.hero-east-02",
+      "atlas": "rich-character",
+      "rect": [
+        1639,
+        2,
+        322,
+        283
+      ],
+      "pivot": [
+        161,
+        283
+      ]
+    },
+    {
+      "id": "rich.hero-east-03",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        374,
+        257,
+        367
+      ],
+      "pivot": [
+        129,
+        367
+      ]
+    },
+    {
+      "id": "rich.hero-east-04",
+      "atlas": "rich-character",
+      "rect": [
+        263,
+        374,
+        254,
+        374
+      ],
+      "pivot": [
+        127,
+        374
+      ]
+    },
+    {
+      "id": "rich.hero-south-01",
+      "atlas": "rich-character",
+      "rect": [
+        521,
+        374,
+        324,
+        262
+      ],
+      "pivot": [
+        162,
+        262
+      ]
+    },
+    {
+      "id": "rich.hero-south-02",
+      "atlas": "rich-character",
+      "rect": [
+        849,
+        374,
+        345,
+        250
+      ],
+      "pivot": [
+        173,
+        250
+      ]
+    },
+    {
+      "id": "rich.hero-south-03",
+      "atlas": "rich-character",
+      "rect": [
+        1198,
+        374,
+        256,
+        367
+      ],
+      "pivot": [
+        128,
+        367
+      ]
+    },
+    {
+      "id": "rich.hero-south-04",
+      "atlas": "rich-character",
+      "rect": [
+        1458,
+        374,
+        254,
+        374
+      ],
+      "pivot": [
+        127,
+        374
+      ]
+    },
+    {
+      "id": "rich.hero-west-01",
+      "atlas": "rich-character",
+      "rect": [
+        1716,
+        374,
+        325,
+        270
+      ],
+      "pivot": [
+        163,
+        270
+      ]
+    },
+    {
+      "id": "rich.hero-west-02",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        752,
+        346,
+        250
+      ],
+      "pivot": [
+        173,
+        250
+      ]
+    },
+    {
+      "id": "rich.hero-west-03",
+      "atlas": "rich-character",
+      "rect": [
+        352,
+        752,
+        257,
+        366
+      ],
+      "pivot": [
+        129,
+        366
+      ]
+    },
+    {
+      "id": "rich.hero-west-04",
+      "atlas": "rich-character",
+      "rect": [
+        613,
+        752,
+        346,
+        251
+      ],
+      "pivot": [
+        173,
+        251
+      ]
+    },
+    {
+      "id": "rich.floor-wood",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        2,
+        411,
+        422
+      ],
+      "pivot": [
+        206,
+        422
+      ]
+    },
+    {
+      "id": "rich.floor-leaf",
+      "atlas": "rich-world",
+      "rect": [
+        417,
+        2,
+        413,
+        422
+      ],
+      "pivot": [
+        207,
+        422
+      ]
+    },
+    {
+      "id": "rich.floor-stone",
+      "atlas": "rich-world",
+      "rect": [
+        834,
+        2,
+        427,
+        436
+      ],
+      "pivot": [
+        214,
+        436
+      ]
+    },
+    {
+      "id": "rich.wall-workshop",
+      "atlas": "rich-world",
+      "rect": [
+        1265,
+        2,
+        412,
+        422
+      ],
+      "pivot": [
+        206,
+        422
+      ]
+    },
+    {
+      "id": "rich.crate-idle",
+      "atlas": "rich-world",
+      "rect": [
+        1681,
+        2,
+        349,
+        361
+      ],
+      "pivot": [
+        175,
+        361
+      ]
+    },
+    {
+      "id": "rich.crate-push-left",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        442,
+        349,
+        361
+      ],
+      "pivot": [
+        175,
+        361
+      ]
+    },
+    {
+      "id": "rich.crate-push-right",
+      "atlas": "rich-world",
+      "rect": [
+        355,
+        442,
+        347,
+        361
+      ],
+      "pivot": [
+        174,
+        361
+      ]
+    },
+    {
+      "id": "rich.crate-solved",
+      "atlas": "rich-world",
+      "rect": [
+        706,
+        442,
+        347,
+        361
+      ],
+      "pivot": [
+        174,
+        361
+      ]
+    },
+    {
+      "id": "rich.button-up",
+      "atlas": "rich-world",
+      "rect": [
+        1057,
+        442,
+        297,
+        296
+      ],
+      "pivot": [
+        149,
+        296
+      ]
+    },
+    {
+      "id": "rich.button-half",
+      "atlas": "rich-world",
+      "rect": [
+        1358,
+        442,
+        336,
+        361
+      ],
+      "pivot": [
+        168,
+        361
+      ]
+    },
+    {
+      "id": "rich.button-down",
+      "atlas": "rich-world",
+      "rect": [
+        1698,
+        442,
+        335,
+        360
+      ],
+      "pivot": [
+        168,
+        360
+      ]
+    },
+    {
+      "id": "rich.button-solved",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        807,
+        334,
+        360
+      ],
+      "pivot": [
+        167,
+        360
+      ]
+    },
+    {
+      "id": "rich.push-puff-01",
+      "atlas": "rich-world",
+      "rect": [
+        340,
+        807,
+        202,
+        166
+      ],
+      "pivot": [
+        101,
+        166
+      ]
+    },
+    {
+      "id": "rich.push-puff-02",
+      "atlas": "rich-world",
+      "rect": [
+        546,
+        807,
+        217,
+        192
+      ],
+      "pivot": [
+        109,
+        192
+      ]
+    },
+    {
+      "id": "rich.push-puff-03",
+      "atlas": "rich-world",
+      "rect": [
+        767,
+        807,
+        193,
+        200
+      ],
+      "pivot": [
+        97,
+        200
+      ]
+    },
+    {
+      "id": "rich.push-puff-04",
+      "atlas": "rich-world",
+      "rect": [
+        964,
+        807,
+        218,
+        164
+      ],
+      "pivot": [
+        109,
+        164
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "player.walk.down",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "player.down.0",
+          "ticks": 8
+        },
+        {
+          "sprite": "player.down.1",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "player.walk.up",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "player.up.0",
+          "ticks": 8
+        },
+        {
+          "sprite": "player.up.1",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "player.walk.left",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "player.left.0",
+          "ticks": 8
+        },
+        {
+          "sprite": "player.left.1",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "player.walk.right",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "player.right.0",
+          "ticks": 8
+        },
+        {
+          "sprite": "player.right.1",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-walk-north",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-north-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-walk-east",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-east-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-east-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-east-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-east-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-walk-south",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-south-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-walk-west",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-west-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.push-puff",
+      "loop": false,
+      "frames": [
+        {
+          "sprite": "rich.push-puff-01",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.push-puff-02",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.push-puff-03",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.push-puff-04",
+          "ticks": 5
+        }
+      ]
+    }
+  ],
+  "tileSets": [
+    {
+      "id": "room.tiles",
+      "tileSize": [
+        16,
+        16
+      ],
+      "sprites": [
+        "room.floor",
+        "room.wall"
+      ]
+    }
+  ]
+}

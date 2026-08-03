@@ -1,0 +1,488 @@
+{
+  "schema": "sprite-atlas.v1",
+  "id": "sprout-snake-world",
+  "image": "sprout-snake-world-atlas.png",
+  "size": {
+    "width": 2048,
+    "height": 2048
+  },
+  "scale": 1,
+  "frames": {
+    "grass-plain": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "width": 497,
+        "height": 497
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 7,
+        "width": 497,
+        "height": 497
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "grass-clover": {
+      "frame": {
+        "x": 503,
+        "y": 2,
+        "width": 507,
+        "height": 498
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 2,
+        "y": 7,
+        "width": 507,
+        "height": 498
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "grass-flower": {
+      "frame": {
+        "x": 1014,
+        "y": 2,
+        "width": 285,
+        "height": 312
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 113,
+        "y": 100,
+        "width": 285,
+        "height": 312
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "grass-pebble": {
+      "frame": {
+        "x": 1303,
+        "y": 2,
+        "width": 284,
+        "height": 310
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 114,
+        "y": 101,
+        "width": 284,
+        "height": 310
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "apple-01": {
+      "frame": {
+        "x": 2,
+        "y": 504,
+        "width": 496,
+        "height": 511
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 0,
+        "width": 496,
+        "height": 511
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "apple"
+      ]
+    },
+    "apple-02": {
+      "frame": {
+        "x": 502,
+        "y": 504,
+        "width": 496,
+        "height": 509
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 1,
+        "width": 496,
+        "height": 509
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "apple"
+      ]
+    },
+    "apple-03": {
+      "frame": {
+        "x": 1002,
+        "y": 504,
+        "width": 278,
+        "height": 289
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 117,
+        "y": 111,
+        "width": 278,
+        "height": 289
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "apple"
+      ]
+    },
+    "apple-04": {
+      "frame": {
+        "x": 1284,
+        "y": 504,
+        "width": 283,
+        "height": 314
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 114,
+        "y": 99,
+        "width": 283,
+        "height": 314
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "apple"
+      ]
+    },
+    "pear-01": {
+      "frame": {
+        "x": 1571,
+        "y": 504,
+        "width": 269,
+        "height": 372
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 121,
+        "y": 70,
+        "width": 269,
+        "height": 372
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "pear"
+      ]
+    },
+    "pear-02": {
+      "frame": {
+        "x": 2,
+        "y": 1019,
+        "width": 496,
+        "height": 501
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 5,
+        "width": 496,
+        "height": 501
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "pear"
+      ]
+    },
+    "pear-03": {
+      "frame": {
+        "x": 502,
+        "y": 1019,
+        "width": 254,
+        "height": 347
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 129,
+        "y": 82,
+        "width": 254,
+        "height": 347
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "pear"
+      ]
+    },
+    "pear-04": {
+      "frame": {
+        "x": 760,
+        "y": 1019,
+        "width": 320,
+        "height": 317
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 96,
+        "y": 97,
+        "width": 320,
+        "height": 317
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit",
+        "pear"
+      ]
+    },
+    "eat-burst-01": {
+      "frame": {
+        "x": 1084,
+        "y": 1019,
+        "width": 496,
+        "height": 498
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 7,
+        "width": 496,
+        "height": 498
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "effect"
+      ]
+    },
+    "eat-burst-02": {
+      "frame": {
+        "x": 1584,
+        "y": 1019,
+        "width": 417,
+        "height": 319
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 47,
+        "y": 96,
+        "width": 417,
+        "height": 319
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "effect"
+      ]
+    },
+    "eat-burst-03": {
+      "frame": {
+        "x": 2,
+        "y": 1524,
+        "width": 326,
+        "height": 342
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 93,
+        "y": 85,
+        "width": 326,
+        "height": 342
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "effect"
+      ]
+    },
+    "eat-burst-04": {
+      "frame": {
+        "x": 332,
+        "y": 1524,
+        "width": 319,
+        "height": 314
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 96,
+        "y": 99,
+        "width": 319,
+        "height": 314
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "effect"
+      ]
+    }
+  },
+  "animations": {
+    "apple-idle": {
+      "frames": [
+        "apple-01",
+        "apple-02",
+        "apple-03",
+        "apple-04"
+      ],
+      "fps": 6,
+      "loop": true
+    },
+    "pear-idle": {
+      "frames": [
+        "pear-01",
+        "pear-02",
+        "pear-03",
+        "pear-04"
+      ],
+      "fps": 6,
+      "loop": true
+    },
+    "eat-burst": {
+      "frames": [
+        "eat-burst-01",
+        "eat-burst-02",
+        "eat-burst-03",
+        "eat-burst-04"
+      ],
+      "fps": 12,
+      "loop": false
+    }
+  }
+}

@@ -61,6 +61,34 @@ std::uint32_t read_version(yyjson_val* object, const char* key) {
   return static_cast<std::uint32_t>(yyjson_get_uint(value));
 }
 
+int read_dimension(yyjson_val* value, const char* field) {
+  if (!yyjson_is_uint(value) || yyjson_get_uint(value) < 64 ||
+      yyjson_get_uint(value) > 4096) {
+    throw std::runtime_error(std::string("Package field is outside supported image bounds: ") + field);
+  }
+  return static_cast<int>(yyjson_get_uint(value));
+}
+
+NormalizedRegion read_region(yyjson_val* object, const char* key) {
+  yyjson_val* value = required(object, key);
+  if (!yyjson_is_arr(value) || yyjson_arr_size(value) != 4) {
+    throw std::runtime_error(std::string("Package region should contain x, y, width, height: ") + key);
+  }
+  int parts[4]{};
+  for (std::size_t index = 0; index < 4; ++index) {
+    yyjson_val* part = yyjson_arr_get(value, index);
+    if (!yyjson_is_uint(part) || yyjson_get_uint(part) > 1000) {
+      throw std::runtime_error(std::string("Package region should use normalized 0-1000 coordinates: ") + key);
+    }
+    parts[index] = static_cast<int>(yyjson_get_uint(part));
+  }
+  if (parts[2] == 0 || parts[3] == 0 || parts[0] + parts[2] > 1000 ||
+      parts[1] + parts[3] > 1000) {
+    throw std::runtime_error(std::string("Package region escapes the normalized canvas: ") + key);
+  }
+  return {parts[0], parts[1], parts[2], parts[3]};
+}
+
 std::string read_file(const std::filesystem::path& path) {
   std::error_code error;
   const auto size = std::filesystem::file_size(path, error);
@@ -113,7 +141,7 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     validate_keys(manifest,
                   {"schemaVersion", "id", "title", "version", "runtimeVersion",
                    "entrypoint", "logicalResolution", "audience",
-                   "capabilities", "assetManifest"});
+                   "capabilities", "assetManifest", "titleScreen"});
 
     PackageManifest package{
         .schema_version = read_version(manifest, "schemaVersion"),
@@ -155,12 +183,49 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     yyjson_val* width = yyjson_arr_get_first(resolution);
     yyjson_val* height = yyjson_arr_get(resolution, 1);
     if (!yyjson_is_uint(width) || !yyjson_is_uint(height) ||
-        yyjson_get_uint(width) < 64 || yyjson_get_uint(width) > 640 ||
-        yyjson_get_uint(height) < 64 || yyjson_get_uint(height) > 480) {
+        yyjson_get_uint(width) < 64 || yyjson_get_uint(width) > 4096 ||
+        yyjson_get_uint(height) < 64 || yyjson_get_uint(height) > 4096) {
       throw std::runtime_error("Package logical resolution is outside supported bounds");
     }
     package.logical_width = static_cast<int>(yyjson_get_uint(width));
     package.logical_height = static_cast<int>(yyjson_get_uint(height));
+
+    if (yyjson_val* title_screen = yyjson_obj_get(manifest, "titleScreen")) {
+      validate_keys(title_screen,
+                    {"image", "dimensions", "fit", "titleRegion",
+                     "controlsRegion"});
+      const std::filesystem::path relative = read_text(title_screen, "image");
+      if (relative.is_absolute() || relative.extension() != ".png") {
+        throw std::runtime_error("Package title screen image should be a relative PNG file");
+      }
+      const auto image = std::filesystem::canonical(root / relative, path_error);
+      if (path_error || !std::filesystem::is_regular_file(image) ||
+          !is_within(root, image)) {
+        throw std::runtime_error("Package title screen image escapes or is missing from its root");
+      }
+      yyjson_val* dimensions = required(title_screen, "dimensions");
+      if (!yyjson_is_arr(dimensions) || yyjson_arr_size(dimensions) != 2) {
+        throw std::runtime_error("Package title screen dimensions should contain width and height");
+      }
+      const std::string fit = read_text(title_screen, "fit");
+      PresentationFit presentation_fit{};
+      if (fit == "cover") {
+        presentation_fit = PresentationFit::Cover;
+      } else if (fit == "contain") {
+        presentation_fit = PresentationFit::Contain;
+      } else {
+        throw std::runtime_error("Package title screen fit should be cover or contain");
+      }
+      package.title_screen = {
+          .enabled = true,
+          .image = image,
+          .image_width = read_dimension(yyjson_arr_get_first(dimensions), "titleScreen.dimensions[0]"),
+          .image_height = read_dimension(yyjson_arr_get(dimensions, 1), "titleScreen.dimensions[1]"),
+          .fit = presentation_fit,
+          .title_region = read_region(title_screen, "titleRegion"),
+          .controls_region = read_region(title_screen, "controlsRegion"),
+      };
+    }
 
     const auto audience = read_text(manifest, "audience");
     if (audience == "family") {

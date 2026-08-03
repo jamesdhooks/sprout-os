@@ -32,8 +32,8 @@ edges to 4,096 pixels, and each rendered frame to 4,096 commands.
 
 | Function | Use |
 | --- | --- |
-| `sprout.sprite(id, x, y, scale?, flipX?, flipY?, alpha?)` | Submit one declared frame |
-| `sprout.animate(id, x, y, phase?, scale?, flipX?, flipY?, alpha?)` | Resolve and submit one declared animation |
+| `sprout.sprite(id, x, y, scale?, flipX?, flipY?, alpha?)` | Submit one declared frame; fractional scale supports high-density masters |
+| `sprout.animate(id, x, y, phase?, scale?, flipX?, flipY?, alpha?)` | Resolve one declared animation with the same fractional scale contract |
 | `sprout.sprite_batch(items)` | Submit many sprite or animation items in one Lua-to-host call |
 | `sprout.tilemap(tileSet, bytes, columns, x, y, scale?)` | Submit a dense tile grid in one Lua-to-host call |
 
@@ -41,6 +41,11 @@ A batch item names exactly one `sprite` or `animation` and supplies integer
 `x` and `y`. Optional fields are `phase`, `scale`, `flipX`, `flipY`, and
 `alpha`. Animation selection derives only from the fixed session tick plus an
 explicit phase; rendering never advances animation state.
+
+Sprite scale is a finite number from 1/64 through 64. This permits a dense
+source frame to render on a compact logical canvas without discarding its
+higher-density source or forcing every future game to share one pixel scale.
+Tilemaps retain integer scale because adjacent tile geometry must stay exact.
 
 Tilemap bytes are zero-based indices into the declared tile set. This compact
 representation avoids one Lua call per tile and makes invalid tile values fail
@@ -59,6 +64,18 @@ submits the atlas geometry in a single backend draw.
 Automated core tests inspect commands without creating a window. Windows
 capture tests exercise PNG decoding, declared-size validation, nearest-neighbor
 sampling, geometry batching, and the actual SDL output path.
+
+## Common atlas imports
+
+`tools/import-sprite-atlases.py` compiles `sprite-atlas.v1`, TexturePacker JSON
+Hash, or TexturePacker JSON Array metadata into the strict runtime manifest.
+One import config can combine multiple source atlases, apply stable ID prefixes
+or explicit renames, preserve normalized pivots, translate animation FPS to
+fixed runtime ticks, merge a deterministic base manifest, correct explicitly
+declared row/column ordering, and declare package tile sets. The compiler
+supports `--check` for reproducible builds. Runtime packages therefore retain
+one small, validated contract without requiring artists or third-party tools to
+export a Sprout-specific layout directly.
 
 ## Reproducible first assets
 

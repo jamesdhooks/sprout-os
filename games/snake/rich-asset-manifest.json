@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "source": "original-project-artwork",
+    "license": "GPL-3.0-or-later",
+    "generator": "tools/import-sprite-atlases.py",
+    "palette": "sprout-storybook-1"
+  },
+  "atlases": [
+    {
+      "id": "rich-character",
+      "image": "assets/rich-character.png",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    {
+      "id": "rich-world",
+      "image": "assets/rich-world.png",
+      "size": [
+        2048,
+        2048
+      ]
+    }
+  ],
+  "sprites": [
+    {
+      "id": "rich.snake-head-north",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        2,
+        425,
+        438
+      ],
+      "pivot": [
+        213,
+        438
+      ]
+    },
+    {
+      "id": "rich.snake-head-east",
+      "atlas": "rich-character",
+      "rect": [
+        431,
+        2,
+        430,
+        437
+      ],
+      "pivot": [
+        215,
+        437
+      ]
+    },
+    {
+      "id": "rich.snake-head-south",
+      "atlas": "rich-character",
+      "rect": [
+        865,
+        2,
+        432,
+        437
+      ],
+      "pivot": [
+        216,
+        437
+      ]
+    },
+    {
+      "id": "rich.snake-head-west",
+      "atlas": "rich-character",
+      "rect": [
+        1301,
+        2,
+        430,
+        437
+      ],
+      "pivot": [
+        215,
+        437
+      ]
+    },
+    {
+      "id": "rich.snake-body-vertical",
+      "atlas": "rich-character",
+      "rect": [
+        1735,
+        2,
+        238,
+        466
+      ],
+      "pivot": [
+        119,
+        466
+      ]
+    },
+    {
+      "id": "rich.snake-body-horizontal",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        472,
+        235,
+        463
+      ],
+      "pivot": [
+        118,
+        463
+      ]
+    },
+    {
+      "id": "rich.snake-corner-ne",
+      "atlas": "rich-character",
+      "rect": [
+        241,
+        472,
+        460,
+        223
+      ],
+      "pivot": [
+        230,
+        223
+      ]
+    },
+    {
+      "id": "rich.snake-corner-es",
+      "atlas": "rich-character",
+      "rect": [
+        705,
+        472,
+        431,
+        450
+      ],
+      "pivot": [
+        216,
+        450
+      ]
+    },
+    {
+      "id": "rich.snake-corner-sw",
+      "atlas": "rich-character",
+      "rect": [
+        1140,
+        472,
+        432,
+        443
+      ],
+      "pivot": [
+        216,
+        443
+      ]
+    },
+    {
+      "id": "rich.snake-corner-wn",
+      "atlas": "rich-character",
+      "rect": [
+        1576,
+        472,
+        430,
+        438
+      ],
+      "pivot": [
+        215,
+        438
+      ]
+    },
+    {
+      "id": "rich.snake-tail-north",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        939,
+        435,
+        442
+      ],
+      "pivot": [
+        218,
+        442
+      ]
+    },
+    {
+      "id": "rich.snake-tail-east",
+      "atlas": "rich-character",
+      "rect": [
+        441,
+        939,
+        405,
+        434
+      ],
+      "pivot": [
+        203,
+        434
+      ]
+    },
+    {
+      "id": "rich.snake-tail-south",
+      "atlas": "rich-character",
+      "rect": [
+        850,
+        939,
+        257,
+        432
+      ],
+      "pivot": [
+        129,
+        432
+      ]
+    },
+    {
+      "id": "rich.snake-tail-west",
+      "atlas": "rich-character",
+      "rect": [
+        1111,
+        939,
+        265,
+        435
+      ],
+      "pivot": [
+        133,
+        435
+      ]
+    },
+    {
+      "id": "rich.fruit-apple",
+      "atlas": "rich-character",
+      "rect": [
+        1380,
+        939,
+        388,
+        419
+      ],
+      "pivot": [
+        194,
+        419
+      ]
+    },
+    {
+      "id": "rich.fruit-pear",
+      "atlas": "rich-character",
+      "rect": [
+        2,
+        1385,
+        343,
+        461
+      ],
+      "pivot": [
+        172,
+        461
+      ]
+    },
+    {
+      "id": "rich.grass-plain",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        2,
+        497,
+        497
+      ],
+      "pivot": [
+        249,
+        497
+      ]
+    },
+    {
+      "id": "rich.grass-clover",
+      "atlas": "rich-world",
+      "rect": [
+        503,
+        2,
+        507,
+        498
+      ],
+      "pivot": [
+        254,
+        498
+      ]
+    },
+    {
+      "id": "rich.grass-flower",
+      "atlas": "rich-world",
+      "rect": [
+        1014,
+        2,
+        285,
+        312
+      ],
+      "pivot": [
+        143,
+        312
+      ]
+    },
+    {
+      "id": "rich.grass-pebble",
+      "atlas": "rich-world",
+      "rect": [
+        1303,
+        2,
+        284,
+        310
+      ],
+      "pivot": [
+        142,
+        310
+      ]
+    },
+    {
+      "id": "rich.apple-01",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        504,
+        496,
+        511
+      ],
+      "pivot": [
+        248,
+        511
+      ]
+    },
+    {
+      "id": "rich.apple-02",
+      "atlas": "rich-world",
+      "rect": [
+        502,
+        504,
+        496,
+        509
+      ],
+      "pivot": [
+        248,
+        509
+      ]
+    },
+    {
+      "id": "rich.apple-03",
+      "atlas": "rich-world",
+      "rect": [
+        1002,
+        504,
+        278,
+        289
+      ],
+      "pivot": [
+        139,
+        289
+      ]
+    },
+    {
+      "id": "rich.apple-04",
+      "atlas": "rich-world",
+      "rect": [
+        1284,
+        504,
+        283,
+        314
+      ],
+      "pivot": [
+        142,
+        314
+      ]
+    },
+    {
+      "id": "rich.pear-01",
+      "atlas": "rich-world",
+      "rect": [
+        1571,
+        504,
+        269,
+        372
+      ],
+      "pivot": [
+        135,
+        372
+      ]
+    },
+    {
+      "id": "rich.pear-02",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        1019,
+        496,
+        501
+      ],
+      "pivot": [
+        248,
+        501
+      ]
+    },
+    {
+      "id": "rich.pear-03",
+      "atlas": "rich-world",
+      "rect": [
+        502,
+        1019,
+        254,
+        347
+      ],
+      "pivot": [
+        127,
+        347
+      ]
+    },
+    {
+      "id": "rich.pear-04",
+      "atlas": "rich-world",
+      "rect": [
+        760,
+        1019,
+        320,
+        317
+      ],
+      "pivot": [
+        160,
+        317
+      ]
+    },
+    {
+      "id": "rich.eat-burst-01",
+      "atlas": "rich-world",
+      "rect": [
+        1084,
+        1019,
+        496,
+        498
+      ],
+      "pivot": [
+        248,
+        498
+      ]
+    },
+    {
+      "id": "rich.eat-burst-02",
+      "atlas": "rich-world",
+      "rect": [
+        1584,
+        1019,
+        417,
+        319
+      ],
+      "pivot": [
+        209,
+        319
+      ]
+    },
+    {
+      "id": "rich.eat-burst-03",
+      "atlas": "rich-world",
+      "rect": [
+        2,
+        1524,
+        326,
+        342
+      ],
+      "pivot": [
+        163,
+        342
+      ]
+    },
+    {
+      "id": "rich.eat-burst-04",
+      "atlas": "rich-world",
+      "rect": [
+        332,
+        1524,
+        319,
+        314
+      ],
+      "pivot": [
+        160,
+        314
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "id": "rich.default",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.snake-head-north",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-head-east",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-head-south",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-head-west",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-body-vertical",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-body-horizontal",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-corner-ne",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-corner-es",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-corner-sw",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-corner-wn",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-tail-north",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-tail-east",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-tail-south",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.snake-tail-west",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.fruit-apple",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.fruit-pear",
+          "ticks": 5
+        }
+      ]
+    },
+    {
+      "id": "rich.apple-idle",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.apple-01",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.apple-02",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.apple-03",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.apple-04",
+          "ticks": 10
+        }
+      ]
+    },
+    {
+      "id": "rich.pear-idle",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.pear-01",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.pear-02",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.pear-03",
+          "ticks": 10
+        },
+        {
+          "sprite": "rich.pear-04",
+          "ticks": 10
+        }
+      ]
+    },
+    {
+      "id": "rich.eat-burst",
+      "loop": false,
+      "frames": [
+        {
+          "sprite": "rich.eat-burst-01",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.eat-burst-02",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.eat-burst-03",
+          "ticks": 5
+        },
+        {
+          "sprite": "rich.eat-burst-04",
+          "ticks": 5
+        }
+      ]
+    }
+  ],
+  "tileSets": []
+}

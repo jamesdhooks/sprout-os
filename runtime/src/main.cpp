@@ -5,7 +5,9 @@
 #include <SDL_image.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -20,6 +22,7 @@ struct Arguments {
   std::filesystem::path package;
   std::filesystem::path storage{"sprout-data/native-games"};
   std::filesystem::path capture;
+  std::filesystem::path capture_title;
   std::uint64_t seed{1};
   bool smoke_test{};
 };
@@ -36,11 +39,14 @@ Arguments parse_arguments(int count, char** values) {
       arguments.seed = std::stoull(values[++index]);
     } else if (argument == "--capture" && index + 1 < count) {
       arguments.capture = values[++index];
+    } else if (argument == "--capture-title" && index + 1 < count) {
+      arguments.capture_title = values[++index];
     } else if (argument == "--smoke-test") {
       arguments.smoke_test = true;
     } else {
       throw std::runtime_error("Usage: sprout-runtime --package PATH "
                                "[--storage PATH] [--seed NUMBER] [--capture BMP] "
+                               "[--capture-title BMP] "
                                "[--smoke-test]");
     }
   }
@@ -241,6 +247,139 @@ void capture_frame(SDL_Renderer* renderer, const std::filesystem::path& path) {
   SDL_FreeSurface(surface);
 }
 
+const char* glyph(char character) {
+  switch (static_cast<char>(std::toupper(static_cast<unsigned char>(character)))) {
+    case 'A': return "01110100011000111111100011000110001";
+    case 'B': return "11110100011000111110100011000111110";
+    case 'C': return "01111100001000010000100001000001111";
+    case 'D': return "11110100011000110001100011000111110";
+    case 'E': return "11111100001000011110100001000011111";
+    case 'F': return "11111100001000011110100001000010000";
+    case 'G': return "01111100001000010111100011000101111";
+    case 'H': return "10001100011000111111100011000110001";
+    case 'I': return "11111001000010000100001000010011111";
+    case 'J': return "00111000100001000010000101001001100";
+    case 'K': return "10001100101010011000101001001010001";
+    case 'L': return "10000100001000010000100001000011111";
+    case 'M': return "10001110111010110101100011000110001";
+    case 'N': return "10001110011010110011100011000110001";
+    case 'O': return "01110100011000110001100011000101110";
+    case 'P': return "11110100011000111110100001000010000";
+    case 'Q': return "01110100011000110001101011001001101";
+    case 'R': return "11110100011000111110101001001010001";
+    case 'S': return "01111100001000001110000010000111110";
+    case 'T': return "11111001000010000100001000010000100";
+    case 'U': return "10001100011000110001100011000101110";
+    case 'V': return "10001100011000110001100010101000100";
+    case 'W': return "10001100011000110101101011101110001";
+    case 'X': return "10001100010101000100010101000110001";
+    case 'Y': return "10001100010101000100001000010000100";
+    case 'Z': return "11111000010001000100010001000011111";
+    case '&': return "01100100100100001000101011001001101";
+    default: return "00000000000000000000000000000000000";
+  }
+}
+
+SDL_Rect logical_region(const sprout::runtime::NormalizedRegion& region,
+                        int width, int height) {
+  return {region.x * width / 1000, region.y * height / 1000,
+          region.width * width / 1000, region.height * height / 1000};
+}
+
+void draw_text(SDL_Renderer* renderer, const std::string& text,
+               const SDL_Rect& region, SDL_Color color) {
+  const int units = std::max(1, static_cast<int>(text.size()) * 6 - 1);
+  const int scale = std::max(1, std::min(region.w / units, region.h / 7));
+  const int width = units * scale;
+  const int height = 7 * scale;
+  const int origin_x = region.x + (region.w - width) / 2;
+  const int origin_y = region.y + (region.h - height) / 2;
+  const auto pass = [&](int offset, SDL_Color pass_color) {
+    SDL_SetRenderDrawColor(renderer, pass_color.r, pass_color.g, pass_color.b,
+                           pass_color.a);
+    for (std::size_t letter = 0; letter < text.size(); ++letter) {
+      const char* pixels = glyph(text[letter]);
+      for (int row = 0; row < 7; ++row) {
+        for (int column = 0; column < 5; ++column) {
+          if (pixels[row * 5 + column] != '1') continue;
+          SDL_Rect pixel{origin_x + static_cast<int>(letter) * 6 * scale +
+                             column * scale + offset,
+                         origin_y + row * scale + offset, scale, scale};
+          SDL_RenderFillRect(renderer, &pixel);
+        }
+      }
+    }
+  };
+  pass(std::max(1, scale / 2), {12, 24, 19, 210});
+  pass(0, color);
+}
+
+void draw_title_screen(SDL_Renderer* renderer,
+                       const sprout::runtime::PackageManifest& package,
+                       SDL_Texture* texture) {
+  SDL_SetRenderDrawColor(renderer, 16, 32, 25, 255);
+  SDL_RenderClear(renderer);
+  SDL_Rect destination{0, 0, package.logical_width, package.logical_height};
+  SDL_Rect source{0, 0, package.title_screen.image_width,
+                  package.title_screen.image_height};
+  if (package.title_screen.fit == sprout::runtime::PresentationFit::Cover) {
+    const long long source_ratio = static_cast<long long>(source.w) * destination.h;
+    const long long target_ratio = static_cast<long long>(destination.w) * source.h;
+    if (source_ratio > target_ratio) {
+      const int cropped = source.h * destination.w / destination.h;
+      source.x = (source.w - cropped) / 2;
+      source.w = cropped;
+    } else if (source_ratio < target_ratio) {
+      const int cropped = source.w * destination.h / destination.w;
+      source.y = (source.h - cropped) / 2;
+      source.h = cropped;
+    }
+  } else {
+    const double scale = std::min(static_cast<double>(destination.w) / source.w,
+                                  static_cast<double>(destination.h) / source.h);
+    destination.w = static_cast<int>(source.w * scale);
+    destination.h = static_cast<int>(source.h * scale);
+    destination.x = (package.logical_width - destination.w) / 2;
+    destination.y = (package.logical_height - destination.h) / 2;
+  }
+  SDL_RenderCopy(renderer, texture, &source, &destination);
+
+  const SDL_Rect title = logical_region(package.title_screen.title_region,
+                                        package.logical_width,
+                                        package.logical_height);
+  const SDL_Rect controls = logical_region(package.title_screen.controls_region,
+                                           package.logical_width,
+                                           package.logical_height);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetRenderDrawColor(renderer, 11, 32, 24, 178);
+  SDL_RenderFillRect(renderer, &title);
+  SDL_SetRenderDrawColor(renderer, 246, 236, 212, 226);
+  SDL_RenderFillRect(renderer, &controls);
+  draw_text(renderer, package.title, title, {247, 240, 215, 255});
+  draw_text(renderer, "A START   B BACK", controls, {28, 65, 48, 255});
+  SDL_RenderPresent(renderer);
+}
+
+SDL_Texture* load_title_texture(SDL_Renderer* renderer,
+                                const sprout::runtime::TitleScreen& title) {
+  SDL_Texture* texture = IMG_LoadTexture(renderer, title.image.string().c_str());
+  if (texture == nullptr) {
+    throw std::runtime_error(std::string("Could not load title screen: ") +
+                             IMG_GetError());
+  }
+  int width = 0;
+  int height = 0;
+  if (SDL_QueryTexture(texture, nullptr, nullptr, &width, &height) != 0 ||
+      width != title.image_width || height != title.image_height) {
+    SDL_DestroyTexture(texture);
+    throw std::runtime_error("Title screen dimensions do not match manifest");
+  }
+#if SDL_VERSION_ATLEAST(2, 0, 12)
+  SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+#endif
+  return texture;
+}
+
 }  // namespace
 
 int main(int count, char** values) {
@@ -251,9 +390,9 @@ int main(int count, char** values) {
     const Arguments arguments = parse_arguments(count, values);
     auto package = sprout::runtime::load_package(arguments.package);
     sprout::runtime::Session session(package, arguments.storage, arguments.seed);
-    session.start();
 
     if (arguments.smoke_test) {
+      session.start();
       session.step({});
       session.render();
       session.stop();
@@ -269,7 +408,8 @@ int main(int count, char** values) {
       throw std::runtime_error(std::string("PNG decoder initialization failed: ") +
                                IMG_GetError());
     }
-    const auto window_flags = arguments.capture.empty()
+    const auto window_flags = arguments.capture.empty() &&
+                                      arguments.capture_title.empty()
                                   ? SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
                                   : SDL_WINDOW_HIDDEN;
     window = SDL_CreateWindow(package.title.c_str(), SDL_WINDOWPOS_CENTERED,
@@ -285,6 +425,54 @@ int main(int count, char** values) {
     }
     SDL_RenderSetLogicalSize(renderer, package.logical_width,
                              package.logical_height);
+    for (int index = 0; index < SDL_NumJoysticks(); ++index) {
+      if (SDL_IsGameController(index)) {
+        controller = SDL_GameControllerOpen(index);
+        if (controller != nullptr) break;
+      }
+    }
+
+    SDL_Texture* title_texture = nullptr;
+    if (package.title_screen.enabled) {
+      title_texture = load_title_texture(renderer, package.title_screen);
+      draw_title_screen(renderer, package, title_texture);
+      if (!arguments.capture_title.empty()) {
+        capture_frame(renderer, arguments.capture_title);
+        SDL_DestroyTexture(title_texture);
+        if (controller != nullptr) SDL_GameControllerClose(controller);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        IMG_Quit();
+        SDL_Quit();
+        return 0;
+      }
+      bool waiting = arguments.capture.empty();
+      bool primary_was_down = false;
+      while (waiting) {
+        SDL_Event event{};
+        while (SDL_PollEvent(&event) != 0) {
+          if (event.type == SDL_QUIT) waiting = false;
+        }
+        const auto actions = read_actions(controller);
+        if (actions.back || actions.secondary) {
+          SDL_DestroyTexture(title_texture);
+          if (controller != nullptr) SDL_GameControllerClose(controller);
+          SDL_DestroyRenderer(renderer);
+          SDL_DestroyWindow(window);
+          IMG_Quit();
+          SDL_Quit();
+          return 0;
+        }
+        if (actions.primary && !primary_was_down) waiting = false;
+        primary_was_down = actions.primary;
+        std::this_thread::sleep_for(std::chrono::milliseconds(8));
+      }
+      SDL_DestroyTexture(title_texture);
+    } else if (!arguments.capture_title.empty()) {
+      throw std::runtime_error("Package does not define a title screen");
+    }
+
+    session.start();
     TextureStore textures(renderer, package.assets);
     GeometryBuffers geometry;
     draw_frame(renderer, session, textures, geometry);
@@ -299,15 +487,6 @@ int main(int count, char** values) {
       SDL_Quit();
       return 0;
     }
-    for (int index = 0; index < SDL_NumJoysticks(); ++index) {
-      if (SDL_IsGameController(index)) {
-        controller = SDL_GameControllerOpen(index);
-        if (controller != nullptr) {
-          break;
-        }
-      }
-    }
-
     constexpr auto tick = std::chrono::microseconds(16667);
     auto previous = std::chrono::steady_clock::now();
     auto accumulator = std::chrono::steady_clock::duration::zero();

@@ -1,0 +1,472 @@
+{
+  "schema": "sprite-atlas.v1",
+  "id": "mouse-maze-world",
+  "image": "mouse-maze-world-atlas.png",
+  "size": {
+    "width": 2048,
+    "height": 2048
+  },
+  "scale": 1,
+  "frames": {
+    "floor-plain": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "floor-pebbles": {
+      "frame": {
+        "x": 518,
+        "y": 2,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "floor-clover": {
+      "frame": {
+        "x": 1034,
+        "y": 2,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "floor"
+      ]
+    },
+    "outside-foliage": {
+      "frame": {
+        "x": 2,
+        "y": 518,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "background"
+      ]
+    },
+    "hedge-horizontal": {
+      "frame": {
+        "x": 518,
+        "y": 518,
+        "width": 499,
+        "height": 344
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 84,
+        "width": 499,
+        "height": 344
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-vertical": {
+      "frame": {
+        "x": 1021,
+        "y": 518,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-corner-ne": {
+      "frame": {
+        "x": 1537,
+        "y": 518,
+        "width": 507,
+        "height": 501
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 2,
+        "y": 5,
+        "width": 507,
+        "height": 501
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-corner-se": {
+      "frame": {
+        "x": 2,
+        "y": 1034,
+        "width": 496,
+        "height": 495
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 8,
+        "width": 496,
+        "height": 495
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-corner-sw": {
+      "frame": {
+        "x": 502,
+        "y": 1034,
+        "width": 499,
+        "height": 507
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 2,
+        "width": 499,
+        "height": 507
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-corner-nw": {
+      "frame": {
+        "x": 1005,
+        "y": 1034,
+        "width": 512,
+        "height": 512
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-t": {
+      "frame": {
+        "x": 1521,
+        "y": 1034,
+        "width": 496,
+        "height": 490
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 11,
+        "width": 496,
+        "height": 490
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "hedge-cross": {
+      "frame": {
+        "x": 2,
+        "y": 1550,
+        "width": 248,
+        "height": 277
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 132,
+        "y": 117,
+        "width": 248,
+        "height": 277
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "tile",
+        "wall"
+      ]
+    },
+    "cheese-01": {
+      "frame": {
+        "x": 254,
+        "y": 1550,
+        "width": 246,
+        "height": 275
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 133,
+        "y": 118,
+        "width": 246,
+        "height": 275
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "cheese",
+        "idle"
+      ]
+    },
+    "cheese-02": {
+      "frame": {
+        "x": 504,
+        "y": 1550,
+        "width": 499,
+        "height": 495
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 8,
+        "width": 499,
+        "height": 495
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "cheese",
+        "idle"
+      ]
+    },
+    "cheese-03": {
+      "frame": {
+        "x": 1007,
+        "y": 1550,
+        "width": 496,
+        "height": 490
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 11,
+        "width": 496,
+        "height": 490
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "cheese",
+        "idle"
+      ]
+    },
+    "cheese-04": {
+      "frame": {
+        "x": 1507,
+        "y": 1550,
+        "width": 246,
+        "height": 276
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 133,
+        "y": 118,
+        "width": 246,
+        "height": 276
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "cheese",
+        "idle"
+      ]
+    }
+  },
+  "animations": {
+    "cheese-idle": {
+      "frames": [
+        "cheese-01",
+        "cheese-02",
+        "cheese-03",
+        "cheese-04"
+      ],
+      "fps": 6,
+      "loop": true
+    }
+  }
+}

@@ -9,6 +9,7 @@ extern "C" {
 #include <yyjson.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -157,21 +158,22 @@ struct Session::Impl {
   }
 
   static void append_sprite(lua_State* state, Impl& runtime,
-                            std::size_t sprite_index, int x, int y, int scale,
+                            std::size_t sprite_index, int x, int y, double scale,
                             bool flip_x, bool flip_y, int alpha) {
     if (sprite_index >= runtime.package.assets.sprites.size()) {
       luaL_error(state, "sprite index is outside bounds");
       return;
     }
-    if (scale < 1 || scale > 8 || alpha < 0 || alpha > 255) {
+    if (!std::isfinite(scale) || scale < (1.0 / 64.0) || scale > 64.0 ||
+        alpha < 0 || alpha > 255) {
       luaL_error(state, "sprite scale or alpha is outside bounds");
       return;
     }
     const auto& frame = runtime.package.assets.sprites[sprite_index];
-    const int target_x = x - frame.pivot_x * scale;
-    const int target_y = y - frame.pivot_y * scale;
-    const int width = frame.width * scale;
-    const int height = frame.height * scale;
+    const int target_x = x - static_cast<int>(std::lround(frame.pivot_x * scale));
+    const int target_y = y - static_cast<int>(std::lround(frame.pivot_y * scale));
+    const int width = (std::max)(1, static_cast<int>(std::lround(frame.width * scale)));
+    const int height = (std::max)(1, static_cast<int>(std::lround(frame.height * scale)));
     if (target_x < -width || target_y < -height ||
         target_x >= runtime.package.logical_width ||
         target_y >= runtime.package.logical_height) {
@@ -208,7 +210,7 @@ struct Session::Impl {
     append_sprite(state, runtime, found->second,
                   static_cast<int>(luaL_checkinteger(state, 2)),
                   static_cast<int>(luaL_checkinteger(state, 3)),
-                  static_cast<int>(luaL_optinteger(state, 4, 1)),
+                  static_cast<double>(luaL_optnumber(state, 4, 1.0)),
                   lua_toboolean(state, 5) != 0,
                   lua_toboolean(state, 6) != 0,
                   static_cast<int>(luaL_optinteger(state, 7, 255)));
@@ -242,7 +244,7 @@ struct Session::Impl {
     append_sprite(state, runtime, sprite_index,
                   static_cast<int>(luaL_checkinteger(state, 2)),
                   static_cast<int>(luaL_checkinteger(state, 3)),
-                  static_cast<int>(luaL_optinteger(state, 5, 1)),
+                  static_cast<double>(luaL_optnumber(state, 5, 1.0)),
                   lua_toboolean(state, 6) != 0,
                   lua_toboolean(state, 7) != 0,
                   static_cast<int>(luaL_optinteger(state, 8, 255)));
@@ -264,6 +266,21 @@ struct Session::Impl {
       luaL_error(state, "sprite batch field should be an integer: %s", field);
     } else {
       result = lua_tointeger(state, -1);
+    }
+    lua_pop(state, 1);
+    return result;
+  }
+
+  static lua_Number table_number(lua_State* state, int table_index,
+                                 const char* field, lua_Number fallback) {
+    lua_getfield(state, table_index, field);
+    lua_Number result = fallback;
+    if (!lua_isnil(state, -1)) {
+      if (!lua_isnumber(state, -1)) {
+        lua_pop(state, 1);
+        luaL_error(state, "sprite batch field should be numeric: %s", field);
+      }
+      result = lua_tonumber(state, -1);
     }
     lua_pop(state, 1);
     return result;
@@ -359,7 +376,7 @@ struct Session::Impl {
           state, runtime, sprite_index,
           static_cast<int>(table_integer(state, item, "x", 0, true)),
           static_cast<int>(table_integer(state, item, "y", 0, true)),
-          static_cast<int>(table_integer(state, item, "scale", 1)),
+          static_cast<double>(table_number(state, item, "scale", 1.0)),
           table_boolean(state, item, "flipX"),
           table_boolean(state, item, "flipY"),
           static_cast<int>(table_integer(state, item, "alpha", 255)));

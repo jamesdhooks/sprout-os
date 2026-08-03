@@ -1,8 +1,23 @@
 # Arcade Asset Pipeline
 
+## Resolution and presentation
+
+Artwork begins from the highest practical reviewed master. Runtime derivatives
+are selected per target profile; 640×480 is the Miyoo Mini Plus display target,
+not a global game canvas. Each package independently declares its logical
+resolution, and asset scale/density metadata must remain explicit.
+
+SproutOS startup art, launcher art, and per-game title art are distinct assets.
+A game title background is full-screen and theme-consistent with its gameplay
+art, while the runtime owns the title and simple Start/Continue/Back interface.
+This keeps text crisp, localized, and state-aware while allowing rich artwork.
+
 Status: **First deterministic atlases and runtime pipeline implemented**
 
-Sprout Arcade uses small original pixel-art assets with deterministic runtime packing. Visual assets should make game state immediately readable at 320×240 without creating a large content-production dependency.
+Sprout Arcade uses original, package-owned artwork with deterministic runtime
+packing. Visual assets must remain readable at each package's declared logical
+resolution and at the 640×480 handheld target without imposing one global art
+style, pixel density, or coordinate system on future games.
 
 ## Source and runtime layout
 
@@ -36,25 +51,20 @@ Initial asset sets are intentionally small:
 
 ## Creation and sourcing
 
-Assets may be hand-authored, procedurally drawn, commissioned, generated with an image model, or adapted from a compatible source. Every accepted asset must have a known license and provenance. Do not imitate a living artist, recognizable game property, trademarked character, or proprietary sprite sheet.
+Assets may be original project artwork, commissioned work, or adapted from a compatible source. Every accepted asset must have a known license and source category. Do not imitate a living artist, recognizable game property, trademarked character, or proprietary sprite sheet.
 
-Generative image tools are best used for mood, silhouette, palette, and variant exploration. Pixel-perfect runtime assets should then be redrawn or normalized to the project grid, palette, transparency, and readability constraints. Record the tool/model, date, prompt summary, substantial edits, and reviewer in `asset-manifest.json`; do not claim generated work was made without automated assistance.
+Runtime assets must be normalized to the package's coordinate system, transparency, anchor, and readability constraints. Track only durable runtime provenance in `asset-manifest.json`; raw production files and tool-specific working metadata stay outside the repository.
 
 Example provenance entry:
 
 ```json
 {
   "id": "mouse.walk.down",
-  "source": "generated-concept-redrawn",
+  "source": "original-project-artwork",
   "license": "GPL-3.0-or-later",
-  "generator": {
-    "tool": "OpenAI image generation",
-    "date": "YYYY-MM-DD",
-    "promptSummary": "friendly top-down field mouse pixel-art silhouette"
-  },
   "review": {
-    "grid": "16x16",
-    "palette": "sprout-arcade-1",
+    "anchor": "bottom-center",
+    "targetScale": "package-defined",
     "derivativeRiskChecked": true
   }
 }

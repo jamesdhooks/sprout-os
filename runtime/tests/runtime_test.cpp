@@ -113,6 +113,14 @@ int main() {
     const auto snake_path =
         std::filesystem::path(SPROUT_SOURCE_DIR) / "games" / "snake";
     const auto snake_package = sprout::runtime::load_package(snake_path);
+    check(snake_package.title_screen.enabled &&
+              snake_package.title_screen.image_width == 640 &&
+              snake_package.title_screen.image_height == 480,
+          "Snake title presentation was not loaded");
+    check(snake_package.assets.atlases.size() == 2 &&
+              snake_package.assets.sprites.size() == 32 &&
+              snake_package.assets.animations.size() == 4,
+          "Snake rich asset catalogue was not loaded");
     sprout::runtime::Session snake_first(snake_package, root / "snake-first", 7);
     sprout::runtime::Session snake_second(snake_package, root / "snake-second", 7);
     snake_first.start();
@@ -130,9 +138,11 @@ int main() {
     const auto mouse_path =
         std::filesystem::path(SPROUT_SOURCE_DIR) / "games" / "mouse-maze";
     const auto mouse_package = sprout::runtime::load_package(mouse_path);
-    check(mouse_package.assets.atlases.size() == 1 &&
-              mouse_package.assets.sprites.size() == 12 &&
-              mouse_package.assets.animations.size() == 5 &&
+    check(mouse_package.title_screen.enabled,
+          "Mouse Maze title presentation was not loaded");
+    check(mouse_package.assets.atlases.size() == 3 &&
+              mouse_package.assets.sprites.size() == 44 &&
+              mouse_package.assets.animations.size() == 10 &&
               mouse_package.assets.tile_sets.size() == 1,
           "Mouse Maze asset catalogue was not loaded");
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
@@ -143,6 +153,9 @@ int main() {
                   sprout::runtime::DrawCommandType::Sprite,
           "Mouse Maze did not submit its tilemap and animated sprite");
     const int initial_mouse_frame = initial_mouse_drawing.back().sprite.source_x;
+    check(initial_mouse_drawing.back().sprite.width <
+              initial_mouse_drawing.back().sprite.source_width,
+          "fractional sprite scaling did not preserve the rich source frame");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     check(mouse.render().back().sprite.source_x != initial_mouse_frame,
           "engine animation did not advance from the fixed session tick");
@@ -150,9 +163,11 @@ int main() {
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";
     const auto blocks_package = sprout::runtime::load_package(blocks_path);
-    check(blocks_package.assets.atlases.size() == 1 &&
-              blocks_package.assets.sprites.size() == 15 &&
-              blocks_package.assets.animations.size() == 4,
+    check(blocks_package.title_screen.enabled,
+          "Blocks & Buttons title presentation was not loaded");
+    check(blocks_package.assets.atlases.size() == 3 &&
+              blocks_package.assets.sprites.size() == 47 &&
+              blocks_package.assets.animations.size() == 9,
           "Blocks & Buttons asset catalogue was not loaded");
     sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
     blocks.start();
