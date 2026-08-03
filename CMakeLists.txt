@@ -10,6 +10,10 @@ option(SPROUT_BUILD_DESKTOP "Build the SDL desktop launcher preview" ON)
 option(SPROUT_BUILD_ONION "Build Onion target diagnostics" OFF)
 option(SPROUT_BUILD_RUNTIME "Build the native-game runtime" ${SPROUT_BUILD_DESKTOP})
 
+if(SPROUT_BUILD_DESKTOP AND NOT SPROUT_BUILD_RUNTIME)
+  message(FATAL_ERROR "The desktop launcher preview requires SPROUT_BUILD_RUNTIME")
+endif()
+
 FetchContent_Declare(
   SQLite3
   URL https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip

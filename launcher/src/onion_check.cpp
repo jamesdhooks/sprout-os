@@ -190,7 +190,10 @@ int main(int argc, char* argv[]) {
                      hash_finished - hash_started)
                      .count()
               << '\n';
-    std::cout << "typed-launch-request=" << launch->launch_target->item_id
+    const auto& launch_target =
+        std::get<sprout::launcher::EmulatedLaunchTarget>(
+            *launch->launch_target);
+    std::cout << "typed-launch-request=" << launch_target.item_id
               << '\n';
 
     if (arguments.sd_card_root.has_value()) {

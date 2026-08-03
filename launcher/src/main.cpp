@@ -4,6 +4,8 @@
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/local_library.hpp"
+#include "sprout/launcher/native_launch_adapter.hpp"
+#include "sprout/launcher/native_library.hpp"
 #include "sprout/launcher/profile_archive.hpp"
 #include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/profile_repository.hpp"
@@ -27,11 +29,14 @@
 #include <ctime>
 #include <filesystem>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
+#include <variant>
 
 namespace {
 
@@ -136,6 +141,18 @@ sprout::launcher::AccessMoment current_access_time() {
   };
 }
 
+sprout::launcher::TimePolicySample current_time_policy_sample() {
+  const auto access = current_access_time();
+  const auto monotonic = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch());
+  return {
+      .monotonic_milliseconds =
+          static_cast<std::uint64_t>(monotonic.count()),
+      .utc_seconds = access.utc_seconds,
+      .local_date = access.local_date,
+  };
+}
+
 SDL_Renderer* create_renderer(SDL_Window* window) {
   SDL_Renderer* renderer =
       SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -173,7 +190,48 @@ std::vector<sprout::launcher::LibraryEntry> discovered_library(
   entries.reserve(scan.items.size());
   for (auto item : scan.items) {
     entries.push_back(sprout::launcher::LibraryEntry{
-        .item = std::move(item),
+        .id = item.id,
+        .title = item.title,
+        .platform_label =
+            item.system == sprout::launcher::OnionSystem::GameBoy ? "GB" : "SFC",
+        .launch_target = sprout::launcher::EmulatedLaunchTarget{
+            .item_id = item.id,
+            .system = item.system,
+            .rom_path = std::move(item.rom_path),
+            .launch_allowed = true,
+        },
+        .child_visible = false,
+        .favorite = false,
+        .recent_rank = std::nullopt,
+        .launch_allowed = true,
+        .unavailable_reason = {},
+    });
+  }
+  return entries;
+}
+
+std::vector<sprout::launcher::LibraryEntry> discovered_native_library(
+    const std::filesystem::path& packages_root) {
+  const auto scan =
+      sprout::launcher::NativePackageScanner(packages_root).discover();
+  for (const auto& warning : scan.warnings) {
+    std::cerr << "Library warning: " << warning << '\n';
+  }
+  std::vector<sprout::launcher::LibraryEntry> entries;
+  entries.reserve(scan.items.size());
+  for (auto item : scan.items) {
+    entries.push_back(sprout::launcher::LibraryEntry{
+        .id = item.id,
+        .title = item.title,
+        .platform_label = "ARCADE",
+        .launch_target = sprout::launcher::NativeLaunchTarget{
+            .item_id = item.id,
+            .package_root = std::move(item.package_root),
+            .profile_id = {},
+            .seed = 1,
+            .launch_allowed = true,
+        },
+        .child_visible = item.child_visible,
         .favorite = false,
         .recent_rank = std::nullopt,
         .launch_allowed = true,
@@ -377,15 +435,20 @@ int save_screenshot(SDL_Renderer* renderer, const char* path) {
 
 int main(int argc, char* argv[]) {
   bool smoke_test = false;
+  bool arcade_smoke_test = false;
   bool screenshot = false;
   const char* screenshot_path = nullptr;
   std::string_view screenshot_screen;
   std::optional<std::filesystem::path> data_root;
   std::optional<std::filesystem::path> sd_card_root;
+  std::optional<std::filesystem::path> arcade_root;
+  std::optional<std::filesystem::path> runtime_executable;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--smoke-test") {
       smoke_test = true;
+    } else if (argument == "--arcade-smoke-test") {
+      arcade_smoke_test = true;
     } else if (argument == "--screenshot" && index + 1 < argc) {
       screenshot = true;
       screenshot_path = argv[++index];
@@ -397,10 +460,53 @@ int main(int argc, char* argv[]) {
       data_root = std::filesystem::path(argv[++index]);
     } else if (argument == "--sd-root" && index + 1 < argc) {
       sd_card_root = std::filesystem::path(argv[++index]);
+    } else if (argument == "--arcade-root" && index + 1 < argc) {
+      arcade_root = std::filesystem::path(argv[++index]);
+    } else if (argument == "--runtime" && index + 1 < argc) {
+      runtime_executable = std::filesystem::path(argv[++index]);
     } else {
       std::cerr << "Unsupported or incomplete launcher argument: " << argument << '\n';
       return EXIT_FAILURE;
     }
+  }
+
+  if (arcade_root.has_value() != runtime_executable.has_value() ||
+      (arcade_root.has_value() && !data_root.has_value())) {
+    std::cerr << "Arcade preview requires --arcade-root, --runtime, and --data-dir together\n";
+    return EXIT_FAILURE;
+  }
+
+  if (arcade_smoke_test) {
+    if (!arcade_root.has_value() || !runtime_executable.has_value() ||
+        !data_root.has_value()) {
+      std::cerr << "Arcade smoke test requires --arcade-root, --runtime, and --data-dir\n";
+      return EXIT_FAILURE;
+    }
+    auto entries = discovered_native_library(*arcade_root);
+    if (entries.empty()) {
+      std::cerr << "Arcade smoke test found no valid native packages\n";
+      return EXIT_FAILURE;
+    }
+    auto target = std::get<sprout::launcher::NativeLaunchTarget>(
+        entries.front().launch_target);
+    target.profile_id = "diagnostic-child";
+    target.seed = 1;
+    target.launch_allowed = true;
+    sprout::launcher::SystemLaunchProcess process;
+    sprout::launcher::NativeLaunchAdapter adapter(
+        *runtime_executable, *data_root / "data" / "native-games", process);
+    const auto result = adapter.launch(
+        target, sprout::launcher::NativeLaunchMode::SmokeTest);
+    std::cout << "arcade smoke result: " << result.item_id << " outcome="
+              << static_cast<int>(result.outcome);
+    if (result.exit_code.has_value()) {
+      std::cout << " exit=" << *result.exit_code;
+    }
+    if (!result.detail.empty()) {
+      std::cout << " detail=" << result.detail;
+    }
+    std::cout << '\n';
+    return result.completed() ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
@@ -558,15 +664,22 @@ int main(int argc, char* argv[]) {
     }
     if (screenshot_screen == "library-recent" ||
         screenshot_screen == "library-favorites" ||
-        screenshot_screen == "library-all") {
+        screenshot_screen == "library-all" ||
+        screenshot_screen == "library-arcade") {
       auto section = sprout::launcher::LibrarySection::Recent;
       if (screenshot_screen == "library-favorites") {
         section = sprout::launcher::LibrarySection::Favorites;
       } else if (screenshot_screen == "library-all") {
         section = sprout::launcher::LibrarySection::All;
+      } else if (screenshot_screen == "library-arcade") {
+        section = sprout::launcher::LibrarySection::Arcade;
       }
       sprout::launcher::LibraryPresentation library(
-          sprout::launcher::make_demo_library(), section);
+          section == sprout::launcher::LibrarySection::Arcade &&
+                  arcade_root.has_value()
+              ? discovered_native_library(*arcade_root)
+              : sprout::launcher::make_demo_library(),
+          section);
       if (section == sprout::launcher::LibrarySection::All) {
         (void)library.handle(Action::Up);
         (void)library.handle(Action::Confirm);
@@ -647,6 +760,8 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::ParentPinPresentation> parent_pin;
   std::unique_ptr<sprout::launcher::ParentAccessController> access_controller;
   std::unique_ptr<sprout::launcher::LibraryPresentation> library;
+  sprout::launcher::SystemLaunchProcess launch_process;
+  std::unique_ptr<sprout::launcher::NativeLaunchAdapter> native_launch;
   std::vector<sprout::launcher::LibraryEntry> library_entries;
   std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
@@ -703,6 +818,15 @@ int main(int argc, char* argv[]) {
     library_entries = sd_card_root.has_value()
                           ? discovered_library(*sd_card_root)
                           : sprout::launcher::make_demo_library();
+    if (arcade_root.has_value()) {
+      auto native_entries = discovered_native_library(*arcade_root);
+      library_entries.insert(library_entries.end(),
+                             std::make_move_iterator(native_entries.begin()),
+                             std::make_move_iterator(native_entries.end()));
+      native_launch = std::make_unique<sprout::launcher::NativeLaunchAdapter>(
+          *runtime_executable, *data_root / "data" / "native-games",
+          launch_process);
+    }
     if (data_root.has_value()) {
       std::filesystem::create_directories(*data_root / "data");
       startup_health =
@@ -824,9 +948,63 @@ int main(int argc, char* argv[]) {
         } else if (library_event->type ==
                        sprout::launcher::LibraryPresentationEventType::LaunchRequested &&
                    library_event->launch_target.has_value()) {
-          std::cout << "preview launch request: "
-                    << library_event->launch_target->item_id << " ("
-                    << library_event->launch_target->rom_path.string() << ")\n";
+          if (std::holds_alternative<sprout::launcher::NativeLaunchTarget>(
+                  *library_event->launch_target)) {
+            if (native_launch == nullptr || state->active_profile() == nullptr) {
+              library->report_launch_result("SPROUT RUNTIME IS UNAVAILABLE");
+              return true;
+            }
+            auto target = std::get<sprout::launcher::NativeLaunchTarget>(
+                *library_event->launch_target);
+            const auto* active_profile = state->active_profile();
+            std::optional<std::string> policy_session;
+            if (active_profile->role == sprout::launcher::ProfileRole::Child &&
+                daily_time_policy != nullptr) {
+              const auto sample = current_time_policy_sample();
+              policy_session = "native-" + active_profile->id + "-" +
+                               std::to_string(sample.monotonic_milliseconds);
+              const auto decision = daily_time_policy->begin_session(
+                  active_profile->id, *policy_session, target.item_id, sample);
+              if (!decision.launch_allowed) {
+                library->report_launch_result("DAILY PLAY TIME IS USED UP");
+                return true;
+              }
+            }
+
+            SDL_HideWindow(window);
+            const auto launch_result = native_launch->launch(target);
+            SDL_ShowWindow(window);
+            SDL_RaiseWindow(window);
+            SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+            std::cout << "native launch result: " << launch_result.item_id
+                      << " outcome="
+                      << static_cast<int>(launch_result.outcome);
+            if (launch_result.exit_code.has_value()) {
+              std::cout << " exit=" << *launch_result.exit_code;
+            }
+            if (!launch_result.detail.empty()) {
+              std::cout << " detail=" << launch_result.detail;
+            }
+            std::cout << '\n';
+            if (policy_session.has_value()) {
+              const auto decision = daily_time_policy->pause_session(
+                  *policy_session, current_time_policy_sample());
+              if (decision.status.expired) {
+                library->report_launch_result("DAILY PLAY TIME IS USED UP");
+                return true;
+              }
+            }
+            library->report_launch_result(
+                launch_result.completed() ? "RETURNED TO SPROUT"
+                                          : "GAME COULD NOT START: " +
+                                                launch_result.detail);
+          } else {
+            const auto& target =
+                std::get<sprout::launcher::EmulatedLaunchTarget>(
+                    *library_event->launch_target);
+            std::cout << "preview launch request: " << target.item_id << " ("
+                      << target.rom_path.string() << ")\n";
+          }
         }
         return true;
       }
@@ -868,12 +1046,40 @@ int main(int argc, char* argv[]) {
       if (section.has_value()) {
         auto entries = library_entries;
         const auto* active_profile = state->active_profile();
-        if (sd_card_root.has_value() && active_profile != nullptr &&
-            active_profile->role == sprout::launcher::ProfileRole::Child) {
+        if (active_profile != nullptr) {
+          const bool child =
+              active_profile->role == sprout::launcher::ProfileRole::Child;
+          bool time_expired = false;
+          if (child && daily_time_policy != nullptr) {
+            time_expired =
+                daily_time_policy
+                    ->status(active_profile->id, current_time_policy_sample())
+                    .expired;
+          }
           for (auto& entry : entries) {
-            entry.launch_allowed = false;
-            entry.unavailable_reason =
-                "PARENT APPROVAL IS NOT CONFIGURED FOR THIS GAME";
+            std::visit(
+                [&](auto& target) {
+                  target.launch_allowed = entry.launch_allowed;
+                  if constexpr (std::is_same_v<
+                                    std::decay_t<decltype(target)>,
+                                    sprout::launcher::NativeLaunchTarget>) {
+                    target.profile_id = active_profile->id;
+                    const auto sample = current_time_policy_sample();
+                    target.seed =
+                        sample.monotonic_milliseconds ^
+                        static_cast<std::uint64_t>(sample.utc_seconds);
+                    if (target.seed == 0) target.seed = 1;
+                  }
+                },
+                entry.launch_target);
+            if (child && !entry.child_visible) {
+              entry.launch_allowed = false;
+              entry.unavailable_reason =
+                  "PARENT APPROVAL IS NOT CONFIGURED FOR THIS GAME";
+            } else if (child && time_expired) {
+              entry.launch_allowed = false;
+              entry.unavailable_reason = "DAILY PLAY TIME IS USED UP";
+            }
           }
         }
         library = std::make_unique<sprout::launcher::LibraryPresentation>(

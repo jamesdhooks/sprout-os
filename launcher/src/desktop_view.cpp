@@ -211,9 +211,9 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
             56, 78, 2, color_from_rgb(profile->accent_rgb));
 
   const auto items = state.menu_items();
-  const int row_start = items.size() > 7 ? 104 : (items.size() > 6 ? 108 : 118);
-  const int row_gap = items.size() > 7 ? 38 : (items.size() > 6 ? 43 : 49);
-  const int row_height = items.size() > 7 ? 31 : (items.size() > 6 ? 35 : 39);
+  const int row_start = items.size() > 8 ? 98 : (items.size() > 7 ? 104 : (items.size() > 6 ? 108 : 118));
+  const int row_gap = items.size() > 8 ? 34 : (items.size() > 7 ? 38 : (items.size() > 6 ? 43 : 49));
+  const int row_height = items.size() > 8 ? 27 : (items.size() > 7 ? 31 : (items.size() > 6 ? 35 : 39));
   for (std::size_t index = 0; index < items.size(); ++index) {
     const SDL_Rect row{88, row_start + static_cast<int>(index) * row_gap, 464,
                        row_height};
@@ -256,7 +256,7 @@ void render_library(SDL_Renderer* renderer,
   SDL_RenderClear(renderer);
 
   draw_text(renderer, library.title(), 48, 32, 4, kText);
-  draw_text(renderer, "LOCAL ONION LIBRARY", 50, 76, 2, kMuted);
+  draw_text(renderer, library.source_label(), 50, 76, 2, kMuted);
 
   const auto entries = library.entries();
   if (entries.empty()) {
@@ -282,15 +282,14 @@ void render_library(SDL_Renderer* renderer,
         outline_rect(renderer, row, 3, kFocus);
         draw_text(renderer, ">", 78, row.y + 12, 2, kFocus);
       }
-      const std::string title = entry.item.title.size() > 30
-                                    ? entry.item.title.substr(0, 30)
-                                    : entry.item.title;
+      const std::string title = entry.title.size() > 30
+                                    ? entry.title.substr(0, 30)
+                                    : entry.title;
       draw_text(renderer, title, 106, row.y + 12, 2,
                 entry.launch_allowed && entry.unavailable_reason.empty()
                     ? kText
                     : kMuted);
-      const auto contract = onion_system_contract(entry.item.system);
-      draw_text(renderer, contract.has_value() ? contract->id : "?", 500,
+      draw_text(renderer, entry.platform_label, 476,
                 row.y + 12, 2, kMuted);
       if (entry.favorite) {
         draw_text(renderer, "*", 548, row.y + 12, 2, kFocus);

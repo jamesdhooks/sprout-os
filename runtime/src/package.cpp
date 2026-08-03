@@ -112,7 +112,8 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     yyjson_val* manifest = yyjson_doc_get_root(document);
     validate_keys(manifest,
                   {"schemaVersion", "id", "title", "version", "runtimeVersion",
-                   "entrypoint", "logicalResolution", "capabilities"});
+                   "entrypoint", "logicalResolution", "audience",
+                   "capabilities"});
 
     PackageManifest package{
         .schema_version = read_version(manifest, "schemaVersion"),
@@ -160,6 +161,15 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
     }
     package.logical_width = static_cast<int>(yyjson_get_uint(width));
     package.logical_height = static_cast<int>(yyjson_get_uint(height));
+
+    const auto audience = read_text(manifest, "audience");
+    if (audience == "family") {
+      package.audience = PackageAudience::Family;
+    } else if (audience == "parent") {
+      package.audience = PackageAudience::Parent;
+    } else {
+      throw std::runtime_error("Package audience should be family or parent");
+    }
 
     yyjson_val* capabilities = required(manifest, "capabilities");
     if (!yyjson_is_arr(capabilities)) {

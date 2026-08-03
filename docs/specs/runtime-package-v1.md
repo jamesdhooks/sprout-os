@@ -24,6 +24,7 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `version` | `MAJOR.MINOR.PATCH` |
 | `runtimeVersion` | Integer `1` |
 | `entrypoint` | Relative `.lua` file contained by the package root |
+| `audience` | `family` for child-visible packages or `parent` for parent-only packages |
 | `logicalResolution` | Width 64–640 and height 64–480 |
 | `capabilities` | Unique subset of `events` and `local-storage` |
 
@@ -50,7 +51,7 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 | `sprout.storage_get(key, fallback?)` | Reads a package integer from local storage |
 | `sprout.storage_set(key, value)` | Atomically writes a package integer when `local-storage` is declared |
 
-Storage keys are bounded ASCII identifiers. Storage is isolated by package ID. The preview does not yet provide profile-scoped saves; the launcher must not claim that boundary until a real integration implements it.
+Storage keys are bounded ASCII identifiers. The launcher gives the runtime a profile-specific storage root, and the runtime adds the package ID, producing `<launcher-data>/native-games/<profile-id>/<package-id>/storage.json`. Direct runtime development commands use their explicitly supplied storage root and remain separate from launcher profile data.
 
 The runtime, not package code, emits `GameStarted` and `GameExited`. Packages cannot forge policy, time, recommendation, or parent-control events.
 
@@ -58,4 +59,4 @@ The runtime, not package code, emits `GameStarted` and `GameExited`. Packages ca
 
 The interpreter opens only Lua base, table, string, math, and UTF-8 libraries. File, operating-system, dynamic-loading, package, and debug libraries are unavailable; text loading and lifecycle instruction limits reduce accidental and casual package abuse. There is not yet a memory quota or accepted hostile-package sandbox. Only checked-in local packages are supported.
 
-Remote catalogue metadata, archives, hashes, signatures, downloads, updates, release channels, and rollback remain outside v1.
+The launcher revalidates the manifest at launch, uses only its configured runtime executable, and never treats package metadata as an executable command. Remote catalogue metadata, archives, hashes, signatures, downloads, updates, release channels, and rollback remain outside v1.

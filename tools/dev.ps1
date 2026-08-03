@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("configure", "build", "test", "run", "run-arcade")]
+    [ValidateSet("configure", "build", "test", "run", "run-arcade", "arcade-smoke")]
     [string]$Action = "build",
     [string]$SdRoot,
     [string]$ArcadePackage = "games\snake"
@@ -106,6 +106,10 @@ try {
             throw "Launcher executable was not found at $executable."
         }
         $launcherArguments = @("--data-dir", (Join-Path $repoRoot "out\preview-data"))
+        $launcherArguments += @(
+            "--arcade-root", (Join-Path $repoRoot "games"),
+            "--runtime", (Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe")
+        )
         if ($SdRoot) {
             $launcherArguments += @("--sd-root", $SdRoot)
         }
@@ -122,6 +126,18 @@ try {
             throw "Arcade package was not found at $packageRoot."
         }
         & $executable --package $packageRoot --storage (Join-Path $repoRoot "out\arcade-preview-data")
+    }
+
+    if ($Action -eq "arcade-smoke") {
+        $launcher = Join-Path $repoRoot "out\build\windows-ninja-x64\launcher\Debug\sprout-launcher.exe"
+        $runtime = Join-Path $repoRoot "out\build\windows-ninja-x64\runtime\Debug\sprout-runtime.exe"
+        & $launcher --arcade-smoke-test `
+            --data-dir (Join-Path $repoRoot "out\arcade-smoke-data") `
+            --arcade-root (Join-Path $repoRoot "games") `
+            --runtime $runtime
+        if ($LASTEXITCODE -ne 0) {
+            throw "Arcade smoke test failed with exit code $LASTEXITCODE."
+        }
     }
 } finally {
     Pop-Location

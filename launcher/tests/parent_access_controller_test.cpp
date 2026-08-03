@@ -107,7 +107,7 @@ void sensitive_actions_reauthenticate_and_manual_lock_revokes() {
   expect(fixture.state.screen() == Screen::ParentHome,
          "valid grant should enter parent mode without another prompt");
 
-  for (int index = 0; index < 3; ++index) {
+  for (int index = 0; index < 4; ++index) {
     (void)fixture.controller.handle(Action::Down, kToday);
   }
   (void)fixture.controller.handle(Action::Confirm, kToday);

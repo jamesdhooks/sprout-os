@@ -118,7 +118,16 @@ TimePolicySample sample(std::uint64_t monotonic_milliseconds,
 LibraryEntry entry_for(const EmulatedLibraryItem& item, bool favorite,
                        std::optional<std::size_t> recent_rank) {
   return {
-      .item = item,
+      .id = item.id,
+      .title = item.title,
+      .platform_label = item.system == OnionSystem::GameBoy ? "GB" : "SFC",
+      .launch_target = EmulatedLaunchTarget{
+          .item_id = item.id,
+          .system = item.system,
+          .rom_path = item.rom_path,
+          .launch_allowed = true,
+      },
+      .child_visible = false,
       .favorite = favorite,
       .recent_rank = recent_rank,
       .launch_allowed = true,
@@ -133,7 +142,7 @@ EmulatedLaunchTarget select_first(std::vector<LibraryEntry> entries,
              selected->type == LibraryPresentationEventType::LaunchRequested &&
              selected->launch_target.has_value(),
          "library fixture should produce a typed launch request");
-  return *selected->launch_target;
+  return std::get<EmulatedLaunchTarget>(*selected->launch_target);
 }
 
 void complete_host_journey() {
@@ -220,7 +229,7 @@ void complete_host_journey() {
     expect(state.screen() == Screen::ParentHome &&
                !controller.has_pin_prompt(),
            "persisted end-of-day grant should enter parent mode");
-    for (int index = 0; index < 6; ++index) {
+    for (int index = 0; index < 7; ++index) {
       (void)controller.handle(Action::Down, {1'000, "2026-08-02"});
     }
     (void)controller.handle(Action::Confirm, {1'000, "2026-08-02"});

@@ -41,7 +41,9 @@ void child_profile_opens_child_home() {
   expect(event->type == EventType::ProfileActivated, "selection should activate a profile");
   expect(event->profile_id == "child-alex", "child fixture ID should be preserved");
   expect(state.screen() == Screen::ChildHome, "child should open child home");
-  expect(state.menu_items().size() == 5, "child home should expose its focused preview menu");
+  expect(state.menu_items().size() == 6, "child home should expose its focused preview menu");
+  expect(state.menu_items()[3] == "Sprout Arcade",
+         "child home should expose the local Arcade collection");
 }
 
 void parent_profile_opens_parent_home() {
@@ -51,10 +53,12 @@ void parent_profile_opens_parent_home() {
   expect(event.has_value(), "parent selection should emit an event");
   expect(event->profile_id == "parent-preview", "parent fixture ID should be preserved");
   expect(state.screen() == Screen::ParentHome, "parent should open parent home");
-  expect(state.menu_items().size() == 8, "parent home should expose its focused preview menu");
-  expect(state.menu_items()[5] == "Backup & Restore",
+  expect(state.menu_items().size() == 9, "parent home should expose its focused preview menu");
+  expect(state.menu_items()[3] == "Sprout Arcade",
+         "parent home should expose the local Arcade collection");
+  expect(state.menu_items()[6] == "Backup & Restore",
          "parent home should expose portable profile backup");
-  expect(state.menu_items()[6] == "Lock Parent Access",
+  expect(state.menu_items()[7] == "Lock Parent Access",
          "parent home should expose explicit manual lock");
 }
 
@@ -62,7 +66,7 @@ void home_navigation_and_lifecycle_are_explicit() {
   LauncherState state(sprout::launcher::make_demo_household());
   (void)state.handle(Action::Confirm);
   (void)state.handle(Action::Up);
-  expect(state.focus_index() == 4, "up should wrap on child home");
+  expect(state.focus_index() == 5, "up should wrap on child home");
 
   (void)state.handle(Action::Down);
   const auto invoked = state.handle(Action::Confirm);
