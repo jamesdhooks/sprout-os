@@ -57,6 +57,11 @@ function render()
   sprout.rect(10, 20, 30, 40, 80, 160, 90)
 end
 
+function capture_scenario(name)
+  if name ~= "review" then error("unknown capture scenario") end
+  score = 314
+end
+
 function snapshot()
   return tostring(score)
 end
@@ -93,6 +98,9 @@ int main() {
     auto changed = first.drain_events();
     check(changed.size() == 1 && changed.front().type == "AchievementUnlocked",
           "score event was not emitted");
+    first.apply_capture_scenario("review");
+    check(first.snapshot() == "314",
+          "capture scenario did not establish deterministic state");
     first.stop();
     auto stopped = first.drain_events();
     check(stopped.size() == 1 && stopped.front().type == "GameExited",
@@ -125,6 +133,8 @@ int main() {
     sprout::runtime::Session snake_second(snake_package, root / "snake-second", 7);
     snake_first.start();
     snake_second.start();
+    snake_first.apply_capture_scenario("gameplay");
+    snake_second.apply_capture_scenario("gameplay");
     for (int tick = 0; tick < 80; ++tick) {
       const sprout::runtime::Actions actions{.down = tick == 18,
                                              .left = tick == 42};
@@ -134,6 +144,9 @@ int main() {
     check(snake_first.snapshot() == snake_second.snapshot(),
           "Snake was not deterministic for identical input");
     check(!snake_first.render().empty(), "Snake did not render any content");
+    snake_first.apply_capture_scenario("fail");
+    check(snake_first.snapshot().starts_with("ended:7:7:"),
+          "Snake fail capture scenario was not applied");
 
     const auto mouse_path =
         std::filesystem::path(SPROUT_SOURCE_DIR) / "games" / "mouse-maze";
@@ -147,6 +160,7 @@ int main() {
           "Mouse Maze asset catalogue was not loaded");
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
     mouse.start();
+    mouse.apply_capture_scenario("gameplay");
     const auto initial_mouse_drawing = mouse.render();
     check(initial_mouse_drawing.size() > 160 &&
               initial_mouse_drawing.back().type ==
@@ -159,6 +173,9 @@ int main() {
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     check(mouse.render().back().sprite.source_x != initial_mouse_frame,
           "engine animation did not advance from the fixed session tick");
+    mouse.apply_capture_scenario("win");
+    check(mouse.snapshot() == "13:9:right:1",
+          "Mouse Maze win capture scenario was not applied");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";
@@ -171,11 +188,22 @@ int main() {
           "Blocks & Buttons asset catalogue was not loaded");
     sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
     blocks.start();
+    blocks.apply_capture_scenario("gameplay");
     const auto& blocks_drawing = blocks.render();
     check(blocks_drawing.size() > 80 &&
               blocks_drawing.back().type ==
                   sprout::runtime::DrawCommandType::Sprite,
           "Blocks & Buttons did not submit its sprite scene");
+    blocks.apply_capture_scenario("win");
+    check(blocks.snapshot() == "6:5:right:1:0:7:2:7:5",
+          "Blocks & Buttons win capture scenario was not applied");
+    blocks.apply_capture_scenario("fail");
+    check(blocks.snapshot() == "2:2:left:0:1:1:1:5:4",
+          "Blocks & Buttons fail capture scenario was not applied");
+    blocks.apply_capture_scenario("deadlock-test");
+    blocks.step({.left = true});
+    check(blocks.snapshot() == "2:1:left:0:1:1:1:5:4",
+          "Blocks & Buttons did not detect a provable corner deadlock");
 
     write(package_path / "game.lua", R"(
 function init()

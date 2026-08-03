@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace sprout::runtime {
@@ -79,6 +80,7 @@ class Session {
 
   void start();
   void step(const Actions& actions);
+  void apply_capture_scenario(std::string_view scenario);
   void stop();
   const std::vector<DrawCommand>& render();
   std::vector<RuntimeEvent> drain_events();

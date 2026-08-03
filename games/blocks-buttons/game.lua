@@ -22,7 +22,7 @@ end
 
 local buttons = {{x = 7, y = 2}, {x = 7, y = 5}}
 local initial_crates = {{x = 4, y = 2}, {x = 5, y = 4}}
-local player_x, player_y, crates, direction, complete
+local player_x, player_y, crates, direction, complete, deadlocked
 local previous = {}
 
 local function crate_at(x, y)
@@ -44,7 +44,7 @@ local function wall_at(x, y)
 end
 
 local function reset()
-  player_x, player_y, direction, complete = 2, 2, "down", false
+  player_x, player_y, direction, complete, deadlocked = 2, 2, "down", false, false
   crates = {}
   for index, crate in ipairs(initial_crates) do
     crates[index] = {x = crate.x, y = crate.y}
@@ -53,7 +53,17 @@ end
 
 local function evaluate()
   for _, button in ipairs(buttons) do
-    if not crate_at(button.x, button.y) then return end
+    if not crate_at(button.x, button.y) then
+      for _, crate in ipairs(crates) do
+        if not button_at(crate.x, crate.y) and
+            (wall_at(crate.x - 1, crate.y) or wall_at(crate.x + 1, crate.y)) and
+            (wall_at(crate.x, crate.y - 1) or wall_at(crate.x, crate.y + 1)) then
+          deadlocked = true
+          return
+        end
+      end
+      return
+    end
   end
   complete = true
   sprout.storage_set("completed", 1)
@@ -65,7 +75,7 @@ function init()
 end
 
 function update(actions)
-  if complete and actions.primary and not previous.primary then
+  if (complete or deadlocked) and actions.primary and not previous.primary then
     reset()
     previous = actions
     return
@@ -80,7 +90,7 @@ function update(actions)
   elseif actions.down and not previous.down then dy, direction = 1, "down"
   elseif actions.left and not previous.left then dx, direction = -1, "left"
   elseif actions.right and not previous.right then dx, direction = 1, "right" end
-  if not complete and (dx ~= 0 or dy ~= 0) then
+  if not complete and not deadlocked and (dx ~= 0 or dy ~= 0) then
     local target_x, target_y = player_x + dx, player_y + dy
     local crate_index = crate_at(target_x, target_y)
     if crate_index then
@@ -122,11 +132,36 @@ function render()
       scale = rich_scale}
   sprites[#sprites + 1] = {sprite = "retry", x = 16, y = 8}
   sprout.sprite_batch(sprites)
-  if complete then sprout.rect(104, 8, 112, 20, 83, 198, 126) end
+  if complete then
+    sprout.rect(104, 8, 112, 20, 83, 198, 126)
+  elseif deadlocked then
+    sprout.rect(104, 8, 112, 20, 235, 173, 78)
+    sprout.sprite("retry", 152, 10)
+  end
+end
+
+function capture_scenario(name)
+  if name == "gameplay" then
+    player_x, player_y, direction, complete, deadlocked = 6, 2, "right", false, false
+    crates = {{x = 7, y = 2}, {x = 5, y = 4}}
+  elseif name == "win" then
+    player_x, player_y, direction, complete, deadlocked = 6, 5, "right", true, false
+    crates = {{x = 7, y = 2}, {x = 7, y = 5}}
+  elseif name == "fail" then
+    player_x, player_y, direction, complete, deadlocked = 2, 2, "left", false, true
+    crates = {{x = 1, y = 1}, {x = 5, y = 4}}
+  elseif name == "deadlock-test" then
+    player_x, player_y, direction, complete, deadlocked = 3, 1, "left", false, false
+    crates = {{x = 2, y = 1}, {x = 5, y = 4}}
+  else
+    error("unsupported capture scenario: " .. name)
+  end
+  previous = {}
 end
 
 function snapshot()
-  local values = {player_x, player_y, direction, complete and 1 or 0}
+  local values = {player_x, player_y, direction, complete and 1 or 0,
+                  deadlocked and 1 or 0}
   for _, crate in ipairs(crates) do
     values[#values + 1] = crate.x
     values[#values + 1] = crate.y

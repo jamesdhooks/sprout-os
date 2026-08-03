@@ -587,7 +587,10 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen == "recovery") {
+    if (screenshot_screen == "recovery" ||
+        screenshot_screen == "recovery-home" ||
+        screenshot_screen == "recovery-confirm-restore" ||
+        screenshot_screen == "recovery-confirm-reset") {
       TemporaryDirectory directory("recovery-screenshot");
       sprout::launcher::ConfigurationStore configuration(
           directory.path() / "config");
@@ -595,6 +598,13 @@ int main(int argc, char* argv[]) {
       first.next_setup_step = sprout::launcher::SetupStep::Parent;
       (void)configuration.save(first);
       sprout::launcher::RecoveryPresentation recovery(configuration, 4);
+      if (screenshot_screen == "recovery-confirm-restore") {
+        (void)recovery.handle(Action::Down);
+        (void)recovery.handle(Action::Confirm);
+      } else if (screenshot_screen == "recovery-confirm-reset") {
+        (void)recovery.handle(Action::Up);
+        (void)recovery.handle(Action::Confirm);
+      }
       sprout::launcher::render_recovery(renderer, recovery);
       const int result = save_screenshot(renderer, screenshot_path);
       SDL_DestroyRenderer(renderer);
@@ -602,12 +612,16 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen == "pin-create" || screenshot_screen == "pin-auth") {
+    if (screenshot_screen == "pin-create" || screenshot_screen == "pin-auth" ||
+        screenshot_screen == "pin-auth-failed") {
       sprout::launcher::ParentPinPresentation pin(
           screenshot_screen == "pin-create"
               ? sprout::launcher::ParentPinMode::Create
               : sprout::launcher::ParentPinMode::Authenticate);
       (void)pin.handle(Action::Confirm);
+      if (screenshot_screen == "pin-auth-failed") {
+        pin.authentication_failed();
+      }
       (void)pin.handle(Action::Right);
       (void)pin.handle(Action::Confirm);
       sprout::launcher::render_parent_pin(renderer, pin);
@@ -617,7 +631,9 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen == "crop" || screenshot_screen == "profile-image") {
+    if (screenshot_screen == "crop" || screenshot_screen == "profile-image" ||
+        screenshot_screen == "profile-image-crop" ||
+        screenshot_screen == "profile-image-result") {
       if (!data_root.has_value()) {
         std::cerr << "Profile image screenshots require --data-dir with an imports folder\n";
         SDL_DestroyRenderer(renderer);
@@ -639,20 +655,24 @@ int main(int argc, char* argv[]) {
           .id = "parent-primary",
           .display_name = "Parent",
           .role = sprout::launcher::ProfileRole::Parent,
-          .avatar_ref = "builtin:fox",
+          .avatar_ref = "builtin:explorer-fox",
           .save_namespace = "saves-parent-primary",
       });
       const auto image_root = directory.path() / "profile-images";
       sprout::launcher::ProfileImageImporter importer(image_root, profiles);
       sprout::launcher::ProfileImageCropPresentation crop(
           importer, "parent-primary", *source);
-      if (screenshot_screen == "crop") {
+      if (screenshot_screen == "crop" ||
+          screenshot_screen == "profile-image-crop") {
         (void)crop.handle(Action::ZoomIn);
         sprout::launcher::render_profile_image_crop(renderer, crop);
       } else {
         (void)crop.handle(Action::Confirm);
         LauncherState state(load_launcher_profiles(profiles));
-        sprout::launcher::render_launcher(renderer, state, image_root);
+        sprout::launcher::render_launcher(renderer, state, image_root,
+                                          launcher_background,
+                                          launcher_accents,
+                                          built_in_avatar_root);
       }
       const int result = save_screenshot(renderer, screenshot_path);
       SDL_DestroyRenderer(renderer);
@@ -668,36 +688,59 @@ int main(int argc, char* argv[]) {
       const bool show_import = screenshot_screen == "setup-avatars-import";
       sprout::launcher::SetupPresentation setup(wizard, show_import);
       auto target = sprout::launcher::SetupStep::Welcome;
-      if (screenshot_screen == "setup-parent") {
+      if (screenshot_screen == "setup" || screenshot_screen == "setup-welcome") {
+        target = sprout::launcher::SetupStep::Welcome;
+      } else if (screenshot_screen == "setup-locale") {
+        target = sprout::launcher::SetupStep::Locale;
+      } else if (screenshot_screen == "setup-network") {
+        target = sprout::launcher::SetupStep::Network;
+      } else if (screenshot_screen == "setup-parent") {
         target = sprout::launcher::SetupStep::Parent;
       } else if (screenshot_screen == "setup-pin") {
         target = sprout::launcher::SetupStep::ParentPin;
       } else if (screenshot_screen == "setup-child") {
         target = sprout::launcher::SetupStep::Child;
+      } else if (screenshot_screen == "setup-avatars" || show_import) {
+        target = sprout::launcher::SetupStep::Avatars;
+      } else if (screenshot_screen == "setup-library") {
+        target = sprout::launcher::SetupStep::Library;
+      } else if (screenshot_screen == "setup-child-defaults") {
+        target = sprout::launcher::SetupStep::ChildDefaults;
+      } else if (screenshot_screen == "setup-connectors") {
+        target = sprout::launcher::SetupStep::Connectors;
       } else if (screenshot_screen == "setup-review") {
         target = sprout::launcher::SetupStep::Review;
-      } else if (show_import) {
-        target = sprout::launcher::SetupStep::Avatars;
-      } else if (screenshot_screen != "setup") {
+      } else if (screenshot_screen == "setup-complete") {
+        target = sprout::launcher::SetupStep::Complete;
+      } else {
         std::cerr << "Unsupported setup screenshot: " << screenshot_screen << '\n';
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
         return EXIT_FAILURE;
       }
-      while (setup.step() != target) {
+      for (int attempt = 0; setup.step() != target && attempt < 16; ++attempt) {
+        const auto before = setup.step();
         if (setup.step() == sprout::launcher::SetupStep::ParentPin) {
           (void)setup.handle(Action::Right);
+        } else if (setup.step() == sprout::launcher::SetupStep::Avatars) {
+          (void)setup.handle(Action::Up);
         }
         (void)setup.handle(Action::Confirm);
-        if (!setup.error_message().empty() ||
-            setup.step() == sprout::launcher::SetupStep::Complete) {
+        if (!setup.error_message().empty() || setup.step() == before) {
           std::cerr << "Could not reach requested setup screenshot step\n";
           SDL_DestroyRenderer(renderer);
           SDL_DestroyWindow(window);
           SDL_Quit();
           return EXIT_FAILURE;
         }
+      }
+      if (setup.step() != target) {
+        std::cerr << "Could not reach requested setup screenshot step\n";
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
       }
       sprout::launcher::render_setup(renderer, setup);
       const int result = save_screenshot(renderer, screenshot_path);
@@ -709,7 +752,9 @@ int main(int argc, char* argv[]) {
     if (screenshot_screen == "library-recent" ||
         screenshot_screen == "library-favorites" ||
         screenshot_screen == "library-all" ||
-        screenshot_screen == "library-arcade") {
+        screenshot_screen == "library-arcade" ||
+        screenshot_screen == "library-empty" ||
+        screenshot_screen == "library-unavailable") {
       auto section = sprout::launcher::LibrarySection::Recent;
       if (screenshot_screen == "library-favorites") {
         section = sprout::launcher::LibrarySection::Favorites;
@@ -719,12 +764,14 @@ int main(int argc, char* argv[]) {
         section = sprout::launcher::LibrarySection::Arcade;
       }
       sprout::launcher::LibraryPresentation library(
-          section == sprout::launcher::LibrarySection::Arcade &&
+          screenshot_screen == "library-empty"
+              ? std::vector<sprout::launcher::LibraryEntry>{}
+              : section == sprout::launcher::LibrarySection::Arcade &&
                   arcade_root.has_value()
               ? discovered_native_library(*arcade_root)
               : sprout::launcher::make_demo_library(),
           section);
-      if (section == sprout::launcher::LibrarySection::All) {
+      if (screenshot_screen == "library-unavailable") {
         (void)library.handle(Action::Up);
         (void)library.handle(Action::Confirm);
       }
@@ -735,10 +782,21 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen == "profile-archive") {
+    if (screenshot_screen == "profile-archive" ||
+        screenshot_screen == "profile-archive-home" ||
+        screenshot_screen == "profile-archive-export" ||
+        screenshot_screen == "profile-archive-confirm-portrait" ||
+        screenshot_screen == "profile-archive-restore") {
       TemporaryDirectory directory("profile-archive-screenshot");
       sprout::launcher::ProfileRepository profiles(
           directory.path() / "profiles.sqlite3");
+      profiles.create_profile(sprout::launcher::NewProfile{
+          .id = "parent-primary",
+          .display_name = "Parent",
+          .role = sprout::launcher::ProfileRole::Parent,
+          .avatar_ref = "local:review-portrait",
+          .save_namespace = "saves-parent-primary",
+      });
       profiles.create_profile(sprout::launcher::NewProfile{
           .id = "child-alex",
           .display_name = "Alex",
@@ -757,6 +815,16 @@ int main(int argc, char* argv[]) {
       sprout::launcher::ProfileArchivePresentation archive(
           profiles, archives, directory.path() / "exports",
           directory.path() / "imports");
+      if (screenshot_screen == "profile-archive-export" ||
+          screenshot_screen == "profile-archive-confirm-portrait") {
+        (void)archive.handle(Action::Confirm);
+        if (screenshot_screen == "profile-archive-confirm-portrait") {
+          (void)archive.handle(Action::Confirm);
+        }
+      } else if (screenshot_screen == "profile-archive-restore") {
+        (void)archive.handle(Action::Right);
+        (void)archive.handle(Action::Confirm);
+      }
       sprout::launcher::render_profile_archive(renderer, archive);
       const int result = save_screenshot(renderer, screenshot_path);
       SDL_DestroyRenderer(renderer);
@@ -766,7 +834,10 @@ int main(int argc, char* argv[]) {
     }
     if (screenshot_screen == "profile-avatars" ||
         screenshot_screen == "profile-avatars-new" ||
-        screenshot_screen == "profile-avatars-last") {
+        screenshot_screen == "profile-avatars-last" ||
+        screenshot_screen == "profile-settings" ||
+        sprout::launcher::starts_with(screenshot_screen,
+                                      "profile-avatars-page-")) {
       TemporaryDirectory directory("profile-avatars-screenshot");
       sprout::launcher::ProfileRepository profiles(
           directory.path() / "profiles.sqlite3");
@@ -786,11 +857,28 @@ int main(int argc, char* argv[]) {
           .content_policy_ref = "content:child-default",
           .time_policy_ref = "time:child-default",
       });
+      const bool profile_selection = screenshot_screen == "profile-settings";
       sprout::launcher::ProfileAvatarPresentation avatars(
-          profiles, true, "child-alex");
-      if (screenshot_screen == "profile-avatars-new") {
-        for (int index = 0; index < 8; ++index) {
-          static_cast<void>(avatars.handle(Action::Down));
+          profiles, true,
+          profile_selection ? std::nullopt
+                            : std::optional<std::string>{"child-alex"});
+      if (sprout::launcher::starts_with(screenshot_screen,
+                                        "profile-avatars-page-")) {
+        const int page = std::stoi(
+            std::string(screenshot_screen.substr(21)));
+        if (page < 1 || page > 9) {
+          std::cerr << "Unsupported avatar page: " << page << '\n';
+          SDL_DestroyRenderer(renderer);
+          SDL_DestroyWindow(window);
+          SDL_Quit();
+          return EXIT_FAILURE;
+        }
+        for (int index = 0; index < (page - 1) * 8; ++index) {
+          static_cast<void>(avatars.handle(Action::Right));
+        }
+      } else if (screenshot_screen == "profile-avatars-new") {
+        for (int index = 0; index < 32; ++index) {
+          static_cast<void>(avatars.handle(Action::Right));
         }
       } else if (screenshot_screen == "profile-avatars-last") {
         static_cast<void>(avatars.handle(Action::Left));
@@ -804,11 +892,18 @@ int main(int argc, char* argv[]) {
       return result;
     }
     LauncherState state(sprout::launcher::make_demo_household());
-    if (screenshot_screen == "child") {
+    if (screenshot_screen == "child" || screenshot_screen == "child-home") {
       (void)state.handle(Action::Confirm);
-    } else if (screenshot_screen == "parent") {
+    } else if (screenshot_screen == "parent" ||
+               screenshot_screen == "parent-home") {
       (void)state.handle(Action::Right);
       (void)state.handle(Action::Confirm);
+    } else if (screenshot_screen != "profile-select") {
+      std::cerr << "Unsupported screenshot screen: " << screenshot_screen << '\n';
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return EXIT_FAILURE;
     }
     sprout::launcher::render_launcher(renderer, state, {}, launcher_background,
                                       launcher_accents,

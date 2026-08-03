@@ -206,6 +206,31 @@ function render()
   end
 end
 
+function capture_scenario(name)
+  if name == "gameplay" then
+    snake = {
+      {x = 10, y = 5}, {x = 9, y = 5}, {x = 8, y = 5},
+      {x = 8, y = 6}, {x = 8, y = 7}, {x = 7, y = 7}, {x = 6, y = 7}
+    }
+    direction = {x = 1, y = 0}
+    queued = {x = 1, y = 0}
+    fruit = {x = 13, y = 5}
+    ticks, score, best, ended = 32, 4, math.max(best, 7), false
+  elseif name == "fail" then
+    snake = {
+      {x = 19, y = 5}, {x = 18, y = 5}, {x = 17, y = 5},
+      {x = 16, y = 5}, {x = 15, y = 5}, {x = 14, y = 5}
+    }
+    direction = {x = 1, y = 0}
+    queued = {x = 1, y = 0}
+    fruit = {x = 5, y = 9}
+    ticks, score, best, ended = 48, 7, math.max(best, 7), true
+  else
+    error("unsupported capture scenario: " .. name)
+  end
+  restart_down = false
+end
+
 function snapshot()
   local parts = {ended and "ended" or "playing", tostring(score),
                  tostring(best), tostring(fruit.x), tostring(fruit.y)}

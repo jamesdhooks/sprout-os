@@ -139,7 +139,7 @@ void SetupPresentation::refresh_content() {
       return;
     case SetupStep::Avatars:
       title_ = "PROFILE PORTRAITS";
-      description_ = "CHOOSE FROM 32 BUILT-IN PORTRAITS";
+      description_ = "CHOOSE FROM 64 BUILT-IN PORTRAITS";
       choices_ = {"CHOOSE PARENT"};
       if (child_profile_available_) choices_.push_back("CHOOSE CHILD");
       if (custom_image_available_) choices_.push_back("IMPORT FOR PARENT");

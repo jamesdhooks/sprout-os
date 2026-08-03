@@ -23,6 +23,7 @@ struct Arguments {
   std::filesystem::path storage{"sprout-data/native-games"};
   std::filesystem::path capture;
   std::filesystem::path capture_title;
+  std::string capture_state;
   std::uint64_t seed{1};
   bool smoke_test{};
 };
@@ -41,17 +42,23 @@ Arguments parse_arguments(int count, char** values) {
       arguments.capture = values[++index];
     } else if (argument == "--capture-title" && index + 1 < count) {
       arguments.capture_title = values[++index];
+    } else if (argument == "--capture-state" && index + 1 < count) {
+      arguments.capture_state = values[++index];
     } else if (argument == "--smoke-test") {
       arguments.smoke_test = true;
     } else {
       throw std::runtime_error("Usage: sprout-runtime --package PATH "
                                "[--storage PATH] [--seed NUMBER] [--capture BMP] "
                                "[--capture-title BMP] "
+                               "[--capture-state NAME] "
                                "[--smoke-test]");
     }
   }
   if (arguments.package.empty()) {
     throw std::runtime_error("A native-game package path is required");
+  }
+  if (!arguments.capture_state.empty() && arguments.capture.empty()) {
+    throw std::runtime_error("--capture-state requires --capture");
   }
   return arguments;
 }
@@ -473,6 +480,9 @@ int main(int count, char** values) {
     }
 
     session.start();
+    if (!arguments.capture_state.empty()) {
+      session.apply_capture_scenario(arguments.capture_state);
+    }
     TextureStore textures(renderer, package.assets);
     GeometryBuffers geometry;
     draw_frame(renderer, session, textures, geometry);

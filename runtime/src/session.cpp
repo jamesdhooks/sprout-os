@@ -666,6 +666,23 @@ void Session::step(const Actions& actions) {
   ++impl_->tick;
 }
 
+void Session::apply_capture_scenario(std::string_view scenario) {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  if (impl_->stopped) {
+    throw std::runtime_error("Native-game session is stopped");
+  }
+  if (scenario.empty() || scenario.size() > 64U ||
+      !std::all_of(scenario.begin(), scenario.end(), [](unsigned char value) {
+        return std::isalnum(value) != 0 || value == '-';
+      })) {
+    throw std::invalid_argument("Capture scenario name is invalid");
+  }
+  lua_pushlstring(impl_->lua, scenario.data(), scenario.size());
+  impl_->call("capture_scenario", 1);
+}
+
 void Session::stop() {
   if (!impl_->started) {
     throw std::runtime_error("Native-game session has not started");

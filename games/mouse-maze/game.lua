@@ -79,6 +79,17 @@ function render()
   end
 end
 
+function capture_scenario(name)
+  if name == "gameplay" then
+    mouse_x, mouse_y, direction, complete = 7, 7, "right", false
+  elseif name == "win" then
+    mouse_x, mouse_y, direction, complete = 13, 9, "right", true
+  else
+    error("unsupported capture scenario: " .. name)
+  end
+  previous = {}
+end
+
 function snapshot()
   return table.concat({mouse_x, mouse_y, direction, complete and 1 or 0}, ":")
 end

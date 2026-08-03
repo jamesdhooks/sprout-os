@@ -49,6 +49,14 @@ This discovers the requested checked-in package, creates isolated diagnostic-pro
 
 The standard `-Action test` command also runs explicit Snake and lifecycle-fixture launcher smoke journeys, including a profile-isolated storage assertion. Follow the [Arcade Windows evidence protocol](arcade-windows-evidence.md) for the automated matrix and manual keyboard/controller/render checklist.
 
+Generate the complete deterministic launcher and game screenshot matrix with:
+
+```powershell
+.\tools\capture-visual-validation.ps1 -OutputDirectory ..\sprout-work\visual-validation
+```
+
+The generated review bundle is local and untracked. See the [visual-validation guide](visual-validation.md) for coverage, forced game-state semantics, and known presentation gaps.
+
 By default, recent, favorite, and all-game views use sanitized in-memory fixtures. To inspect filenames on an explicitly selected development-card or fixture root without executing games:
 
 ```powershell
