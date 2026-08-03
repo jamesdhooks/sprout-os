@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A 64-item built-in profile-avatar library with 512-pixel transparent masters,
+  runtime thumbnails, paged parent-managed selection, and retained custom-image
+  import support.
 - Playable Mouse & Cheese Maze and Blocks & Buttons Windows prototypes with
   deterministic original pixel-art sprite sheets and reproducible asset
   generation.

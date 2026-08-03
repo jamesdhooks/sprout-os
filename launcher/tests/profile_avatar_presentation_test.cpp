@@ -68,8 +68,8 @@ void assigns_a_catalogue_avatar_to_a_selected_profile() {
          "settings should begin with profile selection");
   (void)presentation.handle(Action::Confirm);
   expect(presentation.stage() == ProfileAvatarStage::Avatar &&
-             presentation.avatars().size() == 32,
-         "profile selection should expose all 32 built-in avatars");
+             presentation.avatars().size() == 64,
+         "profile selection should expose all 64 built-in avatars");
   (void)presentation.handle(Action::Right);
   const auto assigned = presentation.handle(Action::Confirm);
   expect(assigned.has_value() &&
@@ -85,9 +85,9 @@ void exposes_custom_import_as_a_final_paged_choice() {
   ProfileRepository profiles(directory.path() / "profiles.sqlite3");
   add_profiles(profiles);
   ProfileAvatarPresentation presentation(profiles, true, "child-primary");
-  expect(presentation.page_count() == 5,
-         "32 built-ins plus custom import should span five pages");
-  for (int index = 0; index < 8; ++index) {
+  expect(presentation.page_count() == 9,
+         "64 built-ins plus custom import should span nine pages");
+  for (int index = 0; index < 16; ++index) {
     (void)presentation.handle(Action::Down);
   }
   expect(presentation.import_focused(),

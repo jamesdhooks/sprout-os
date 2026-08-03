@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+EXPECTED_AVATAR_COUNT = 64
 
 
 def png_header(path: Path) -> tuple[int, int, int]:
@@ -32,8 +33,11 @@ def validate(root: Path) -> None:
     if catalogue.get("schema") != "sprout.profile-avatar-catalogue.v1":
         raise ValueError("Unexpected profile-avatar catalogue schema")
     avatars = catalogue.get("avatars")
-    if not isinstance(avatars, list) or len(avatars) != 32:
-        raise ValueError("The built-in profile-avatar catalogue must contain 32 entries")
+    if not isinstance(avatars, list) or len(avatars) != EXPECTED_AVATAR_COUNT:
+        raise ValueError(
+            "The built-in profile-avatar catalogue must contain "
+            f"{EXPECTED_AVATAR_COUNT} entries"
+        )
 
     ids: set[str] = set()
     expected: dict[str, set[str]] = {"masters": set(), "thumbs": set()}
@@ -74,4 +78,7 @@ if __name__ == "__main__":
         else Path(__file__).resolve().parents[1] / "launcher" / "assets" / "avatars"
     )
     validate(avatar_root)
-    print("profile avatar assets: 32 masters and 32 thumbnails valid")
+    print(
+        "profile avatar assets: "
+        f"{EXPECTED_AVATAR_COUNT} masters and {EXPECTED_AVATAR_COUNT} thumbnails valid"
+    )

@@ -765,6 +765,7 @@ int main(int argc, char* argv[]) {
       return result;
     }
     if (screenshot_screen == "profile-avatars" ||
+        screenshot_screen == "profile-avatars-new" ||
         screenshot_screen == "profile-avatars-last") {
       TemporaryDirectory directory("profile-avatars-screenshot");
       sprout::launcher::ProfileRepository profiles(
@@ -787,7 +788,11 @@ int main(int argc, char* argv[]) {
       });
       sprout::launcher::ProfileAvatarPresentation avatars(
           profiles, true, "child-alex");
-      if (screenshot_screen == "profile-avatars-last") {
+      if (screenshot_screen == "profile-avatars-new") {
+        for (int index = 0; index < 8; ++index) {
+          static_cast<void>(avatars.handle(Action::Down));
+        }
+      } else if (screenshot_screen == "profile-avatars-last") {
         static_cast<void>(avatars.handle(Action::Left));
       }
       sprout::launcher::render_profile_avatars(
