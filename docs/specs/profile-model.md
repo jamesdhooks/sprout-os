@@ -21,7 +21,7 @@ Status: **implemented persistence schema v1**. The broader profile contract rema
 
 PIN hashes, connector credentials, active grants, play history, favorites, recents, and save data are separate records. They must not be embedded in a portable profile definition by default.
 
-Daily allowance and usage are likewise separate profile-scoped records. The implemented boundary is described in the [daily time-policy specification](daily-time-policy.md).
+Daily allowance and usage are likewise separate profile-scoped records. The implemented boundary is described in the [daily time-policy specification](daily-time-policy.md). First-run child creation persists the documented 45-minute default when a policy store is available.
 
 ## Persistence schema v1
 
@@ -30,6 +30,8 @@ The launcher implements profiles in a SQLite `profiles` table with database sche
 Opening an empty version-zero database creates schema version 1 inside one transaction. A database with a newer version is rejected without modification. A failed migration rolls back its schema and version changes. There is no destructive migration or permanent-delete operation in v1.
 
 Built-in avatars use `builtin:<id>` references. The implemented import core uses revisioned `local:<id>` references for managed PNG variants; image bytes and source filesystem paths are not stored in the profile row. See the [profile image pipeline](profile-images.md).
+
+The implemented [portable profile archive](profile-archive.md) exports one active profile with its concrete child allowance and optional normalized managed avatar. It intentionally omits lifecycle history, local revisions, timestamps, credentials, grants, usage, saves, and library activity. Restore accepts only a new identity and save namespace; schema v1 does not merge or remap.
 
 ## Invariants
 

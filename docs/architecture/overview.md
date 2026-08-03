@@ -19,7 +19,7 @@ Sprout Runtime (planned)       Optional Sprout Server (planned)
 Sprout Arcade / Studio / SDK (planned after concrete consumers)
 ```
 
-The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a persisted daily child-time decision core, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Persisted recent/favorite activity, GameSwitcher and policy-lifecycle integration, hardware-validated Onion execution, and device rendering do not exist yet.
+The repository currently contains portable launcher navigation, profile/configuration persistence, parent access enforcement, a versioned one-profile archive boundary, a persisted daily child-time decision core, deterministic local GB/SNES discovery and library views, a typed Onion launch adapter, and a Windows SDL2 preview. Persisted recent/favorite activity, GameSwitcher and policy-lifecycle integration, hardware-validated Onion execution, and device rendering do not exist yet.
 
 ## Process responsibilities
 
@@ -59,6 +59,6 @@ Configuration resolves in this order:
 platform defaults → household → device → profile → library item → temporary grant
 ```
 
-SQLite holds transactional state; versioned JSON holds portable definitions. Secrets are referenced rather than embedded. Writes require validation, atomic activation, snapshots, and last-known-good recovery.
+SQLite holds transactional state; versioned JSON holds portable definitions. The implemented one-profile archive carries only portable profile fields, a child allowance, and an explicitly selected normalized portrait; it excludes secrets, usage, saves, and library activity. Secrets are referenced rather than embedded. Writes require validation, atomic activation, snapshots, and last-known-good recovery.
 
 Child mode uses an allowlist enforced at launch and resume boundaries. This protects against casual bypass, not a skilled person with physical or SD-card access. Profile data, connector credentials, package capabilities, and the Onion adapter are separate security boundaries.
