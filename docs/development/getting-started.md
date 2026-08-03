@@ -51,7 +51,7 @@ Configure and build the command-line device diagnostic:
 powershell -ExecutionPolicy Bypass -File .\tools\build-onion.ps1 -Action build
 ```
 
-This produces `out/build/onion-arm/launcher/sprout-onion-check`. It verifies that portable launcher storage, parent access, daily-time policy, a built-in-avatar profile archive round trip, startup-health persistence, library presentation, and typed launch-request code compile and link against Onion's ARM sysroot. It does not provide a device renderer, install a startup launcher, select a safe-mode action, or execute a game. Follow the [development-card device check](onion-device-check.md) before running it on hardware.
+This produces `out/build/onion-arm/launcher/sprout-onion-check` and audits its SHA-256, size, ARM EABI5 format, interpreter, and reviewed shared dependencies. Use `-Action audit` to recheck an existing artifact without rebuilding. The diagnostic verifies that portable launcher storage, parent access, daily-time policy, a built-in-avatar profile archive round trip, startup-health persistence, library presentation, and typed launch-request code compile and link against Onion's ARM sysroot. It does not provide a device renderer, install a startup launcher, select a safe-mode action, execute a game, or prove target execution. Follow the [development-card device check](onion-device-check.md) before running it on hardware.
 
 ## Development cards
 
