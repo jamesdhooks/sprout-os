@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "baseManifest": "../asset-manifest.json",
+  "provenance": {
+    "source": "original-project-artwork",
+    "license": "GPL-3.0-or-later",
+    "generator": "tools/import-sprite-atlases.py",
+    "palette": "sprout-storybook-1"
+  },
+  "atlases": [
+    {
+      "id": "rich-character",
+      "manifest": "rich-character-atlas.json",
+      "image": "assets/rich-character.png",
+      "prefix": "rich.",
+      "animationPrefix": "rich."
+    },
+    {
+      "id": "rich-world",
+      "manifest": "rich-world-atlas.json",
+      "image": "assets/rich-world.png",
+      "prefix": "rich.",
+      "animationPrefix": "rich.",
+      "rename": {
+        "hedge-cross": "rich.cheese-goal"
+      }
+    }
+  ]
+}

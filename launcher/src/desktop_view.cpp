@@ -236,6 +236,26 @@ int setup_step_number(SetupStep step) {
 
 }  // namespace
 
+bool render_startup_splash(SDL_Renderer* renderer,
+                           const std::filesystem::path& image_path) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+  SDL_Texture* texture =
+      IMG_LoadTexture(renderer, path_as_utf8(image_path).c_str());
+  if (texture == nullptr) {
+    return false;
+  }
+  const SDL_Rect canvas{0, 0, kWidth, kHeight};
+  SDL_RenderCopy(renderer, texture, nullptr, &canvas);
+  SDL_DestroyTexture(texture);
+
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  fill_rect(renderer, {78, 34, 484, 86}, {18, 45, 34, 198});
+  draw_centered_text(renderer, "SPROUTOS", kWidth / 2, 51, 7, kText);
+  SDL_RenderPresent(renderer);
+  return true;
+}
+
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
                      const std::filesystem::path& managed_image_root) {
   set_color(renderer, kBackground);

@@ -252,6 +252,14 @@ if(SPROUT_BUILD_DESKTOP)
       SDL2::SDL2-static
   )
 
+  add_custom_command(
+    TARGET sprout-launcher POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:sprout-launcher>/assets
+    COMMENT "Copying launcher visual assets"
+  )
+
   if(MSVC)
     target_compile_options(sprout_profile_images PRIVATE /W4 /permissive-)
     target_compile_options(sprout-launcher PRIVATE /W4 /permissive-)

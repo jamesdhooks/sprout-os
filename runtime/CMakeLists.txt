@@ -54,6 +54,21 @@ if(BUILD_TESTING)
     COMMAND "${Python3_EXECUTABLE}"
             "${PROJECT_SOURCE_DIR}/tools/generate-arcade-assets.py" --check
   )
+  add_test(
+    NAME arcade-atlas-importer
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/import-sprite-atlases-test.py"
+  )
+  foreach(game_package IN ITEMS mouse-maze blocks-buttons snake)
+    add_test(
+      NAME "arcade-${game_package}-atlas-import"
+      COMMAND "${Python3_EXECUTABLE}"
+              "${PROJECT_SOURCE_DIR}/tools/import-sprite-atlases.py"
+              --config "${PROJECT_SOURCE_DIR}/games/${game_package}/assets-src/atlas-import.json"
+              --output "${PROJECT_SOURCE_DIR}/games/${game_package}/rich-asset-manifest.json"
+              --check
+    )
+  endforeach()
 
   if(SPROUT_BUILD_DESKTOP)
     add_test(

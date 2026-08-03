@@ -2,6 +2,7 @@
 .env
 .env.*
 *.log
+__pycache__/
 out/
 .DS_Store
 Thumbs.db

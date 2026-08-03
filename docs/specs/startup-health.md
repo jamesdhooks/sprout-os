@@ -1,6 +1,12 @@
 # Launcher Startup Health
 
-Status: **implemented decision, persistence, and desktop launcher integration v1; device startup integration pending**.
+Status: **implemented decision, persistence, desktop launcher integration, and desktop startup presentation v1; device startup integration pending**.
+
+The desktop launcher presents a dedicated SproutOS startup image before the
+profile experience. This asset is separate from launcher backgrounds and every
+game title page. The host renders the SproutOS wordmark so it remains crisp and
+does not depend on lettering baked into the illustration. Onion boot-hook timing
+and safe-mode interaction remain device-validation work.
 
 ## Purpose
 

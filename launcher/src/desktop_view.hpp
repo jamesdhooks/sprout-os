@@ -14,6 +14,8 @@ struct SDL_Renderer;
 
 namespace sprout::launcher {
 
+bool render_startup_splash(SDL_Renderer* renderer,
+                           const std::filesystem::path& image_path);
 void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
                      const std::filesystem::path& managed_image_root = {});
 void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup);

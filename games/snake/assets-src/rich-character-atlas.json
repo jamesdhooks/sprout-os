@@ -1,0 +1,490 @@
+{
+  "schema": "sprite-atlas.v1",
+  "id": "snake-segments-fruit",
+  "image": "snake-segments-fruit-atlas.png",
+  "size": {
+    "width": 2048,
+    "height": 2048
+  },
+  "scale": 1,
+  "frames": {
+    "snake-head-north": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "width": 425,
+        "height": 438
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 43,
+        "y": 74,
+        "width": 425,
+        "height": 438
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "head",
+        "north"
+      ]
+    },
+    "snake-head-east": {
+      "frame": {
+        "x": 431,
+        "y": 2,
+        "width": 430,
+        "height": 437
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 41,
+        "y": 75,
+        "width": 430,
+        "height": 437
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "head",
+        "east"
+      ]
+    },
+    "snake-head-south": {
+      "frame": {
+        "x": 865,
+        "y": 2,
+        "width": 432,
+        "height": 437
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 40,
+        "y": 75,
+        "width": 432,
+        "height": 437
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "head",
+        "south"
+      ]
+    },
+    "snake-head-west": {
+      "frame": {
+        "x": 1301,
+        "y": 2,
+        "width": 430,
+        "height": 437
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 41,
+        "y": 75,
+        "width": 430,
+        "height": 437
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "head",
+        "west"
+      ]
+    },
+    "snake-body-vertical": {
+      "frame": {
+        "x": 1735,
+        "y": 2,
+        "width": 238,
+        "height": 466
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 137,
+        "y": 46,
+        "width": 238,
+        "height": 466
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "body"
+      ]
+    },
+    "snake-body-horizontal": {
+      "frame": {
+        "x": 2,
+        "y": 472,
+        "width": 235,
+        "height": 463
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 138,
+        "y": 49,
+        "width": 235,
+        "height": 463
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "body"
+      ]
+    },
+    "snake-corner-ne": {
+      "frame": {
+        "x": 241,
+        "y": 472,
+        "width": 460,
+        "height": 223
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 26,
+        "y": 289,
+        "width": 460,
+        "height": 223
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "corner"
+      ]
+    },
+    "snake-corner-es": {
+      "frame": {
+        "x": 705,
+        "y": 472,
+        "width": 431,
+        "height": 450
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 40,
+        "y": 62,
+        "width": 431,
+        "height": 450
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "corner"
+      ]
+    },
+    "snake-corner-sw": {
+      "frame": {
+        "x": 1140,
+        "y": 472,
+        "width": 432,
+        "height": 443
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 40,
+        "y": 69,
+        "width": 432,
+        "height": 443
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "corner"
+      ]
+    },
+    "snake-corner-wn": {
+      "frame": {
+        "x": 1576,
+        "y": 472,
+        "width": 430,
+        "height": 438
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 41,
+        "y": 74,
+        "width": 430,
+        "height": 438
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "corner"
+      ]
+    },
+    "snake-tail-north": {
+      "frame": {
+        "x": 2,
+        "y": 939,
+        "width": 435,
+        "height": 442
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 38,
+        "y": 70,
+        "width": 435,
+        "height": 442
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "tail",
+        "north"
+      ]
+    },
+    "snake-tail-east": {
+      "frame": {
+        "x": 441,
+        "y": 939,
+        "width": 405,
+        "height": 434
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 53,
+        "y": 78,
+        "width": 405,
+        "height": 434
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "tail",
+        "east"
+      ]
+    },
+    "snake-tail-south": {
+      "frame": {
+        "x": 850,
+        "y": 939,
+        "width": 257,
+        "height": 432
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 127,
+        "y": 80,
+        "width": 257,
+        "height": 432
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "tail",
+        "south"
+      ]
+    },
+    "snake-tail-west": {
+      "frame": {
+        "x": 1111,
+        "y": 939,
+        "width": 265,
+        "height": 435
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 123,
+        "y": 77,
+        "width": 265,
+        "height": 435
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "snake",
+        "tail",
+        "west"
+      ]
+    },
+    "fruit-apple": {
+      "frame": {
+        "x": 1380,
+        "y": 939,
+        "width": 388,
+        "height": 419
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 62,
+        "y": 93,
+        "width": 388,
+        "height": 419
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit"
+      ]
+    },
+    "fruit-pear": {
+      "frame": {
+        "x": 2,
+        "y": 1385,
+        "width": 343,
+        "height": 461
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 84,
+        "y": 51,
+        "width": 343,
+        "height": 461
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "fruit"
+      ]
+    }
+  },
+  "animations": {
+    "default": {
+      "frames": [
+        "snake-head-north",
+        "snake-head-east",
+        "snake-head-south",
+        "snake-head-west",
+        "snake-body-vertical",
+        "snake-body-horizontal",
+        "snake-corner-ne",
+        "snake-corner-es",
+        "snake-corner-sw",
+        "snake-corner-wn",
+        "snake-tail-north",
+        "snake-tail-east",
+        "snake-tail-south",
+        "snake-tail-west",
+        "fruit-apple",
+        "fruit-pear"
+      ],
+      "fps": 12,
+      "loop": true
+    }
+  }
+}

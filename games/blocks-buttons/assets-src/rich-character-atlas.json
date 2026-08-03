@@ -1,0 +1,518 @@
+{
+  "schema": "sprite-atlas.v1",
+  "id": "sprout-hero-walk-directions",
+  "image": "sprout-hero-walk-directions-atlas.png",
+  "size": {
+    "width": 2048,
+    "height": 2048
+  },
+  "scale": 1,
+  "frames": {
+    "hero-north-01": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "width": 321,
+        "height": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 95,
+        "y": 249,
+        "width": 321,
+        "height": 263
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "north"
+      ]
+    },
+    "hero-north-02": {
+      "frame": {
+        "x": 327,
+        "y": 2,
+        "width": 322,
+        "height": 281
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 95,
+        "y": 231,
+        "width": 322,
+        "height": 281
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "north"
+      ]
+    },
+    "hero-north-03": {
+      "frame": {
+        "x": 653,
+        "y": 2,
+        "width": 320,
+        "height": 368
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 96,
+        "y": 144,
+        "width": 320,
+        "height": 368
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "north"
+      ]
+    },
+    "hero-north-04": {
+      "frame": {
+        "x": 977,
+        "y": 2,
+        "width": 330,
+        "height": 253
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 91,
+        "y": 259,
+        "width": 330,
+        "height": 253
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "north"
+      ]
+    },
+    "hero-east-01": {
+      "frame": {
+        "x": 1311,
+        "y": 2,
+        "width": 324,
+        "height": 264
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 94,
+        "y": 248,
+        "width": 324,
+        "height": 264
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "east"
+      ]
+    },
+    "hero-east-02": {
+      "frame": {
+        "x": 1639,
+        "y": 2,
+        "width": 322,
+        "height": 283
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 95,
+        "y": 229,
+        "width": 322,
+        "height": 283
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "east"
+      ]
+    },
+    "hero-east-03": {
+      "frame": {
+        "x": 2,
+        "y": 374,
+        "width": 257,
+        "height": 367
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 127,
+        "y": 145,
+        "width": 257,
+        "height": 367
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "east"
+      ]
+    },
+    "hero-east-04": {
+      "frame": {
+        "x": 263,
+        "y": 374,
+        "width": 254,
+        "height": 374
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 129,
+        "y": 138,
+        "width": 254,
+        "height": 374
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "east"
+      ]
+    },
+    "hero-south-01": {
+      "frame": {
+        "x": 521,
+        "y": 374,
+        "width": 324,
+        "height": 262
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 94,
+        "y": 250,
+        "width": 324,
+        "height": 262
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "south"
+      ]
+    },
+    "hero-south-02": {
+      "frame": {
+        "x": 849,
+        "y": 374,
+        "width": 345,
+        "height": 250
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 83,
+        "y": 262,
+        "width": 345,
+        "height": 250
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "south"
+      ]
+    },
+    "hero-south-03": {
+      "frame": {
+        "x": 1198,
+        "y": 374,
+        "width": 256,
+        "height": 367
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 128,
+        "y": 145,
+        "width": 256,
+        "height": 367
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "south"
+      ]
+    },
+    "hero-south-04": {
+      "frame": {
+        "x": 1458,
+        "y": 374,
+        "width": 254,
+        "height": 374
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 129,
+        "y": 138,
+        "width": 254,
+        "height": 374
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "south"
+      ]
+    },
+    "hero-west-01": {
+      "frame": {
+        "x": 1716,
+        "y": 374,
+        "width": 325,
+        "height": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 93,
+        "y": 242,
+        "width": 325,
+        "height": 270
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "west"
+      ]
+    },
+    "hero-west-02": {
+      "frame": {
+        "x": 2,
+        "y": 752,
+        "width": 346,
+        "height": 250
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 83,
+        "y": 262,
+        "width": 346,
+        "height": 250
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "west"
+      ]
+    },
+    "hero-west-03": {
+      "frame": {
+        "x": 352,
+        "y": 752,
+        "width": 257,
+        "height": 366
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 127,
+        "y": 146,
+        "width": 257,
+        "height": 366
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "west"
+      ]
+    },
+    "hero-west-04": {
+      "frame": {
+        "x": 613,
+        "y": 752,
+        "width": 346,
+        "height": 251
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 83,
+        "y": 261,
+        "width": 346,
+        "height": 251
+      },
+      "sourceSize": {
+        "width": 512,
+        "height": 512
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "tags": [
+        "hero",
+        "walk",
+        "west"
+      ]
+    }
+  },
+  "animations": {
+    "hero-walk-north": {
+      "frames": [
+        "hero-north-01",
+        "hero-north-02",
+        "hero-north-03",
+        "hero-north-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-walk-east": {
+      "frames": [
+        "hero-east-01",
+        "hero-east-02",
+        "hero-east-03",
+        "hero-east-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-walk-south": {
+      "frames": [
+        "hero-south-01",
+        "hero-south-02",
+        "hero-south-03",
+        "hero-south-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-walk-west": {
+      "frames": [
+        "hero-west-01",
+        "hero-west-02",
+        "hero-west-03",
+        "hero-west-04"
+      ],
+      "fps": 8,
+      "loop": true
+    }
+  }
+}
