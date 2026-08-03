@@ -7,6 +7,7 @@
 #include "sprout/launcher/profile_archive.hpp"
 #include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/profile_repository.hpp"
+#include "sprout/launcher/recovery_presentation.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
 #include "sprout/launcher/parent_access_controller.hpp"
 #include "sprout/launcher/parent_pin_presentation.hpp"
@@ -15,6 +16,7 @@
 #include "sprout/launcher/setup_presentation.hpp"
 #include "sprout/launcher/setup_wizard.hpp"
 #include "sprout/launcher/string_compat.hpp"
+#include "sprout/launcher/startup_health.hpp"
 
 #include <SDL.h>
 
@@ -192,6 +194,20 @@ int run_smoke_test(SDL_Renderer* renderer) {
   sprout::launcher::render_launcher(renderer, state);
 
   TemporaryDirectory directory("desktop-smoke");
+
+  sprout::launcher::ConfigurationStore recovery_configuration(
+      directory.path() / "recovery-config");
+  auto recovery_first = recovery_configuration.save(
+      sprout::launcher::LocalConfiguration{});
+  recovery_first.next_setup_step = sprout::launcher::SetupStep::Parent;
+  (void)recovery_configuration.save(recovery_first);
+  sprout::launcher::RecoveryPresentation recovery(recovery_configuration, 4);
+  sprout::launcher::render_recovery(renderer, recovery);
+  (void)recovery.handle(Action::Up);
+  (void)recovery.handle(Action::Up);
+  (void)recovery.handle(Action::Confirm);
+  sprout::launcher::render_recovery(renderer, recovery);
+
   std::filesystem::create_directories(directory.path() / "data");
   sprout::launcher::ConfigurationStore configuration(directory.path() / "config");
   sprout::launcher::ProfileRepository profiles(directory.path() / "data" /
@@ -421,6 +437,21 @@ int main(int argc, char* argv[]) {
   }
 
   if (screenshot) {
+    if (screenshot_screen == "recovery") {
+      TemporaryDirectory directory("recovery-screenshot");
+      sprout::launcher::ConfigurationStore configuration(
+          directory.path() / "config");
+      auto first = configuration.save(sprout::launcher::LocalConfiguration{});
+      first.next_setup_step = sprout::launcher::SetupStep::Parent;
+      (void)configuration.save(first);
+      sprout::launcher::RecoveryPresentation recovery(configuration, 4);
+      sprout::launcher::render_recovery(renderer, recovery);
+      const int result = save_screenshot(renderer, screenshot_path);
+      SDL_DestroyRenderer(renderer);
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return result;
+    }
     if (screenshot_screen == "pin-create" || screenshot_screen == "pin-auth") {
       sprout::launcher::ParentPinPresentation pin(
           screenshot_screen == "pin-create"
@@ -602,6 +633,8 @@ int main(int argc, char* argv[]) {
   }
 
   std::unique_ptr<sprout::launcher::ConfigurationStore> configuration;
+  std::unique_ptr<sprout::launcher::StartupHealthStore> startup_health;
+  std::unique_ptr<sprout::launcher::RecoveryPresentation> recovery;
   std::unique_ptr<sprout::launcher::ProfileRepository> profiles;
   std::unique_ptr<sprout::launcher::DailyTimePolicyStore> daily_time_policy;
   std::unique_ptr<sprout::launcher::ProfileArchiveService> profile_archives;
@@ -618,52 +651,76 @@ int main(int argc, char* argv[]) {
   std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
   std::optional<LauncherState> state;
+  std::optional<std::uint64_t> startup_attempt_id;
+
+  const auto initialize_persistent_launcher = [&] {
+    profiles = std::make_unique<sprout::launcher::ProfileRepository>(
+        *data_root / "data" / "profiles.sqlite3");
+    daily_time_policy =
+        std::make_unique<sprout::launcher::DailyTimePolicyStore>(
+            *data_root / "data" / "time-policy.sqlite3");
+    for (const auto& profile : profiles->list_profiles(false)) {
+      if (profile.role == sprout::launcher::ProfileRole::Child &&
+          profile.time_policy_ref == "time:child-default" &&
+          !daily_time_policy->find_daily_allowance_seconds(profile.id)
+               .has_value()) {
+        daily_time_policy->set_daily_allowance(
+            profile.id,
+            sprout::launcher::kDefaultChildDailyAllowanceSeconds);
+      }
+    }
+    image_importer = std::make_unique<sprout::launcher::ProfileImageImporter>(
+        *data_root / "data" / "profile-images", *profiles);
+    profile_archives =
+        std::make_unique<sprout::launcher::ProfileArchiveService>(
+            *profiles, *daily_time_policy,
+            *data_root / "data" / "profile-images");
+    parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
+        *data_root / "data" / "security.sqlite3",
+        *data_root / "secrets" / "device-access.key");
+    image_source = pending_profile_image(*data_root);
+    wizard = std::make_unique<sprout::launcher::SetupWizard>(
+        *configuration, *profiles, daily_time_policy.get());
+    parent_credential_ref = wizard->configuration().parent_credential_ref;
+    if (wizard->current_step() == sprout::launcher::SetupStep::Complete) {
+      state.emplace(load_launcher_profiles(*profiles));
+      setup.reset();
+    } else {
+      state.reset();
+      setup = std::make_unique<sprout::launcher::SetupPresentation>(
+          *wizard, image_source.has_value());
+    }
+    if (state.has_value()) {
+      access_controller =
+          std::make_unique<sprout::launcher::ParentAccessController>(
+              *state, parent_access.get(), parent_credential_ref);
+    } else {
+      access_controller.reset();
+    }
+  };
+
   try {
     library_entries = sd_card_root.has_value()
                           ? discovered_library(*sd_card_root)
                           : sprout::launcher::make_demo_library();
     if (data_root.has_value()) {
       std::filesystem::create_directories(*data_root / "data");
+      startup_health =
+          std::make_unique<sprout::launcher::StartupHealthStore>(
+              *data_root / "data" / "startup-health.sqlite3");
+      const auto startup = startup_health->begin_startup();
+      startup_attempt_id = startup.attempt_id;
       configuration = std::make_unique<sprout::launcher::ConfigurationStore>(
           *data_root / "config");
-      profiles = std::make_unique<sprout::launcher::ProfileRepository>(
-          *data_root / "data" / "profiles.sqlite3");
-      daily_time_policy =
-          std::make_unique<sprout::launcher::DailyTimePolicyStore>(
-              *data_root / "data" / "time-policy.sqlite3");
-      for (const auto& profile : profiles->list_profiles(false)) {
-        if (profile.role == sprout::launcher::ProfileRole::Child &&
-            profile.time_policy_ref == "time:child-default" &&
-            !daily_time_policy->find_daily_allowance_seconds(profile.id)
-                 .has_value()) {
-          daily_time_policy->set_daily_allowance(
-              profile.id,
-              sprout::launcher::kDefaultChildDailyAllowanceSeconds);
-        }
-      }
-      image_importer = std::make_unique<sprout::launcher::ProfileImageImporter>(
-          *data_root / "data" / "profile-images", *profiles);
-      profile_archives =
-          std::make_unique<sprout::launcher::ProfileArchiveService>(
-              *profiles, *daily_time_policy,
-              *data_root / "data" / "profile-images");
-      parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
-          *data_root / "data" / "security.sqlite3",
-          *data_root / "secrets" / "device-access.key");
-      image_source = pending_profile_image(*data_root);
-      wizard = std::make_unique<sprout::launcher::SetupWizard>(
-          *configuration, *profiles, daily_time_policy.get());
-      parent_credential_ref = wizard->configuration().parent_credential_ref;
-      if (wizard->current_step() == sprout::launcher::SetupStep::Complete) {
-        state.emplace(load_launcher_profiles(*profiles));
+      if (startup.recovery_required) {
+        recovery =
+            std::make_unique<sprout::launcher::RecoveryPresentation>(
+                *configuration, startup.attempt_id);
       } else {
-        setup = std::make_unique<sprout::launcher::SetupPresentation>(
-            *wizard, image_source.has_value());
+        initialize_persistent_launcher();
       }
     } else {
       state.emplace(sprout::launcher::make_demo_household());
-    }
-    if (state.has_value()) {
       access_controller =
           std::make_unique<sprout::launcher::ParentAccessController>(
               *state, parent_access.get(), parent_credential_ref);
@@ -682,6 +739,19 @@ int main(int argc, char* argv[]) {
   bool dirty = true;
   const auto handle_session_action = [&](Action action) {
     try {
+      if (recovery != nullptr) {
+        const auto recovery_event = recovery->handle(action);
+        if (recovery_event ==
+            sprout::launcher::RecoveryPresentationEvent::ExitRequested) {
+          return false;
+        }
+        if (recovery_event ==
+            sprout::launcher::RecoveryPresentationEvent::ConfigurationChanged) {
+          recovery.reset();
+          initialize_persistent_launcher();
+        }
+        return true;
+      }
       if (parent_pin != nullptr) {
         const auto pin_event = parent_pin->handle(action);
         if (pin_event == sprout::launcher::ParentPinEvent::Cancelled) {
@@ -848,7 +918,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (dirty) {
-      if (parent_pin != nullptr) {
+      if (recovery != nullptr) {
+        sprout::launcher::render_recovery(renderer, *recovery);
+      } else if (parent_pin != nullptr) {
         sprout::launcher::render_parent_pin(renderer, *parent_pin);
       } else if (access_controller != nullptr &&
                  access_controller->has_pin_prompt()) {
@@ -867,6 +939,16 @@ int main(int argc, char* argv[]) {
             renderer, *state,
             data_root.has_value() ? *data_root / "data" / "profile-images"
                                   : std::filesystem::path{});
+      }
+      if (recovery == nullptr && startup_attempt_id.has_value()) {
+        try {
+          startup_health->mark_ready(*startup_attempt_id);
+          startup_attempt_id.reset();
+        } catch (const std::exception& error) {
+          std::cerr << "Launcher readiness could not be recorded: "
+                    << error.what() << '\n';
+          running = false;
+        }
       }
       dirty = false;
     }

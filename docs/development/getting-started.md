@@ -1,6 +1,6 @@
 # Getting Started
 
-Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, persisted daily child-time and startup-health decision cores, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, policy lifecycle, safe-boot integration, or deployable SD-card image.
+Sprout currently has a Windows desktop launcher preview, resumable offline first-run setup, versioned local profiles, device-local parent access, portable one-profile backup/restore, persisted daily child-time and startup-health decision cores, desktop configuration recovery, deterministic local GB/SNES discovery, and a desktop-tested Onion launch contract. There is no supported release, hardware-validated Onion execution, policy lifecycle, safe-boot integration, or deployable SD-card image.
 
 ## Tools
 
@@ -71,7 +71,7 @@ Never hot-swap a card while the device is powered or suspended. Back up the deve
 5. Exercise launch, suspend, GameSwitcher, return, and recovery on hardware.
 6. Capture exact commands, revisions, logs, and outcomes.
 
-The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting, restart-based startup-health decisions, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
+The Windows test action covers launcher navigation, profile persistence and migrations, atomic configuration recovery, repeated-start routing decisions, recovery restore/reset presentation and quarantine safety, interruption at every setup step, setup presentation behavior, image decoding/cropping/activation, Argon2id PIN storage, authenticated grants, controller PIN entry, parent authorization transitions, profile archive validation/export/restore and presentation, persisted daily-time accounting, deterministic local GB/SNES discovery, recent/favorite/all presentation, the typed Onion launch contract, and a headless SDL render traversal. The pinned ARM build is also implemented and checked in CI. Device deployment is manual and hardware acceptance remains outstanding.
 
 ## Configuration and secrets
 
@@ -83,6 +83,6 @@ Application files and user data must remain separable so an update cannot overwr
 
 Desktop preview should emulate the 640×480 display, action-level inputs, slow storage, offline operation, and representative data. It cannot verify Miyoo input devices, power behavior, framebuffer details, Onion process state, or GameSwitcher integration.
 
-The development build must eventually support a documented boot gesture that bypasses Sprout and starts stock Onion, plus recovery after repeated launcher failures. The blueprint's suggested button is not accepted until hardware testing confirms the startup path.
+The desktop launcher now recovers after repeated unfinished starts through validated last-known-good restore or launcher-only reset. The development build must still support a documented boot gesture that bypasses Sprout and starts stock Onion. The blueprint's suggested button is not accepted until hardware testing confirms the startup path.
 
 See [Onion integration research](../research/onion-integration.md) for current evidence and unknowns.

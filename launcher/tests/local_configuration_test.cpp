@@ -112,6 +112,12 @@ void snapshots_and_restores_last_known_good() {
   const auto second = store.save(first);
   expect(second.revision == 2, "second save should advance revision");
   expect(store.has_last_known_good(), "second save should snapshot revision one");
+  const auto active_before_preview = read_file(store.active_path());
+  const auto preview = store.load_last_known_good();
+  expect(preview.revision == 1 && preview.next_setup_step == SetupStep::Welcome,
+         "last-known-good preview should expose the validated prior revision");
+  expect(read_file(store.active_path()) == active_before_preview,
+         "previewing last-known-good should not change active configuration");
 
   overwrite_file(store.active_path(), "{broken json");
   expect_failure([&] { (void)store.load_active(); },
@@ -120,6 +126,52 @@ void snapshots_and_restores_last_known_good() {
   expect(restored.revision == 1, "rollback should restore the exact prior revision");
   expect(store.load_active().next_setup_step == SetupStep::Welcome,
          "rollback should reactivate the prior setup state");
+}
+
+void quarantines_active_configuration_without_overwrite() {
+  TemporaryDirectory directory;
+  ConfigurationStore store(directory.path());
+  auto first = store.save(LocalConfiguration{});
+  first.next_setup_step = SetupStep::Locale;
+  (void)store.save(first);
+  const auto last_known_good = read_file(store.last_known_good_path());
+  const std::string broken = "{broken configuration bytes";
+  overwrite_file(store.active_path(), broken);
+
+  const auto quarantined = store.quarantine_active(7);
+  expect(quarantined.has_value(), "active configuration should be quarantined");
+  expect(quarantined->filename() == "sprout.failed-startup-7.json",
+         "quarantine name should identify the startup attempt");
+  expect(read_file(*quarantined) == broken,
+         "quarantine should preserve active bytes exactly");
+  expect(!store.has_active(), "quarantine should remove the active path");
+  expect(read_file(store.last_known_good_path()) == last_known_good,
+         "quarantine should not change the last-known-good snapshot");
+
+  overwrite_file(store.active_path(), "new active bytes");
+  expect_failure([&] { (void)store.quarantine_active(7); },
+                 "an existing quarantine target should prevent overwrite");
+  expect(read_file(store.active_path()) == "new active bytes",
+         "a collision should leave the active configuration in place");
+}
+
+void rejects_irregular_recovery_paths_without_mutation() {
+  TemporaryDirectory directory;
+  ConfigurationStore store(directory.path());
+  (void)store.save(LocalConfiguration{});
+  const auto active = read_file(store.active_path());
+  overwrite_file(directory.path() / "recovery", "not a directory");
+  expect_failure([&] { (void)store.quarantine_active(3); },
+                 "irregular recovery path should be rejected");
+  expect(read_file(store.active_path()) == active,
+         "irregular recovery path should leave active bytes unchanged");
+}
+
+void quarantine_without_active_configuration_is_a_noop() {
+  TemporaryDirectory directory;
+  ConfigurationStore store(directory.path());
+  expect(!store.quarantine_active(1).has_value(),
+         "missing active configuration should not invent a quarantine file");
 }
 
 void rejects_stale_and_invalid_writes() {
@@ -180,6 +232,9 @@ int main() {
     saves_and_reloads_versioned_configuration();
     resolves_configuration_in_scope_order();
     snapshots_and_restores_last_known_good();
+    quarantines_active_configuration_without_overwrite();
+    rejects_irregular_recovery_paths_without_mutation();
+    quarantine_without_active_configuration_is_a_noop();
     rejects_stale_and_invalid_writes();
     rejects_newer_and_unknown_json_without_mutation();
     leaves_no_pending_file_after_activation();

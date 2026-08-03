@@ -450,4 +450,36 @@ void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup) {
   SDL_RenderPresent(renderer);
 }
 
+void render_recovery(SDL_Renderer* renderer,
+                     const RecoveryPresentation& recovery) {
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+
+  draw_centered_text(renderer, recovery.title(), kWidth / 2, 34, 3, kText);
+  draw_centered_text(renderer, recovery.description(), kWidth / 2, 76, 1,
+                     kMuted);
+
+  const auto choices = recovery.choices();
+  for (std::size_t index = 0; index < choices.size(); ++index) {
+    const SDL_Rect row{92, 126 + static_cast<int>(index) * 68, 456, 52};
+    fill_rect(renderer, row,
+              index == recovery.focus_index() ? kPanelFocused : kPanel);
+    if (index == recovery.focus_index()) {
+      outline_rect(renderer, row, 3, kFocus);
+      draw_text(renderer, ">", 112, row.y + 14, 2, kFocus);
+    }
+    draw_text(renderer, choices[index], 148, row.y + 14, 2, kText);
+  }
+
+  if (!recovery.notice().empty()) {
+    draw_centered_text(renderer,
+                       std::string(recovery.notice()).substr(0, 68), kWidth / 2,
+                       398, 1,
+                       recovery.notice_is_error() ? kFocus : kText);
+  }
+  draw_centered_text(renderer, "ARROWS MOVE   A SELECT   B BACK", kWidth / 2,
+                     450, 1, kMuted);
+  SDL_RenderPresent(renderer);
+}
+
 }  // namespace sprout::launcher

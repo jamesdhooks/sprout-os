@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A controller-accessible desktop recovery flow after repeated unfinished starts, with validated last-known-good preview/restore, cancel-first launcher reset, collision-safe active-configuration quarantine, and readiness only after ordinary UI renders.
 - A clock-independent launcher startup-health store that transactionally counts unfinished attempts, rejects stale readiness acknowledgements, and requests recovery after three consecutive failures.
 - A controller-accessible, parent-reauthenticated one-profile export and restore flow with versioned checksummed archives, conflict preflight, explicit unencrypted-portrait consent, and no secrets, usage, saves, or library activity.
 - A profile-scoped daily-time-policy core with monotonic active accounting, persisted usage and one-time warnings, bounded restart recovery, rollback checks, and explicit launch-block/save-and-exit decisions.
