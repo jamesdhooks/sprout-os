@@ -18,24 +18,26 @@ Sprout is an open-source, family-oriented gaming platform for retro handhelds an
 | Component | Responsibility | Status |
 | --- | --- | --- |
 | SproutOS | Family launcher, profiles, policy, library, Onion integration, and recovery | First committed milestone |
-| Sprout Runtime | Portable native-game execution | Planned after the launcher MVP |
-| Sprout Arcade | Native-game catalogue and package distribution | Planned later |
+| Sprout Runtime | Portable native-game execution | Windows preview in progress |
+| Sprout Arcade | Native-game catalogue and package distribution | Local Windows game preview in progress; distribution planned later |
 | Sprout Studio | Game development and validation tools | Planned later |
 | Sprout Server | Optional sync, family management, and recommendations | Planned later |
 | Sprout SDK | Schemas, package contracts, and developer tooling | Planned as real consumers emerge |
 
-The initial milestone is the **Sprout Family Launcher MVP**: a development-card vertical slice from profile selection through Onion launch, GameSwitcher return, time accounting, parent control, profile portability, and safe recovery. A pinned ARM command-line diagnostic plus persisted daily-time, profile-archive, startup-health, and desktop configuration-recovery paths now build, but device execution, lifecycle enforcement, safe boot, and the device renderer remain unverified. See the [roadmap](docs/roadmap.md).
+The initial **Sprout Family Launcher MVP** remains blocked on its development-card evidence: Onion launch, GameSwitcher return, lifecycle enforcement, safe boot, and device rendering are unverified. Work is proceeding independently on a bounded **Sprout Arcade Windows Preview** consisting of a deterministic native runtime, one local packaged microgame, launcher handoff, and automated Windows evidence. Catalogue hosting, downloads, signing infrastructure, and device support remain deferred. See the [roadmap](docs/roadmap.md).
 
 ## Repository layout
 
 ```text
 launcher/   Portable launcher state and the SDL2 desktop preview
+runtime/    Native-game runtime (created by the Windows preview milestone)
+games/      Concrete local Sprout Arcade packages used by the runtime
 docs/       Architecture, specifications, research, and roadmap
 tools/      Focused development entry points
 .github/    Contribution templates
 ```
 
-Runtime, server, package, and connector directories remain intentionally absent until a concrete milestone needs them.
+Server and connector directories remain intentionally absent until a concrete milestone needs them. Runtime and game-package structure is added only for the Windows preview's concrete game consumer.
 
 ## Development
 
@@ -46,6 +48,7 @@ On Windows with Visual Studio C++ tools:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action test
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run-arcade
 ```
 
 The long-form product direction is preserved in the [platform blueprint](docs/reference/Sprout_Platform_Design_and_Technical_Blueprint.md). The concise documents under `docs/` define the navigable working foundation.

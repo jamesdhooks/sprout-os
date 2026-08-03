@@ -8,6 +8,7 @@ find_package(Threads REQUIRED)
 
 option(SPROUT_BUILD_DESKTOP "Build the SDL desktop launcher preview" ON)
 option(SPROUT_BUILD_ONION "Build Onion target diagnostics" OFF)
+option(SPROUT_BUILD_RUNTIME "Build the native-game runtime" ${SPROUT_BUILD_DESKTOP})
 
 FetchContent_Declare(
   SQLite3
@@ -119,6 +120,52 @@ if(SPROUT_BUILD_DESKTOP)
   )
   FetchContent_MakeAvailable(SDL2_image)
   target_compile_definitions(SDL2_image PRIVATE STBI_MAX_DIMENSIONS=8192)
+endif()
+
+if(SPROUT_BUILD_RUNTIME)
+  FetchContent_Declare(
+    Lua
+    URL https://www.lua.org/ftp/lua-5.4.8.tar.gz
+    URL_HASH SHA256=4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  )
+  FetchContent_MakeAvailable(Lua)
+
+  add_library(
+    sprout_lua STATIC
+    "${lua_SOURCE_DIR}/src/lapi.c"
+    "${lua_SOURCE_DIR}/src/lauxlib.c"
+    "${lua_SOURCE_DIR}/src/lbaselib.c"
+    "${lua_SOURCE_DIR}/src/lcode.c"
+    "${lua_SOURCE_DIR}/src/lctype.c"
+    "${lua_SOURCE_DIR}/src/ldebug.c"
+    "${lua_SOURCE_DIR}/src/ldo.c"
+    "${lua_SOURCE_DIR}/src/ldump.c"
+    "${lua_SOURCE_DIR}/src/lfunc.c"
+    "${lua_SOURCE_DIR}/src/lgc.c"
+    "${lua_SOURCE_DIR}/src/llex.c"
+    "${lua_SOURCE_DIR}/src/lmathlib.c"
+    "${lua_SOURCE_DIR}/src/lmem.c"
+    "${lua_SOURCE_DIR}/src/lobject.c"
+    "${lua_SOURCE_DIR}/src/lopcodes.c"
+    "${lua_SOURCE_DIR}/src/lparser.c"
+    "${lua_SOURCE_DIR}/src/lstate.c"
+    "${lua_SOURCE_DIR}/src/lstring.c"
+    "${lua_SOURCE_DIR}/src/lstrlib.c"
+    "${lua_SOURCE_DIR}/src/ltable.c"
+    "${lua_SOURCE_DIR}/src/ltablib.c"
+    "${lua_SOURCE_DIR}/src/ltm.c"
+    "${lua_SOURCE_DIR}/src/lundump.c"
+    "${lua_SOURCE_DIR}/src/lutf8lib.c"
+    "${lua_SOURCE_DIR}/src/lvm.c"
+    "${lua_SOURCE_DIR}/src/lzio.c"
+  )
+  target_include_directories(sprout_lua PUBLIC "${lua_SOURCE_DIR}/src")
+  if(UNIX)
+    target_link_libraries(sprout_lua PRIVATE ${CMAKE_DL_LIBS} m)
+  endif()
+
+  add_subdirectory(runtime)
 endif()
 
 add_subdirectory(launcher)

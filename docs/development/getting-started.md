@@ -29,6 +29,14 @@ Run the interactive 640×480 preview:
 powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run
 ```
 
+Run the first local Arcade package through the Windows runtime with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run-arcade
+```
+
+This starts the checked-in `games/snake` package with isolated storage under `out/arcade-preview-data`. Arrow keys or WASD control direction, `Z`/Enter or controller A restarts after a round, and Escape or controller Back exits. This is Windows runtime evidence only; it does not validate the Miyoo renderer, input driver, performance, or package installation.
+
 By default, recent, favorite, and all-game views use sanitized in-memory fixtures. To inspect filenames on an explicitly selected development-card or fixture root without executing games:
 
 ```powershell

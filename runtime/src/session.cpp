@@ -1,0 +1,426 @@
+#include "sprout/runtime/session.hpp"
+
+extern "C" {
+#include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+}
+
+#include <yyjson.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <limits>
+#include <map>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
+namespace sprout::runtime {
+namespace {
+
+bool has_capability(const PackageManifest& package, std::string_view capability) {
+  return std::find(package.capabilities.begin(), package.capabilities.end(),
+                   capability) != package.capabilities.end();
+}
+
+bool valid_storage_key(std::string_view key) {
+  return !key.empty() && key.size() <= 64 &&
+         std::all_of(key.begin(), key.end(), [](unsigned char character) {
+           return std::isalnum(character) != 0 || character == '.' ||
+                  character == '-' || character == '_';
+         });
+}
+
+bool valid_event_type(std::string_view type) {
+  return type == "AchievementUnlocked" || type == "LevelCompleted";
+}
+
+void replace_file(const std::filesystem::path& pending,
+                  const std::filesystem::path& destination) {
+#ifdef _WIN32
+  if (!MoveFileExW(pending.c_str(), destination.c_str(),
+                   MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+    throw std::runtime_error("Could not activate native-game storage");
+  }
+#else
+  if (std::rename(pending.c_str(), destination.c_str()) != 0) {
+    throw std::runtime_error("Could not activate native-game storage");
+  }
+#endif
+}
+
+}  // namespace
+
+struct Session::Impl {
+  PackageManifest package;
+  std::filesystem::path storage_path;
+  std::uint64_t random_state;
+  lua_State* lua{};
+  bool started{};
+  bool stopped{};
+  std::map<std::string, std::int64_t> storage;
+  std::vector<DrawRect> drawing;
+  std::vector<RuntimeEvent> events;
+
+  Impl(PackageManifest loaded_package, std::filesystem::path storage_root,
+       std::uint64_t seed)
+      : package(std::move(loaded_package)),
+        storage_path(std::move(storage_root) / package.id / "storage.json"),
+        random_state(seed == 0 ? 0x9e3779b97f4a7c15ULL : seed),
+        lua(luaL_newstate()) {
+    if (lua == nullptr) {
+      throw std::runtime_error("Could not allocate native-game interpreter");
+    }
+    load_storage();
+  }
+
+  ~Impl() {
+    if (lua != nullptr) {
+      lua_close(lua);
+    }
+  }
+
+  static Impl& self(lua_State* state) {
+    return *static_cast<Impl*>(lua_touserdata(state, lua_upvalueindex(1)));
+  }
+
+  static int random(lua_State* state) {
+    auto& runtime = self(state);
+    const auto maximum = luaL_checkinteger(state, 1);
+    if (maximum <= 0) {
+      return luaL_error(state, "random maximum should be positive");
+    }
+    std::uint64_t value = runtime.random_state;
+    value ^= value >> 12U;
+    value ^= value << 25U;
+    value ^= value >> 27U;
+    runtime.random_state = value;
+    value *= 2685821657736338717ULL;
+    lua_pushinteger(state,
+                    static_cast<lua_Integer>(value %
+                                             static_cast<std::uint64_t>(maximum)) +
+                        1);
+    return 1;
+  }
+
+  static int rect(lua_State* state) {
+    auto& runtime = self(state);
+    DrawRect rectangle{
+        .x = static_cast<int>(luaL_checkinteger(state, 1)),
+        .y = static_cast<int>(luaL_checkinteger(state, 2)),
+        .width = static_cast<int>(luaL_checkinteger(state, 3)),
+        .height = static_cast<int>(luaL_checkinteger(state, 4)),
+        .red = static_cast<std::uint8_t>(luaL_checkinteger(state, 5)),
+        .green = static_cast<std::uint8_t>(luaL_checkinteger(state, 6)),
+        .blue = static_cast<std::uint8_t>(luaL_checkinteger(state, 7)),
+        .alpha = static_cast<std::uint8_t>(luaL_optinteger(state, 8, 255)),
+    };
+    const auto valid_color = [state](int index) {
+      const auto component = lua_tointeger(state, index);
+      return component >= 0 && component <= 255;
+    };
+    if (rectangle.x < 0 || rectangle.y < 0 || rectangle.width <= 0 ||
+        rectangle.height <= 0 ||
+        rectangle.x + rectangle.width > runtime.package.logical_width ||
+        rectangle.y + rectangle.height > runtime.package.logical_height ||
+        !valid_color(5) || !valid_color(6) || !valid_color(7) ||
+        (lua_gettop(state) >= 8 && !valid_color(8))) {
+      return luaL_error(state, "rectangle is outside the logical surface");
+    }
+    runtime.drawing.push_back(rectangle);
+    return 0;
+  }
+
+  static int emit(lua_State* state) {
+    auto& runtime = self(state);
+    if (!has_capability(runtime.package, "events")) {
+      return luaL_error(state, "package did not declare the events capability");
+    }
+    std::size_t type_length = 0;
+    std::size_t value_length = 0;
+    const char* type_text = luaL_checklstring(state, 1, &type_length);
+    const char* value_text = luaL_optlstring(state, 2, "", &value_length);
+    const std::string type(type_text, type_length);
+    const std::string value(value_text, value_length);
+    if (!valid_event_type(type) || value.size() > 256) {
+      return luaL_error(state, "event type or value is invalid");
+    }
+    runtime.events.push_back({type, value});
+    return 0;
+  }
+
+  static int storage_get(lua_State* state) {
+    auto& runtime = self(state);
+    if (!has_capability(runtime.package, "local-storage")) {
+      return luaL_error(state,
+                        "package did not declare the local-storage capability");
+    }
+    std::size_t key_length = 0;
+    const char* key_text = luaL_checklstring(state, 1, &key_length);
+    const std::string key(key_text, key_length);
+    const auto fallback = luaL_optinteger(state, 2, 0);
+    if (!valid_storage_key(key)) {
+      return luaL_error(state, "storage key is invalid");
+    }
+    const auto found = runtime.storage.find(key);
+    lua_pushinteger(state, found == runtime.storage.end()
+                               ? fallback
+                               : static_cast<lua_Integer>(found->second));
+    return 1;
+  }
+
+  static int storage_set(lua_State* state) {
+    auto& runtime = self(state);
+    if (!has_capability(runtime.package, "local-storage")) {
+      return luaL_error(state,
+                        "package did not declare the local-storage capability");
+    }
+    std::size_t key_length = 0;
+    const char* key_text = luaL_checklstring(state, 1, &key_length);
+    const std::string key(key_text, key_length);
+    const auto value = luaL_checkinteger(state, 2);
+    if (!valid_storage_key(key)) {
+      return luaL_error(state, "storage key is invalid");
+    }
+    runtime.storage[key] = static_cast<std::int64_t>(value);
+    try {
+      runtime.save_storage();
+    } catch (const std::exception& error) {
+      return luaL_error(state, "%s", error.what());
+    }
+    return 0;
+  }
+
+  void open_library(const char* name, lua_CFunction function) {
+    luaL_requiref(lua, name, function, 1);
+    lua_pop(lua, 1);
+  }
+
+  void install_api() {
+    open_library(LUA_GNAME, luaopen_base);
+    open_library(LUA_TABLIBNAME, luaopen_table);
+    open_library(LUA_STRLIBNAME, luaopen_string);
+    open_library(LUA_MATHLIBNAME, luaopen_math);
+    open_library(LUA_UTF8LIBNAME, luaopen_utf8);
+
+    for (const char* name : {"dofile", "load", "loadfile", "collectgarbage"}) {
+      lua_pushnil(lua);
+      lua_setglobal(lua, name);
+    }
+    lua_getglobal(lua, LUA_MATHLIBNAME);
+    lua_pushnil(lua);
+    lua_setfield(lua, -2, "random");
+    lua_pushnil(lua);
+    lua_setfield(lua, -2, "randomseed");
+    lua_pop(lua, 1);
+
+    lua_newtable(lua);
+    const auto add = [this](const char* name, lua_CFunction function) {
+      lua_pushlightuserdata(lua, this);
+      lua_pushcclosure(lua, function, 1);
+      lua_setfield(lua, -2, name);
+    };
+    add("random", random);
+    add("rect", rect);
+    add("emit", emit);
+    add("storage_get", storage_get);
+    add("storage_set", storage_set);
+    lua_setglobal(lua, "sprout");
+  }
+
+  void call(const char* name, int arguments, int results = 0) const {
+    const int function_index = lua_gettop(lua) - arguments;
+    lua_getglobal(lua, name);
+    if (!lua_isfunction(lua, -1)) {
+      lua_pop(lua, 1);
+      lua_settop(lua, function_index);
+      throw std::runtime_error(std::string("Game is missing lifecycle function: ") +
+                               name);
+    }
+    lua_insert(lua, function_index + 1);
+    lua_sethook(lua, instruction_limit, LUA_MASKCOUNT, 100000);
+    const int result = lua_pcall(lua, arguments, results, 0);
+    lua_sethook(lua, nullptr, 0, 0);
+    if (result != LUA_OK) {
+      const std::string message = lua_tostring(lua, -1);
+      lua_pop(lua, 1);
+      throw std::runtime_error(std::string("Game ") + name + " failed: " + message);
+    }
+  }
+
+  static void instruction_limit(lua_State* state, lua_Debug*) {
+    luaL_error(state, "lifecycle instruction limit exceeded");
+  }
+
+  void load_storage() {
+    std::error_code error;
+    if (!std::filesystem::exists(storage_path, error)) {
+      return;
+    }
+    std::ifstream stream(storage_path, std::ios::binary);
+    if (!stream) {
+      throw std::runtime_error("Could not open native-game storage");
+    }
+    const std::string encoded{std::istreambuf_iterator<char>(stream),
+                              std::istreambuf_iterator<char>()};
+    if (encoded.size() > 64U * 1024U) {
+      throw std::runtime_error("Native-game storage is too large");
+    }
+    yyjson_doc* document = yyjson_read(encoded.data(), encoded.size(), 0);
+    if (document == nullptr) {
+      throw std::runtime_error("Native-game storage is invalid JSON");
+    }
+    yyjson_val* root = yyjson_doc_get_root(document);
+    if (!yyjson_is_obj(root)) {
+      yyjson_doc_free(document);
+      throw std::runtime_error("Native-game storage should be an object");
+    }
+    yyjson_obj_iter iterator = yyjson_obj_iter_with(root);
+    while (yyjson_val* key = yyjson_obj_iter_next(&iterator)) {
+      yyjson_val* value = yyjson_obj_iter_get_val(key);
+      const std::string name(yyjson_get_str(key), yyjson_get_len(key));
+      if (!valid_storage_key(name) || !yyjson_is_int(value)) {
+        yyjson_doc_free(document);
+        throw std::runtime_error("Native-game storage contains an invalid entry");
+      }
+      storage.emplace(name, yyjson_get_sint(value));
+    }
+    yyjson_doc_free(document);
+  }
+
+  void save_storage() const {
+    std::filesystem::create_directories(storage_path.parent_path());
+    yyjson_mut_doc* document = yyjson_mut_doc_new(nullptr);
+    yyjson_mut_val* root = yyjson_mut_obj(document);
+    yyjson_mut_doc_set_root(document, root);
+    for (const auto& [key, value] : storage) {
+      yyjson_mut_obj_add_val(document, root, key.c_str(),
+                             yyjson_mut_sint(document, value));
+    }
+    std::size_t length = 0;
+    char* encoded = yyjson_mut_write(document, YYJSON_WRITE_PRETTY, &length);
+    yyjson_mut_doc_free(document);
+    if (encoded == nullptr) {
+      throw std::runtime_error("Could not encode native-game storage");
+    }
+    const auto pending = storage_path.string() + ".pending";
+    std::ofstream stream(pending, std::ios::binary | std::ios::trunc);
+    stream.write(encoded, static_cast<std::streamsize>(length));
+    stream.put('\n');
+    std::free(encoded);
+    stream.flush();
+    if (!stream) {
+      throw std::runtime_error("Could not write native-game storage");
+    }
+    stream.close();
+    replace_file(pending, storage_path);
+  }
+};
+
+Session::Session(PackageManifest package, std::filesystem::path storage_root,
+                 std::uint64_t seed)
+    : impl_(std::make_unique<Impl>(std::move(package), std::move(storage_root),
+                                   seed)) {}
+
+Session::~Session() = default;
+Session::Session(Session&&) noexcept = default;
+Session& Session::operator=(Session&&) noexcept = default;
+
+void Session::start() {
+  if (impl_->started) {
+    throw std::runtime_error("Native-game session is already started");
+  }
+  impl_->install_api();
+  if (luaL_loadfilex(impl_->lua, impl_->package.entrypoint.string().c_str(), "t") !=
+      LUA_OK) {
+    const std::string message = lua_tostring(impl_->lua, -1);
+    lua_pop(impl_->lua, 1);
+    throw std::runtime_error("Could not load native game: " + message);
+  }
+  lua_sethook(impl_->lua, Impl::instruction_limit, LUA_MASKCOUNT, 100000);
+  const int load_result = lua_pcall(impl_->lua, 0, 0, 0);
+  lua_sethook(impl_->lua, nullptr, 0, 0);
+  if (load_result != LUA_OK) {
+    const std::string message = lua_tostring(impl_->lua, -1);
+    lua_pop(impl_->lua, 1);
+    throw std::runtime_error("Could not load native game: " + message);
+  }
+  impl_->call("init", 0);
+  impl_->started = true;
+  impl_->events.insert(impl_->events.begin(), {"GameStarted", "fresh"});
+}
+
+void Session::step(const Actions& actions) {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  if (impl_->stopped) {
+    throw std::runtime_error("Native-game session is stopped");
+  }
+  lua_newtable(impl_->lua);
+  const auto add = [this](const char* name, bool pressed) {
+    lua_pushboolean(impl_->lua, pressed);
+    lua_setfield(impl_->lua, -2, name);
+  };
+  add("up", actions.up);
+  add("down", actions.down);
+  add("left", actions.left);
+  add("right", actions.right);
+  add("primary", actions.primary);
+  add("secondary", actions.secondary);
+  add("start", actions.start);
+  add("back", actions.back);
+  impl_->call("update", 1);
+}
+
+void Session::stop() {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  if (!impl_->stopped) {
+    impl_->events.push_back({"GameExited", "normal"});
+    impl_->stopped = true;
+  }
+}
+
+const std::vector<DrawRect>& Session::render() {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  impl_->drawing.clear();
+  impl_->call("render", 0);
+  return impl_->drawing;
+}
+
+std::vector<RuntimeEvent> Session::drain_events() {
+  std::vector<RuntimeEvent> result;
+  result.swap(impl_->events);
+  return result;
+}
+
+std::string Session::snapshot() const {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  impl_->call("snapshot", 0, 1);
+  if (!lua_isstring(impl_->lua, -1)) {
+    lua_pop(impl_->lua, 1);
+    throw std::runtime_error("Game snapshot should return text");
+  }
+  const std::string result = lua_tostring(impl_->lua, -1);
+  lua_pop(impl_->lua, 1);
+  return result;
+}
+
+const PackageManifest& Session::package() const noexcept { return impl_->package; }
+
+}  // namespace sprout::runtime

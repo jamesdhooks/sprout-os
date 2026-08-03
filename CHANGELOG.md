@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A committed Windows-only Sprout Arcade preview milestone that keeps physical Onion acceptance open while bounding native runtime work to one local packaged game and its verified launcher lifecycle.
+- A Windows-native Sprout Runtime preview with strict local manifests, sandboxed text Lua, deterministic fixed-step sessions, action input, rectangle rendering, structured events, atomic package storage, and lifecycle instruction limits.
+- Sprout Snake as the first local Arcade package, with deterministic D-pad play, immediate replay, best-score storage, original code-only presentation, and automated runtime coverage.
 - A pinned Onion artifact audit that records SHA-256, byte size, ARM EABI5 format, interpreter, and reviewed dynamic dependencies and fails before deployment on incompatible output.
 - A deterministic host integration journey and release-blocking evidence checklist spanning resumed setup, profiles, parent access, local GB/SNES selections, time expiry, profile portability, and repeated-start recovery while preserving hardware-only gates.
 - A controller-accessible desktop recovery flow after repeated unfinished starts, with validated last-known-good preview/restore, cancel-first launcher reset, collision-safe active-configuration quarantine, and readiness only after ordinary UI renders.
