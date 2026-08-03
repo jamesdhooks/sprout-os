@@ -7,7 +7,7 @@
 namespace sprout::launcher {
 namespace {
 
-constexpr std::array<BuiltInAvatar, 32> kAvatars{{
+constexpr std::array<BuiltInAvatar, 64> kAvatars{{
     {"rocket-ship", "ROCKET SHIP"},
     {"sunflower", "SUNFLOWER"},
     {"unicorn", "UNICORN"},
@@ -40,6 +40,38 @@ constexpr std::array<BuiltInAvatar, 32> kAvatars{{
     {"astronaut-cat", "ASTRONAUT CAT"},
     {"crystal-geode", "CRYSTAL GEODE"},
     {"smiling-planet", "SMILING PLANET"},
+    {"rainbow-kite", "RAINBOW KITE"},
+    {"capybara", "CAPYBARA"},
+    {"treasure-chest", "TREASURE CHEST"},
+    {"jellyfish", "JELLYFISH"},
+    {"griffin", "GRIFFIN"},
+    {"strawberry", "STRAWBERRY"},
+    {"steam-train", "STEAM TRAIN"},
+    {"otter", "OTTER"},
+    {"narwhal", "NARWHAL"},
+    {"ukulele", "UKULELE"},
+    {"treehouse", "TREEHOUSE"},
+    {"raccoon", "RACCOON"},
+    {"sailboat", "SAILBOAT"},
+    {"alpaca", "ALPACA"},
+    {"paint-palette", "PAINT PALETTE"},
+    {"frog", "FROG"},
+    {"excavator", "EXCAVATOR"},
+    {"hedgehog", "HEDGEHOG"},
+    {"rainbow-cloud", "RAINBOW CLOUD"},
+    {"parrot", "PARROT"},
+    {"treasure-map", "TREASURE MAP"},
+    {"blue-whale", "BLUE WHALE"},
+    {"roller-skate", "ROLLER SKATE"},
+    {"spotted-deer", "SPOTTED DEER"},
+    {"wizard-hat", "WIZARD HAT"},
+    {"hamster", "HAMSTER"},
+    {"propeller-plane", "PROPELLER PLANE"},
+    {"seahorse", "SEAHORSE"},
+    {"drum", "DRUM"},
+    {"sloth", "SLOTH"},
+    {"telescope", "TELESCOPE"},
+    {"smiling-mountain", "SMILING MOUNTAIN"},
 }};
 
 bool safe_id(std::string_view id) noexcept {
