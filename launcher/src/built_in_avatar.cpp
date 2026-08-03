@@ -1,4 +1,5 @@
 #include "sprout/launcher/built_in_avatar.hpp"
+#include "sprout/launcher/string_compat.hpp"
 
 #include <array>
 #include <stdexcept>
@@ -59,7 +60,7 @@ ReadOnlyView<BuiltInAvatar> built_in_avatars() noexcept { return kAvatars; }
 const BuiltInAvatar* find_built_in_avatar(
     std::string_view avatar_ref) noexcept {
   constexpr std::string_view prefix = "builtin:";
-  const auto id = avatar_ref.starts_with(prefix)
+  const auto id = starts_with(avatar_ref, prefix)
                       ? avatar_ref.substr(prefix.size())
                       : avatar_ref;
   for (const auto& avatar : kAvatars) {

@@ -7,7 +7,7 @@
 namespace sprout::launcher {
 
 std::vector<std::uint8_t> smooth_portrait_outline(
-    std::span<const std::uint8_t> source_alpha, int width, int height,
+    ReadOnlyView<std::uint8_t> source_alpha, int width, int height,
     float radius) {
   if (width <= 0 || height <= 0 ||
       source_alpha.size() != static_cast<std::size_t>(width * height)) {
