@@ -4,6 +4,8 @@ Status: implemented Windows preview contract
 
 This specification records the local package boundary exercised by Sprout Snake. It is not the future signed `.sprout` distribution format.
 
+The reusable engine direction and planned lifecycle evolution are documented under [Sprout Runtime](../runtime/README.md). Those documents distinguish current v1 behavior from proposed versioned slices; this file remains authoritative for implemented v1 packages.
+
 ## Package directory
 
 ```text

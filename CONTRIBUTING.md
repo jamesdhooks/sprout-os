@@ -45,7 +45,7 @@ Update user or developer documentation whenever behavior, configuration, migrati
 
 ## Packages and future connectors
 
-The Windows preview accepts only checked-in local packages following [Runtime Package v1](docs/specs/runtime-package-v1.md). A game contribution currently requires a milestone issue, original or compatibly licensed content, deterministic host tests, controller-only playability, declared capabilities, and an explicit license. Do not present a local preview directory as a signed or safely installable third-party package.
+The Windows preview accepts only checked-in local packages following [Runtime Package v1](docs/specs/runtime-package-v1.md). A game contribution currently requires a milestone issue, original or compatibly licensed content, deterministic host tests, controller-only playability, declared capabilities, and an explicit license. Follow the [Arcade catalogue](docs/arcade/catalogue.md), [runtime engine ownership](docs/runtime/engine-systems.md), and [asset provenance](docs/arcade/assets.md): reuse established engine services, keep game-specific rules in the package/tool, and do not copy private fonts, storage codecs, host wrappers, or lifecycle frameworks into a game. Do not present a local preview directory as a signed or safely installable third-party package.
 
 Remote distribution and external-service connectors are not implemented. Future packages must add content and integrity metadata when those accepted specifications exist. Future connectors must declare provider-neutral capabilities, configuration requirements, credential references, health behavior, offline behavior, and per-profile permissions.
 
