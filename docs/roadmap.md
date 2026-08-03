@@ -14,6 +14,8 @@ The launcher MVP includes a splash; resumable offline setup; one parent and one 
 
 Hardware behavior must be demonstrated on a development card. Desktop preview alone does not complete the launcher milestone. Its remaining device issues are deliberately deferred until suitable Onion hardware and a development card are available; they remain open and are not treated as complete.
 
+The exact pre-Arcade stopping point and hardware resume procedure are recorded in [Launcher MVP Hardware Halt](development/launcher-mvp-halt.md).
+
 The Windows Arcade preview is a separate evidence track. It now establishes contracts exercised by a real local package and game: deterministic stepping, action input, rendering, profile-isolated local storage, structured events, strict package discovery, audience-based child visibility, launcher handoff, and clean process return. Live time-limit enforcement during an external game remains open. The milestone does not include a remote catalogue, downloads, signing infrastructure, publishing, arbitrary third-party code, or device compatibility claims.
 
 ## Planned later
