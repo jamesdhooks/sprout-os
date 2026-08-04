@@ -15,9 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   rather than its tail-inclusive image bounds, uses smoothly interpolated held-
   direction movement, scales actors from their visible artwork bounds, renders
   walls above the mouse's overlapping tail, sizes its centered level tab to the
-  active grid cell, smoothly resamples its high-resolution atlas, persists the
-  current level, and advances automatically after a short, uncluttered
-  "Cheese!" celebration.
+  active grid cell and aligns it flush with the top edge, smoothly resamples its
+  high-resolution atlas, persists the current level, and advances automatically
+  after a short, uncluttered "Cheese!" celebration.
 
 ### Added
 

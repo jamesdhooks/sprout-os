@@ -222,7 +222,7 @@ int main() {
           "Mouse Maze did not submit its scaled tilemap and animated sprite");
     const auto& initial_cheese_sprite = initial_mouse_drawing[16].sprite;
     check(initial_mouse_drawing[1].sprite.x == 47 &&
-              initial_mouse_drawing[1].sprite.y == 52 &&
+              initial_mouse_drawing[1].sprite.y == 45 &&
               initial_mouse_drawing[1].sprite.width == 45 &&
               initial_mouse_drawing[1].sprite.height == 45,
           "Mouse Maze level-one board did not retain one cell of padding");
@@ -247,7 +247,7 @@ int main() {
     }
     const auto& initial_level_badge =
         initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle;
-    check(initial_level_badge.x == 115 && initial_level_badge.y == 7 &&
+    check(initial_level_badge.x == 115 && initial_level_badge.y == 0 &&
               initial_level_badge.width == 90 &&
               initial_level_badge.height == 45,
           "Mouse Maze level badge did not fill and center in the top cell");
@@ -273,7 +273,7 @@ int main() {
           "Mouse Maze did not advance automatically after its celebration");
     const auto second_maze_drawing = mouse.render();
     check(second_maze_drawing[1].sprite.x == 41 &&
-              second_maze_drawing[1].sprite.y == 35 &&
+              second_maze_drawing[1].sprite.y == 34 &&
               second_maze_drawing[1].sprite.width == 34 &&
               second_maze_drawing[1].sprite.height == 34,
           "Mouse Maze level-two board did not enter its next size band");
@@ -287,7 +287,7 @@ int main() {
           "Mouse Maze actors did not follow the active level scale");
     const auto& second_level_badge =
         second_maze_drawing[second_maze_drawing.size() - 2].rectangle;
-    check(second_level_badge.x == 126 && second_level_badge.y == 1 &&
+    check(second_level_badge.x == 126 && second_level_badge.y == 0 &&
               second_level_badge.width == 68 &&
               second_level_badge.height == 34,
           "Mouse Maze level badge did not follow its density band");

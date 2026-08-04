@@ -38,6 +38,11 @@ floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
 the mouse. Both actors visibly grow with early-level tiles and shrink with later
 density bands.
 
+The padded frame is horizontally centered and top-aligned. Because square
+cells and full-map visibility are preserved, a band's padded aspect ratio may
+leave a narrow remainder on one axis; vertical remainder is placed below the
+maze rather than above the level tab. Cells are never stretched to conceal it.
+
 | Levels | Maze grid | Logical tile | Padded frame |
 | --- | --- | --- | --- |
 | 1 | 5x3 | 45px | 315x225 |

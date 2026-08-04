@@ -55,7 +55,7 @@ local function apply_level_band(next_level)
   tile_size = math.max(8, math.floor(math.min(
       screen_width / framed_columns, screen_height / framed_rows)))
   frame_x = math.floor((screen_width - framed_columns * tile_size) / 2)
-  frame_y = math.floor((screen_height - framed_rows * tile_size) / 2)
+  frame_y = 0
   origin_x = frame_x + padding_cells * tile_size
   origin_y = frame_y + padding_cells * tile_size
   character_scale =
