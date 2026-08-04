@@ -27,13 +27,11 @@ from the selected start, so each level retains a long traversable route. Each
 band maps its odd-dimension grid plus a one-cell perimeter directly onto the
 entire 320x240 play area. X and Y cell extents are derived independently, so
 the perimeter is exactly one grid cell on every side without residual gutters.
-That perimeter uses a quiet forest-ground color, separates playable tiles from
-the display edge, and holds a centered level tab one active cell tall while the
-cell remains readable. The tab scales with each density band, retains minimum
-readable width, expands for multi-digit level numbers, and uses a 12-pixel
-height floor in the final ultra-dense bands. Early levels therefore use very
-few large, richly resampled cells; later levels add cells until reaching the
-densest grid.
+That perimeter uses a quiet forest-ground color and separates playable tiles
+from the display edge. A fixed-size indicator at the top left shows only the
+numeric level and remains independent of maze density. Early levels therefore
+use very few large, richly resampled cells; later levels add cells until
+reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
 than its tail-inclusive extent or transparent 256px atlas cell. Its complete

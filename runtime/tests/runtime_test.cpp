@@ -296,10 +296,10 @@ int main() {
     }
     const auto& initial_level_badge =
         initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle;
-    check(initial_level_badge.x == 114 && initial_level_badge.y == 0 &&
-              initial_level_badge.width == 91 &&
-              initial_level_badge.height == 48,
-          "Mouse Maze level badge did not fill and center in the top cell");
+    check(initial_level_badge.x == 0 && initial_level_badge.y == 0 &&
+              initial_level_badge.width == 44 &&
+              initial_level_badge.height == 18,
+          "Mouse Maze level badge was not fixed at the top left");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
@@ -337,10 +337,10 @@ int main() {
           "Mouse Maze actors did not follow the active level scale");
     const auto& second_level_badge =
         second_maze_drawing[second_maze_drawing.size() - 2].rectangle;
-    check(second_level_badge.x == 124 && second_level_badge.y == 0 &&
-              second_level_badge.width == 71 &&
-              second_level_badge.height == 34,
-          "Mouse Maze level badge did not follow its density band");
+    check(second_level_badge.x == 0 && second_level_badge.y == 0 &&
+              second_level_badge.width == 44 &&
+              second_level_badge.height == 18,
+          "Mouse Maze level badge changed with its density band");
     check(second_maze_drawing.size() > initial_mouse_drawing.size(),
           "Mouse Maze next level did not increase its layered board density");
 
@@ -378,10 +378,10 @@ int main() {
         level_thousand_drawing[level_thousand_drawing.size() - 2].rectangle;
     const auto& level_thousand_label =
         level_thousand_drawing.back().label;
-    check(level_thousand_badge.x == 122 && level_thousand_badge.y == 0 &&
-              level_thousand_badge.width == 76 &&
-              level_thousand_badge.height == 12 &&
-              level_thousand_label.text == "Level 1000" &&
+    check(level_thousand_badge.x == 0 && level_thousand_badge.y == 0 &&
+              level_thousand_badge.width == 44 &&
+              level_thousand_badge.height == 18 &&
+              level_thousand_label.text == "1000" &&
               level_thousand_label.x >= level_thousand_badge.x &&
               level_thousand_label.x + level_thousand_label.width <=
                   level_thousand_badge.x + level_thousand_badge.width,
