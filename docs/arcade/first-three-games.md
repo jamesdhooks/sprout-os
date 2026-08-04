@@ -8,7 +8,8 @@ These games are the committed consumers for the reusable engine foundation. “C
 
 - The whole maze remains visible and fills the 320×240 logical canvas, apart
   from narrow symmetric side gutters required by the odd-cell maze grid.
-- D-pad moves the mouse one tile per press; held input repeats at a controlled rate.
+- D-pad moves the mouse one tile per press; held input interpolates continuously
+  between tile centers at a fixed cadence without an initial repeat pause.
 - Reaching the cheese completes the level with a short readable celebration,
   then advances automatically. Primary action may shorten—but not eliminate—the
   celebration; secondary action asks the host to return.

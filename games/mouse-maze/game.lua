@@ -3,7 +3,7 @@ local origin_x, origin_y = 8, 0
 local character_scale = 5 / 32
 local object_scale = 3 / 32
 local celebration_duration = 90
-local repeat_delay, repeat_interval = 14, 5
+local movement_duration = 6
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 
 local grid = {}
@@ -16,8 +16,9 @@ local goal_x, goal_y = 1, 1
 local direction = "down"
 local complete = false
 local completion_ticks = 0
-local held_direction = nil
-local held_ticks = 0
+local move_from_x, move_from_y = 1, 1
+local movement_tick = movement_duration
+local queued_direction = nil
 local previous = {}
 
 local function seed_random(value)
@@ -118,7 +119,8 @@ local function generate_level(next_level)
   build_tiles()
   mouse_x, mouse_y, direction = 1, 1, "down"
   complete, completion_ticks = false, 0
-  held_direction, held_ticks = nil, 0
+  move_from_x, move_from_y = mouse_x, mouse_y
+  movement_tick, queued_direction = movement_duration, nil
   previous = {}
   sprout.storage_set("current-level", level)
 end
@@ -133,20 +135,6 @@ local function requested_direction(actions)
   if actions.left then return "left", -1, 0 end
   if actions.right then return "right", 1, 0 end
   return nil, 0, 0
-end
-
-local function should_move(requested)
-  if requested == nil then
-    held_direction, held_ticks = nil, 0
-    return false
-  end
-  if requested ~= held_direction then
-    held_direction, held_ticks = requested, 0
-    return true
-  end
-  held_ticks = held_ticks + 1
-  return held_ticks >= repeat_delay and
-      (held_ticks - repeat_delay) % repeat_interval == 0
 end
 
 local function complete_level()
@@ -177,29 +165,57 @@ function update(actions)
     return
   end
 
-  local requested, dx, dy = requested_direction(actions)
-  if requested ~= nil then direction = requested end
-  if should_move(requested) and not blocked(mouse_x + dx, mouse_y + dy) then
-    mouse_x, mouse_y = mouse_x + dx, mouse_y + dy
-    if mouse_x == goal_x and mouse_y == goal_y then complete_level() end
+  local requested = requested_direction(actions)
+  if requested ~= nil then
+    queued_direction = requested
+  else
+    queued_direction = nil
+  end
+
+  if movement_tick < movement_duration then
+    movement_tick = movement_tick + 1
+    if movement_tick == movement_duration and
+        mouse_x == goal_x and mouse_y == goal_y then
+      complete_level()
+      previous = actions
+      return
+    end
+  end
+
+  if movement_tick == movement_duration and queued_direction ~= nil then
+    direction = queued_direction
+    local _, queued_dx, queued_dy = requested_direction({
+      up = direction == "up", down = direction == "down",
+      left = direction == "left", right = direction == "right"
+    })
+    queued_direction = nil
+    if not blocked(mouse_x + queued_dx, mouse_y + queued_dy) then
+      move_from_x, move_from_y = mouse_x, mouse_y
+      mouse_x, mouse_y = mouse_x + queued_dx, mouse_y + queued_dy
+      movement_tick = 0
+    end
   end
   previous = actions
 end
 
 function render()
+  local progress = movement_tick / movement_duration
+  local rendered_x = move_from_x + (mouse_x - move_from_x) * progress
+  local rendered_y = move_from_y + (mouse_y - move_from_y) * progress
   sprout.rect(0, 0, 320, 240, 49, 39, 61)
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y)
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal", x = origin_x + goal_x * tile_size + 8,
       y = origin_y + goal_y * tile_size + 8, scale = object_scale},
     {animation = "rich.mouse-walk-" .. rich_direction[direction],
-      x = origin_x + mouse_x * tile_size + 8,
-      y = origin_y + mouse_y * tile_size + 8,
+      x = math.floor(origin_x + rendered_x * tile_size + 8 + 0.5),
+      y = math.floor(origin_y + rendered_y * tile_size + 8 + 0.5),
       scale = character_scale}
   })
 
-  sprout.rect(12, 5, 64, 18, 255, 244, 211, 238)
-  sprout.label("Level " .. level, 16, 6, 56, 16, 82, 35, 65)
+  sprout.rect(origin_x, origin_y, 48, 14, 255, 244, 211, 238)
+  sprout.label("Level " .. level, origin_x + 3, origin_y + 1, 42, 12,
+      82, 35, 65)
   if complete then
     sprout.rect(76, 96, 168, 48, 255, 226, 155, 246)
     sprout.label("Cheese found!", 88, 100, 144, 24, 82, 35, 65)
@@ -233,7 +249,8 @@ function capture_scenario(name)
   else
     error("unsupported capture scenario: " .. name)
   end
-  held_direction, held_ticks, previous = nil, 0, {}
+  move_from_x, move_from_y = mouse_x, mouse_y
+  movement_tick, queued_direction, previous = movement_duration, nil, {}
 end
 
 function snapshot()

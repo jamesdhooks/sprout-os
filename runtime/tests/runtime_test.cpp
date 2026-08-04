@@ -2,11 +2,13 @@
 #include "sprout/runtime/session.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -170,6 +172,39 @@ int main() {
         mouse_package.assets.sprite_ids.at("rich.mouse-east-01"));
     check(mouse_east.pivot_x == 154 && mouse_east.pivot_y == 128,
           "Mouse Maze body-centered directional pivot was not preserved");
+    auto mouse_position = [](sprout::runtime::Session& session) {
+      const auto& drawing = session.render();
+      for (auto command = drawing.rbegin(); command != drawing.rend(); ++command) {
+        if (command->type == sprout::runtime::DrawCommandType::Sprite) {
+          return std::pair{command->sprite.x, command->sprite.y};
+        }
+      }
+      throw std::runtime_error("Mouse Maze did not render its character sprite");
+    };
+    sprout::runtime::Session mouse_motion(mouse_package, root / "mouse-motion", 7);
+    mouse_motion.start();
+    sprout::runtime::Actions held_direction;
+    held_direction.right = true;
+    mouse_motion.step(held_direction);
+    auto movement_start = mouse_position(mouse_motion);
+    mouse_motion.step(held_direction);
+    auto movement_progress = mouse_position(mouse_motion);
+    if (!mouse_motion.snapshot().starts_with("level:1:2:1:")) {
+      mouse_motion.step({});
+      held_direction.right = false;
+      held_direction.down = true;
+      mouse_motion.step(held_direction);
+      movement_start = mouse_position(mouse_motion);
+      mouse_motion.step(held_direction);
+      movement_progress = mouse_position(mouse_motion);
+      check(mouse_motion.snapshot().starts_with("level:1:1:2:"),
+            "Mouse Maze generated an isolated starting cell");
+    }
+    const int interpolated_distance =
+        std::abs(movement_progress.first - movement_start.first) +
+        std::abs(movement_progress.second - movement_start.second);
+    check(interpolated_distance > 0 && interpolated_distance < 16,
+          "Mouse Maze held input did not interpolate smoothly between cells");
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
     mouse.start();
     mouse.apply_capture_scenario("gameplay");
