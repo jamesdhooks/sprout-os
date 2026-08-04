@@ -289,11 +289,13 @@ local function requested_level_skip(actions)
   return 0
 end
 
-local function requested_hint(actions)
-  local secondary = actions.secondary and not previous.secondary
-  local chord = actions.start and actions.primary and actions.left and
-      not (previous.start and previous.primary and previous.left)
-  return secondary or chord
+local function hint_input(actions)
+  local chord_held = actions.start and actions.primary and actions.left
+  local previous_chord = previous.start and previous.primary and previous.left
+  local held = actions.secondary or chord_held
+  local pressed = (actions.secondary and not previous.secondary) or
+      (chord_held and not previous_chord)
+  return held, pressed
 end
 
 function init()
@@ -313,8 +315,9 @@ function update(actions)
     return
   end
 
-  if requested_hint(actions) then
-    show_hint()
+  local hint_held, hint_pressed = hint_input(actions)
+  if hint_held then
+    if hint_pressed then show_hint() end
     previous = actions
     return
   end

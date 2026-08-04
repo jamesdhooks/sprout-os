@@ -26,7 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   stretching actor sprites.
 - Mouse & Cheese Maze includes a concealed, time-limited breadcrumb hint that
   solves from the current cell and reveals at most half the route, capped at 12
-  cells, using animated dots that fade with distance.
+  cells, using animated dots that fade with distance. Hint buttons consume
+  regular directional input for their complete held duration.
 - Mouse & Cheese Maze continues increasing structural density throughout its
   campaign, growing from a 23x17 maze around level 100 to 53x39 near level 1,000
   instead of reusing the former 19x15 cap.

@@ -211,6 +211,7 @@ int main() {
     mouse_motion.start();
     std::pair<int, int> movement_start{};
     std::pair<int, int> movement_progress{};
+    sprout::runtime::Actions valid_mouse_direction{};
     bool found_exit = false;
     for (const auto candidate : {
              sprout::runtime::Actions{.up = true},
@@ -227,6 +228,7 @@ int main() {
       movement_start = mouse_position(mouse_motion);
       mouse_motion.step(candidate);
       movement_progress = mouse_position(mouse_motion);
+      valid_mouse_direction = candidate;
       found_exit = true;
       break;
     }
@@ -236,6 +238,21 @@ int main() {
         std::abs(movement_progress.second - movement_start.second);
     check(interpolated_distance > 0 && interpolated_distance < 16,
           "Mouse Maze held input did not interpolate smoothly between cells");
+
+    sprout::runtime::Session mouse_hint_suppression(
+        mouse_package, root / "mouse-hint-suppression", 7);
+    mouse_hint_suppression.start();
+    const auto before_hint = parse_mouse_snapshot(
+        mouse_hint_suppression.snapshot());
+    valid_mouse_direction.secondary = true;
+    mouse_hint_suppression.step(valid_mouse_direction);
+    mouse_hint_suppression.step(valid_mouse_direction);
+    const auto after_held_hint = parse_mouse_snapshot(
+        mouse_hint_suppression.snapshot());
+    check(before_hint.mouse_x == after_held_hint.mouse_x &&
+              before_hint.mouse_y == after_held_hint.mouse_y,
+          "Mouse Maze let regular movement through a held hint input");
+
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
     mouse.start();
     mouse.apply_capture_scenario("gameplay");
@@ -424,6 +441,12 @@ int main() {
               animated_hint->circle.alpha != first_hint_alpha,
           "Mouse Maze hint dots did not animate at dense cell sizes");
     mouse_hint.step({.left = true, .primary = true, .start = true});
+    const auto chord_position = parse_mouse_snapshot(mouse_hint.snapshot());
+    mouse_hint.step({.left = true, .primary = true, .start = true});
+    const auto held_chord_position = parse_mouse_snapshot(mouse_hint.snapshot());
+    check(chord_position.mouse_x == held_chord_position.mouse_x &&
+              chord_position.mouse_y == held_chord_position.mouse_y,
+          "Mouse Maze let chord direction through while the hint was held");
     const auto& chord_hint_drawing = mouse_hint.render();
     check(std::any_of(chord_hint_drawing.begin(), chord_hint_drawing.end(),
                       [](const auto& command) {
