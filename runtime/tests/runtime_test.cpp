@@ -217,6 +217,7 @@ int main() {
     }
     check(initial_mouse_drawing.size() > 15 && initial_mouse_sprite != nullptr,
           "Mouse Maze did not submit its scaled tilemap and animated sprite");
+    const auto& initial_cheese_sprite = initial_mouse_drawing[16].sprite;
     check(initial_mouse_drawing[1].sprite.x == 47 &&
               initial_mouse_drawing[1].sprite.y == 52 &&
               initial_mouse_drawing[1].sprite.width == 45 &&
@@ -231,9 +232,10 @@ int main() {
           initial_mouse_drawing[index].sprite.source_x == 0 ? '0' : '1';
     }
     const int initial_mouse_frame = initial_mouse_sprite->source_x;
-    check(initial_mouse_sprite->width <= 45 && initial_mouse_sprite->height <= 45 &&
-              initial_mouse_sprite->width < initial_mouse_sprite->source_width,
-          "scaled Mouse Maze character did not remain within its active cell");
+    check(initial_mouse_sprite->width == 61 && initial_mouse_sprite->height == 61 &&
+              initial_cheese_sprite.width == 50 &&
+              initial_cheese_sprite.height == 50,
+          "Mouse Maze actors did not scale from their visible source bounds");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
@@ -259,6 +261,14 @@ int main() {
               second_maze_drawing[1].sprite.width == 34 &&
               second_maze_drawing[1].sprite.height == 34,
           "Mouse Maze level-two board did not enter its next size band");
+    const auto& second_cheese_sprite = second_maze_drawing[36].sprite;
+    const auto& second_mouse_sprite = second_maze_drawing[37].sprite;
+    check(second_mouse_sprite.width == 46 && second_mouse_sprite.height == 46 &&
+              second_cheese_sprite.width == 38 &&
+              second_cheese_sprite.height == 38 &&
+              second_mouse_sprite.width < initial_mouse_sprite->width &&
+              second_cheese_sprite.width < initial_cheese_sprite.width,
+          "Mouse Maze actors did not follow the active level scale");
     std::string second_maze_signature;
     for (std::size_t index = 1; index <= 35; ++index) {
       second_maze_signature +=

@@ -28,7 +28,9 @@ quiet forest-ground color, separates playable tiles from the display edge, and
 holds the compact level badge. Early levels therefore use very few large,
 richly resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
-centered on it.
+centered on it. Coverage is calculated from each asset's opaque source bounds,
+not its transparent 256px atlas cell, so both visibly grow with early-level
+tiles and shrink with later density bands.
 
 | Levels | Maze grid | Logical tile | Padded frame |
 | --- | --- | --- | --- |

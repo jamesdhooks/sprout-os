@@ -1,11 +1,15 @@
 local screen_width, screen_height = 320, 240
 local source_tile_size = 16
 local padding_cells = 1
+local mouse_visible_extent = 151
+local cheese_visible_extent = 174
+local mouse_cell_coverage = 0.8
+local cheese_cell_coverage = 0.75
 local columns, rows, tile_size = 5, 3, 45
 local frame_x, frame_y = 2, 7
 local origin_x, origin_y = 47, 52
-local character_scale = (tile_size * 0.9) / 256
-local object_scale = (tile_size * 0.65) / 256
+local character_scale = (tile_size * mouse_cell_coverage) / mouse_visible_extent
+local object_scale = (tile_size * cheese_cell_coverage) / cheese_visible_extent
 local celebration_duration = 90
 local movement_duration = 6
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
@@ -53,8 +57,10 @@ local function apply_level_band(next_level)
   frame_y = math.floor((screen_height - framed_rows * tile_size) / 2)
   origin_x = frame_x + padding_cells * tile_size
   origin_y = frame_y + padding_cells * tile_size
-  character_scale = (tile_size * 0.9) / 256
-  object_scale = (tile_size * 0.65) / 256
+  character_scale =
+      (tile_size * mouse_cell_coverage) / mouse_visible_extent
+  object_scale =
+      (tile_size * cheese_cell_coverage) / cheese_visible_extent
 end
 
 local function seed_random(value)
