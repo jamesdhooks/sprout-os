@@ -21,15 +21,18 @@ Use seeded randomized depth-first generation with optional loop insertion. BFS s
 
 The Windows package currently implements deterministic depth-first mazes,
 farthest-reachable BFS goal placement, a persisted campaign seed and current
-level, automatic next-level flow, and progressive board-density bands. Each
-band chooses the largest tile size that fits its odd-dimension grid plus a
-one-cell perimeter within the entire 320x240 play area. That perimeter uses a
-quiet forest-ground color, separates playable tiles from the display edge, and
-holds a centered level tab exactly one active cell tall. The tab scales with
-each density band while retaining a minimum readable width and expanding for
-multi-digit level numbers. Early levels
-therefore use very few large,
-richly resampled cells; later levels add cells until reaching the densest grid.
+level, varied deterministic start rooms and initial facing, automatic next-
+level flow, and progressive board-density bands. Cheese placement is measured
+from the selected start, so each level retains a long traversable route. Each
+band maps its odd-dimension grid plus a one-cell perimeter directly onto the
+entire 320x240 play area. X and Y cell extents are derived independently, so
+the perimeter is exactly one grid cell on every side without residual gutters.
+That perimeter uses a quiet forest-ground color, separates playable tiles from
+the display edge, and holds a centered level tab exactly one active cell tall.
+The tab scales with each density band while retaining a minimum readable width
+and expanding for multi-digit level numbers. Early levels therefore use very
+few large, richly resampled cells; later levels add cells until reaching the
+densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
 than its tail-inclusive extent or transparent 256px atlas cell. Its complete
@@ -39,21 +42,20 @@ floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
 the mouse. Both actors visibly grow with early-level tiles and shrink with later
 density bands.
 
-The padded frame is horizontally centered and top-aligned. Because square
-cells and full-map visibility are preserved, a band's padded aspect ratio may
-leave a narrow remainder on one axis; vertical remainder is placed below the
-maze rather than above the level tab. Cells are never stretched to conceal it.
+Floor and wall cells may differ slightly in width and height to satisfy the
+exact screen mapping. Actor sprites retain uniform scale based on the smaller
+cell axis and therefore never stretch.
 
-| Levels | Maze grid | Logical tile | Padded frame |
+| Levels | Maze grid | Cell width | Cell height |
 | --- | --- | --- | --- |
-| 1 | 5x3 | 45px | 315x225 |
-| 2-3 | 7x5 | 34px | 306x238 |
-| 4-6 | 9x7 | 26px | 286x234 |
-| 7-10 | 11x9 | 21px | 273x231 |
-| 11-15 | 13x9 | 21px | 315x231 |
-| 16-24 | 15x11 | 18px | 306x234 |
-| 25-39 | 17x13 | 16px | 304x240 |
-| 40+ | 19x15 | 14px | 294x238 |
+| 1 | 5x3 | 45.7px | 48.0px |
+| 2-3 | 7x5 | 35.6px | 34.3px |
+| 4-6 | 9x7 | 29.1px | 26.7px |
+| 7-10 | 11x9 | 24.6px | 21.8px |
+| 11-15 | 13x9 | 21.3px | 21.8px |
+| 16-24 | 15x11 | 18.8px | 18.5px |
+| 25-39 | 17x13 | 16.8px | 16.0px |
+| 40+ | 19x15 | 15.2px | 14.1px |
 
 The curated 1,000-layout campaign, loop insertion, and exported metrics remain
 planned content-pipeline work.

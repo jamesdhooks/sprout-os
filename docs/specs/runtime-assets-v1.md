@@ -35,7 +35,7 @@ edges to 4,096 pixels, and each rendered frame to 4,096 commands.
 | `sprout.sprite(id, x, y, scale?, flipX?, flipY?, alpha?)` | Submit one declared frame; fractional scale supports high-density masters |
 | `sprout.animate(id, x, y, phase?, scale?, flipX?, flipY?, alpha?)` | Resolve one declared animation with the same fractional scale contract |
 | `sprout.sprite_batch(items)` | Submit many sprite or animation items in one Lua-to-host call |
-| `sprout.tilemap(tileSet, bytes, columns, x, y, scale?, skipIndex?)` | Submit a dense tile grid, optionally omitting one tile index for layered rendering |
+| `sprout.tilemap(tileSet, bytes, columns, x, y, scaleX?, scaleY?, skipIndex?)` | Submit a dense tile grid with independent axes and an optional omitted tile index |
 | `sprout.label(text, x, y, width, height, r, g, b, a?)` | Submit one bounded shared-font label without a package-specific glyph atlas |
 
 A batch item names exactly one `sprite` or `animation` and supplies integer
@@ -51,13 +51,16 @@ font height.
 Sprite scale is a finite number from 1/64 through 64. This permits a dense
 source frame to render on a compact logical canvas without discarding its
 higher-density source or forcing every future game to share one pixel scale.
-Tilemaps accept a finite fractional scale from 1/64 through 8. The host
-rounds shared tile edges from cumulative positions rather than rounding each
-tile independently, so fractional scales remain contiguous without seams or
-overlap. Source frames may be larger than the logical tile. The host resamples
-each frame to the scaled tile geometry, allowing one rich atlas to serve
-different board densities and future higher-density packages without baking a
-low-resolution source grid.
+Tilemaps accept finite fractional X/Y scales from 1/64 through 8 and fractional
+origins. When Y scale is omitted it inherits X scale. The host rounds shared
+tile edges from cumulative positions rather than rounding each tile
+independently, so fractional scales remain contiguous without seams or overlap.
+Independent axes let a package map a complete logical grid to its viewport
+without inventing extra padding; actor sprites can still use uniform scale.
+Source frames may be larger than the logical tile. The host resamples each frame
+to the scaled tile geometry, allowing one rich atlas to serve different board
+densities and future higher-density packages without baking a low-resolution
+source grid.
 
 Tilemap bytes are zero-based indices into the declared tile set. This compact
 representation avoids one Lua call per tile and makes invalid tile values fail

@@ -436,13 +436,17 @@ struct Session::Impl {
     const auto* tiles = reinterpret_cast<const unsigned char*>(
         luaL_checklstring(state, 2, &length));
     const int columns = static_cast<int>(luaL_checkinteger(state, 3));
-    const int origin_x = static_cast<int>(luaL_checkinteger(state, 4));
-    const int origin_y = static_cast<int>(luaL_checkinteger(state, 5));
-    const double scale = static_cast<double>(luaL_optnumber(state, 6, 1.0));
-    const int skip_index = static_cast<int>(luaL_optinteger(state, 7, -1));
+    const double origin_x = static_cast<double>(luaL_checknumber(state, 4));
+    const double origin_y = static_cast<double>(luaL_checknumber(state, 5));
+    const double scale_x = static_cast<double>(luaL_optnumber(state, 6, 1.0));
+    const double scale_y = static_cast<double>(luaL_optnumber(state, 7, scale_x));
+    const int skip_index = static_cast<int>(luaL_optinteger(state, 8, -1));
     if (length == 0 || length > kMaximumDrawCommands || columns <= 0 ||
         columns > 256 || length % static_cast<std::size_t>(columns) != 0 ||
-        !std::isfinite(scale) || scale < (1.0 / 64.0) || scale > 8.0 ||
+        !std::isfinite(origin_x) || !std::isfinite(origin_y) ||
+        !std::isfinite(scale_x) || !std::isfinite(scale_y) ||
+        scale_x < (1.0 / 64.0) || scale_x > 8.0 ||
+        scale_y < (1.0 / 64.0) || scale_y > 8.0 ||
         skip_index < -1 || skip_index > 255) {
       return luaL_error(state, "tilemap dimensions are outside bounds");
     }
@@ -456,14 +460,14 @@ struct Session::Impl {
       const int row = static_cast<int>(tile / static_cast<std::size_t>(columns));
       const auto& frame =
           runtime.package.assets.sprites[tile_set.sprites[tiles[tile]]];
-      const int target_x = origin_x + static_cast<int>(std::lround(
-          column * tile_set.tile_width * scale));
-      const int target_y = origin_y + static_cast<int>(std::lround(
-          row * tile_set.tile_height * scale));
-      const int target_right = origin_x + static_cast<int>(std::lround(
-          (column + 1) * tile_set.tile_width * scale));
-      const int target_bottom = origin_y + static_cast<int>(std::lround(
-          (row + 1) * tile_set.tile_height * scale));
+      const int target_x = static_cast<int>(std::lround(
+          origin_x + column * tile_set.tile_width * scale_x));
+      const int target_y = static_cast<int>(std::lround(
+          origin_y + row * tile_set.tile_height * scale_y));
+      const int target_right = static_cast<int>(std::lround(
+          origin_x + (column + 1) * tile_set.tile_width * scale_x));
+      const int target_bottom = static_cast<int>(std::lround(
+          origin_y + (row + 1) * tile_set.tile_height * scale_y));
       const int target_width = target_right - target_x;
       const int target_height = target_bottom - target_y;
       if (target_x < 0 || target_y < 0 ||

@@ -2,10 +2,12 @@
 #include "sprout/runtime/session.hpp"
 
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -16,6 +18,24 @@ void check(bool condition, const char* message) {
   if (!condition) {
     throw std::runtime_error(message);
   }
+}
+
+struct MouseSnapshot {
+  int level{};
+  int mouse_x{};
+  int mouse_y{};
+  int goal_x{};
+  int goal_y{};
+};
+
+MouseSnapshot parse_mouse_snapshot(const std::string& snapshot) {
+  MouseSnapshot parsed;
+  if (std::sscanf(snapshot.c_str(), "level:%d:%d:%d:%d:%d:", &parsed.level,
+                  &parsed.mouse_x, &parsed.mouse_y, &parsed.goal_x,
+                  &parsed.goal_y) != 5) {
+    throw std::runtime_error("Could not parse Mouse Maze snapshot");
+  }
+  return parsed;
 }
 
 void write(const std::filesystem::path& path, const std::string& contents) {
@@ -185,23 +205,28 @@ int main() {
     };
     sprout::runtime::Session mouse_motion(mouse_package, root / "mouse-motion", 7);
     mouse_motion.start();
-    sprout::runtime::Actions held_direction;
-    held_direction.right = true;
-    mouse_motion.step(held_direction);
-    auto movement_start = mouse_position(mouse_motion);
-    mouse_motion.step(held_direction);
-    auto movement_progress = mouse_position(mouse_motion);
-    if (!mouse_motion.snapshot().starts_with("level:1:2:1:")) {
+    std::pair<int, int> movement_start{};
+    std::pair<int, int> movement_progress{};
+    bool found_exit = false;
+    for (const auto candidate : {
+             sprout::runtime::Actions{.up = true},
+             sprout::runtime::Actions{.down = true},
+             sprout::runtime::Actions{.left = true},
+             sprout::runtime::Actions{.right = true}}) {
       mouse_motion.step({});
-      held_direction.right = false;
-      held_direction.down = true;
-      mouse_motion.step(held_direction);
+      const auto before = parse_mouse_snapshot(mouse_motion.snapshot());
+      mouse_motion.step(candidate);
+      const auto after = parse_mouse_snapshot(mouse_motion.snapshot());
+      if (before.mouse_x == after.mouse_x && before.mouse_y == after.mouse_y) {
+        continue;
+      }
       movement_start = mouse_position(mouse_motion);
-      mouse_motion.step(held_direction);
+      mouse_motion.step(candidate);
       movement_progress = mouse_position(mouse_motion);
-      check(mouse_motion.snapshot().starts_with("level:1:1:2:"),
-            "Mouse Maze generated an isolated starting cell");
+      found_exit = true;
+      break;
     }
+    check(found_exit, "Mouse Maze generated an isolated starting cell");
     const int interpolated_distance =
         std::abs(movement_progress.first - movement_start.first) +
         std::abs(movement_progress.second - movement_start.second);
@@ -221,10 +246,10 @@ int main() {
     check(initial_mouse_drawing.size() > 15 && initial_mouse_sprite != nullptr,
           "Mouse Maze did not submit its scaled tilemap and animated sprite");
     const auto& initial_cheese_sprite = initial_mouse_drawing[16].sprite;
-    check(initial_mouse_drawing[1].sprite.x == 47 &&
-              initial_mouse_drawing[1].sprite.y == 45 &&
+    check(initial_mouse_drawing[1].sprite.x == 46 &&
+              initial_mouse_drawing[1].sprite.y == 48 &&
               initial_mouse_drawing[1].sprite.width == 45 &&
-              initial_mouse_drawing[1].sprite.height == 45,
+              initial_mouse_drawing[1].sprite.height == 48,
           "Mouse Maze level-one board did not retain one cell of padding");
     for (std::size_t index = 1; index <= 15; ++index) {
       check(initial_mouse_drawing[index].type ==
@@ -232,8 +257,8 @@ int main() {
             "Mouse Maze full-screen tilemap ordering changed");
     }
     const int initial_mouse_frame = initial_mouse_sprite->source_x;
-    check(initial_mouse_sprite->width == 95 &&
-              initial_mouse_sprite->height == 95 &&
+    check(initial_mouse_sprite->width == 96 &&
+              initial_mouse_sprite->height == 96 &&
               initial_cheese_sprite.width == 50 &&
               initial_cheese_sprite.height == 50,
           "Mouse Maze body did not scale independently from its overlapping tail");
@@ -247,9 +272,9 @@ int main() {
     }
     const auto& initial_level_badge =
         initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle;
-    check(initial_level_badge.x == 115 && initial_level_badge.y == 0 &&
-              initial_level_badge.width == 90 &&
-              initial_level_badge.height == 45,
+    check(initial_level_badge.x == 114 && initial_level_badge.y == 0 &&
+              initial_level_badge.width == 91 &&
+              initial_level_badge.height == 48,
           "Mouse Maze level badge did not fill and center in the top cell");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
@@ -268,18 +293,19 @@ int main() {
               mouse.snapshot().ends_with(":right:1:24"),
           "Mouse Maze win capture scenario was not applied");
     for (int tick = 0; tick < 66; ++tick) mouse.step({});
-    check(mouse.snapshot().starts_with("level:2:1:1:") &&
-              mouse.snapshot().ends_with(":down:0:0"),
+    const auto progressed_mouse = parse_mouse_snapshot(mouse.snapshot());
+    check(progressed_mouse.level == 2 &&
+              mouse.snapshot().ends_with(":0:0"),
           "Mouse Maze did not advance automatically after its celebration");
     const auto second_maze_drawing = mouse.render();
-    check(second_maze_drawing[1].sprite.x == 41 &&
+    check(second_maze_drawing[1].sprite.x == 36 &&
               second_maze_drawing[1].sprite.y == 34 &&
-              second_maze_drawing[1].sprite.width == 34 &&
-              second_maze_drawing[1].sprite.height == 34,
+              second_maze_drawing[1].sprite.width == 35 &&
+              second_maze_drawing[1].sprite.height == 35,
           "Mouse Maze level-two board did not enter its next size band");
     const auto& second_cheese_sprite = second_maze_drawing[36].sprite;
     const auto& second_mouse_sprite = second_maze_drawing[37].sprite;
-    check(second_mouse_sprite.width == 71 && second_mouse_sprite.height == 71 &&
+    check(second_mouse_sprite.width == 72 && second_mouse_sprite.height == 72 &&
               second_cheese_sprite.width == 38 &&
               second_cheese_sprite.height == 38 &&
               second_mouse_sprite.width < initial_mouse_sprite->width &&
@@ -287,8 +313,8 @@ int main() {
           "Mouse Maze actors did not follow the active level scale");
     const auto& second_level_badge =
         second_maze_drawing[second_maze_drawing.size() - 2].rectangle;
-    check(second_level_badge.x == 126 && second_level_badge.y == 0 &&
-              second_level_badge.width == 68 &&
+    check(second_level_badge.x == 124 && second_level_badge.y == 0 &&
+              second_level_badge.width == 71 &&
               second_level_badge.height == 34,
           "Mouse Maze level badge did not follow its density band");
     check(second_maze_drawing.size() > initial_mouse_drawing.size(),
@@ -330,6 +356,24 @@ int main() {
               level_thousand_label.x + level_thousand_label.width <=
                   level_thousand_badge.x + level_thousand_badge.width,
           "Mouse Maze multi-digit level label exceeded its scaled badge");
+
+    sprout::runtime::Session mouse_starts(mouse_package, root / "mouse-starts", 7);
+    mouse_starts.start();
+    std::set<std::pair<int, int>> distinct_starts;
+    for (int expected_level = 1; expected_level <= 12; ++expected_level) {
+      const auto generated = parse_mouse_snapshot(mouse_starts.snapshot());
+      check(generated.level == expected_level &&
+                (generated.mouse_x != generated.goal_x ||
+                 generated.mouse_y != generated.goal_y),
+            "Mouse Maze start was not integrated with goal generation");
+      distinct_starts.emplace(generated.mouse_x, generated.mouse_y);
+      if (expected_level < 12) {
+        mouse_starts.step(skip_one);
+        mouse_starts.step({});
+      }
+    }
+    check(distinct_starts.size() >= 6,
+          "Mouse Maze did not vary generated starts across early levels");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";

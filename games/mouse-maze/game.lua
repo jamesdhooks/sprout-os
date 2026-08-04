@@ -5,11 +5,13 @@ local mouse_body_extent = 95
 local cheese_visible_extent = 174
 local mouse_cell_coverage = 0.78
 local cheese_cell_coverage = 0.75
-local columns, rows, tile_size = 5, 3, 45
-local frame_x, frame_y = 2, 7
-local origin_x, origin_y = 47, 52
-local character_scale = (tile_size * mouse_cell_coverage) / mouse_body_extent
-local object_scale = (tile_size * cheese_cell_coverage) / cheese_visible_extent
+local columns, rows = 5, 3
+local cell_width, cell_height, actor_cell_size = 320 / 7, 240 / 5, 320 / 7
+local origin_x, origin_y = cell_width, cell_height
+local character_scale =
+    (actor_cell_size * mouse_cell_coverage) / mouse_body_extent
+local object_scale =
+    (actor_cell_size * cheese_cell_coverage) / cheese_visible_extent
 local celebration_duration = 90
 local movement_duration = 6
 local campaign_level_limit = 1000
@@ -53,16 +55,15 @@ local function apply_level_band(next_level)
   columns, rows = selected.columns, selected.rows
   local framed_columns = columns + padding_cells * 2
   local framed_rows = rows + padding_cells * 2
-  tile_size = math.max(8, math.floor(math.min(
-      screen_width / framed_columns, screen_height / framed_rows)))
-  frame_x = math.floor((screen_width - framed_columns * tile_size) / 2)
-  frame_y = 0
-  origin_x = frame_x + padding_cells * tile_size
-  origin_y = frame_y + padding_cells * tile_size
+  cell_width = screen_width / framed_columns
+  cell_height = screen_height / framed_rows
+  actor_cell_size = math.min(cell_width, cell_height)
+  origin_x = padding_cells * cell_width
+  origin_y = padding_cells * cell_height
   character_scale =
-      (tile_size * mouse_cell_coverage) / mouse_body_extent
+      (actor_cell_size * mouse_cell_coverage) / mouse_body_extent
   object_scale =
-      (tile_size * cheese_cell_coverage) / cheese_visible_extent
+      (actor_cell_size * cheese_cell_coverage) / cheese_visible_extent
 end
 
 local function seed_random(value)
@@ -129,11 +130,32 @@ local function carve_maze()
   end
 end
 
+local function choose_start()
+  local cells = {}
+  for y = 1, rows - 2, 2 do
+    for x = 1, columns - 2, 2 do
+      cells[#cells + 1] = {x = x, y = y}
+    end
+  end
+  local chosen = cells[random(#cells)]
+  mouse_x, mouse_y = chosen.x, chosen.y
+
+  local exits = {}
+  for _, candidate in ipairs({
+      {name = "up", x = 0, y = -1}, {name = "right", x = 1, y = 0},
+      {name = "down", x = 0, y = 1}, {name = "left", x = -1, y = 0}}) do
+    if tile_at(mouse_x + candidate.x, mouse_y + candidate.y) == 0 then
+      exits[#exits + 1] = candidate.name
+    end
+  end
+  direction = exits[random(#exits)]
+end
+
 local function choose_goal()
-  local queue = {{x = 1, y = 1}}
-  local distances = {[1 * columns + 1] = 0}
+  local queue = {{x = mouse_x, y = mouse_y}}
+  local distances = {[mouse_y * columns + mouse_x] = 0}
   local head = 1
-  goal_x, goal_y = 1, 1
+  goal_x, goal_y = mouse_x, mouse_y
   local greatest_distance = 0
   while head <= #queue do
     local current = queue[head]
@@ -161,9 +183,9 @@ local function generate_level(next_level)
   apply_level_band(level)
   seed_random((campaign_seed + level * 104729) % 2147483647)
   carve_maze()
+  choose_start()
   choose_goal()
   build_tiles()
-  mouse_x, mouse_y, direction = 1, 1, "down"
   complete, completion_ticks = false, 0
   move_from_x, move_from_y = mouse_x, mouse_y
   movement_tick, queued_direction = movement_duration, nil
@@ -269,27 +291,28 @@ function render()
   local rendered_y = move_from_y + (mouse_y - move_from_y) * progress
   sprout.rect(0, 0, screen_width, screen_height, 43, 75, 49)
   sprout.tilemap("maze.tiles", floor_tiles, columns, origin_x, origin_y,
-      tile_size / source_tile_size)
+      cell_width / source_tile_size, cell_height / source_tile_size)
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal",
-      x = math.floor(origin_x + (goal_x + 0.5) * tile_size + 0.5),
-      y = math.floor(origin_y + (goal_y + 0.5) * tile_size + 0.5),
+      x = math.floor(origin_x + (goal_x + 0.5) * cell_width + 0.5),
+      y = math.floor(origin_y + (goal_y + 0.5) * cell_height + 0.5),
       scale = object_scale},
     {animation = "rich.mouse-walk-" .. rich_direction[direction],
-      x = math.floor(origin_x + (rendered_x + 0.5) * tile_size + 0.5),
-      y = math.floor(origin_y + (rendered_y + 0.5) * tile_size + 0.5),
+      x = math.floor(origin_x + (rendered_x + 0.5) * cell_width + 0.5),
+      y = math.floor(origin_y + (rendered_y + 0.5) * cell_height + 0.5),
       scale = character_scale}
   })
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
-      tile_size / source_tile_size, 0)
+      cell_width / source_tile_size, cell_height / source_tile_size, 0)
 
   local level_text = "Level " .. level
-  local level_width = math.max(48, tile_size * 2,
-      44 + #tostring(level) * 8)
+  local level_width = math.floor(math.max(48, cell_width * 2,
+      44 + #tostring(level) * 8) + 0.5)
+  local level_height = math.floor(cell_height + 0.5)
   local level_x = math.floor((screen_width - level_width) / 2)
-  sprout.rect(level_x, frame_y, level_width, tile_size, 255, 244, 211, 238)
-  sprout.label(level_text, level_x + 4, frame_y,
-      level_width - 8, tile_size,
+  sprout.rect(level_x, 0, level_width, level_height, 255, 244, 211, 238)
+  sprout.label(level_text, level_x + 4, 0,
+      level_width - 8, level_height,
       82, 35, 65)
   if complete then
     sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)
@@ -314,7 +337,13 @@ local function floor_near_center()
 end
 
 function capture_scenario(name)
-  if name == "gameplay" then
+  if name == "generated-start" then
+    -- Preserve the deterministic start selected during normal initialization.
+  elseif name == "generated-level-2" then
+    generate_level(2)
+  elseif name == "generated-level-1000" then
+    generate_level(1000)
+  elseif name == "gameplay" then
     mouse_x, mouse_y = floor_near_center()
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "gameplay-level-2" then
