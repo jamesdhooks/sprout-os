@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   after a short, uncluttered "Cheese!" celebration.
 - Mouse & Cheese Maze provides debounced action-level QA chords for jumping by
   1, 10, or 100 levels while inspecting its difficulty bands.
+- Shared runtime labels now fit and clip text within both dimensions of their
+  declared region; the Mouse Maze level tab expands for multi-digit levels.
 
 ### Added
 

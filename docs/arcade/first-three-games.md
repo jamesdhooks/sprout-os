@@ -26,7 +26,8 @@ band chooses the largest tile size that fits its odd-dimension grid plus a
 one-cell perimeter within the entire 320x240 play area. That perimeter uses a
 quiet forest-ground color, separates playable tiles from the display edge, and
 holds a centered level tab exactly one active cell tall. The tab scales with
-each density band while retaining a minimum readable width. Early levels
+each density band while retaining a minimum readable width and expanding for
+multi-digit level numbers. Early levels
 therefore use very few large,
 richly resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain

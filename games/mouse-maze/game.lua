@@ -283,10 +283,12 @@ function render()
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
       tile_size / source_tile_size, 0)
 
-  local level_width = math.max(48, tile_size * 2)
+  local level_text = "Level " .. level
+  local level_width = math.max(48, tile_size * 2,
+      44 + #tostring(level) * 8)
   local level_x = math.floor((screen_width - level_width) / 2)
   sprout.rect(level_x, frame_y, level_width, tile_size, 255, 244, 211, 238)
-  sprout.label("Level " .. level, level_x + 4, frame_y,
+  sprout.label(level_text, level_x + 4, frame_y,
       level_width - 8, tile_size,
       82, 35, 65)
   if complete then
@@ -317,6 +319,10 @@ function capture_scenario(name)
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "gameplay-level-2" then
     generate_level(2)
+    mouse_x, mouse_y = floor_near_center()
+    direction, complete, completion_ticks = "right", false, 0
+  elseif name == "gameplay-level-1000" then
+    generate_level(1000)
     mouse_x, mouse_y = floor_near_center()
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "win" then

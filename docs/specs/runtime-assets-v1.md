@@ -43,6 +43,11 @@ A batch item names exactly one `sprite` or `animation` and supplies integer
 `alpha`. Animation selection derives only from the fixed session tick plus an
 explicit phase; rendering never advances animation state.
 
+Labels scale the shared font against both available width and height and clip
+glyph output to the declared region. Dynamic or localized text must therefore
+remain inside its package-owned background rather than overflowing at a fixed
+font height.
+
 Sprite scale is a finite number from 1/64 through 64. This permits a dense
 source frame to render on a compact logical canvas without discarding its
 higher-density source or forcing every future game to share one pixel scale.

@@ -329,8 +329,6 @@ void draw_text(SDL_Renderer* renderer, const std::string& text,
     font_renderer = renderer;
   }
   if (font_texture != nullptr) {
-    const int height = std::max(10, std::min(18, region.h - 8));
-    const double ratio = static_cast<double>(height) / sprout::ui::kUiFontSourceSize;
     const auto metric_for = [](char character) -> const sprout::ui::UiGlyphMetric& {
       const unsigned char value = static_cast<unsigned char>(character);
       const int codepoint = value >= sprout::ui::kUiFontFirstCodepoint &&
@@ -340,12 +338,29 @@ void draw_text(SDL_Renderer* renderer, const std::string& text,
       return sprout::ui::kUiFontRegularMetrics[
           static_cast<std::size_t>(codepoint - sprout::ui::kUiFontFirstCodepoint)];
     };
+    double source_width = 0.0;
+    for (const char character : text) {
+      source_width += metric_for(character).advance;
+    }
+    const int preferred_height = std::max(1, std::min(18, region.h - 8));
+    const double height_ratio =
+        static_cast<double>(preferred_height) / sprout::ui::kUiFontSourceSize;
+    const double width_ratio = source_width > 0.0
+                                   ? static_cast<double>(region.w) / source_width
+                                   : height_ratio;
+    const double ratio = std::min(height_ratio, width_ratio);
+    const int height = std::max(
+        1, static_cast<int>(std::round(sprout::ui::kUiFontSourceSize * ratio)));
     int width = 0;
     for (const char character : text) {
       width += static_cast<int>(std::round(metric_for(character).advance * ratio));
     }
     int x = region.x + (region.w - width) / 2;
     const int baseline = region.y + (region.h - height) / 2;
+    const bool had_clip = SDL_RenderIsClipEnabled(renderer) == SDL_TRUE;
+    SDL_Rect previous_clip{};
+    if (had_clip) SDL_RenderGetClipRect(renderer, &previous_clip);
+    SDL_RenderSetClipRect(renderer, &region);
     SDL_SetTextureColorMod(font_texture, color.r, color.g, color.b);
     SDL_SetTextureAlphaMod(font_texture, color.a);
     for (const char character : text) {
@@ -364,6 +379,7 @@ void draw_text(SDL_Renderer* renderer, const std::string& text,
       }
       x += static_cast<int>(std::round(metric.advance * ratio));
     }
+    SDL_RenderSetClipRect(renderer, had_clip ? &previous_clip : nullptr);
     return;
   }
   const int units = std::max(1, static_cast<int>(text.size()) * 6 - 1);

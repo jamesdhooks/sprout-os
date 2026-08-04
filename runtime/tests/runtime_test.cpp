@@ -317,6 +317,19 @@ int main() {
     }
     check(mouse_skip.snapshot().starts_with("level:1000:"),
           "Mouse Maze QA chord did not cap at the campaign boundary");
+    const auto level_thousand_drawing = mouse_skip.render();
+    const auto& level_thousand_badge =
+        level_thousand_drawing[level_thousand_drawing.size() - 2].rectangle;
+    const auto& level_thousand_label =
+        level_thousand_drawing.back().label;
+    check(level_thousand_badge.x == 122 && level_thousand_badge.y == 0 &&
+              level_thousand_badge.width == 76 &&
+              level_thousand_badge.height == 14 &&
+              level_thousand_label.text == "Level 1000" &&
+              level_thousand_label.x >= level_thousand_badge.x &&
+              level_thousand_label.x + level_thousand_label.width <=
+                  level_thousand_badge.x + level_thousand_badge.width,
+          "Mouse Maze multi-digit level label exceeded its scaled badge");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";
