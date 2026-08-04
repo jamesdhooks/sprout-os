@@ -12,7 +12,7 @@
     "dimensions": [1536, 1152],
     "fit": "cover",
     "titleRegion": [30, 30, 940, 210],
-    "controlsRegion": [160, 840, 680, 120],
+    "controlsRegion": [180, 800, 640, 180],
     "controlsBackground": [255, 225, 155, 238],
     "controlsForeground": [82, 35, 65, 255]
   },

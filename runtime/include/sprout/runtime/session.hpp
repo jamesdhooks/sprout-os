@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -111,6 +112,9 @@ class Session {
   const std::vector<DrawCommand>& render();
   std::vector<RuntimeEvent> drain_events();
   std::string snapshot() const;
+  std::optional<std::string> title_status() const;
+  bool can_reset_progress() const;
+  bool reset_progress();
 
   const PackageManifest& package() const noexcept;
 

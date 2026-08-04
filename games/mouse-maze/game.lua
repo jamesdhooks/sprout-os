@@ -307,6 +307,15 @@ function init()
   generate_level(math.max(1, sprout.storage_get("current-level", 1)))
 end
 
+function title_status()
+  return "Level " .. level
+end
+
+function reset_progress()
+  sprout.storage_set("solved", 0)
+  generate_level(1)
+end
+
 function update(actions)
   local level_skip = requested_level_skip(actions)
   if level_skip > 0 then

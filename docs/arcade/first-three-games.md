@@ -78,6 +78,12 @@ half of that route, capped at 12 cells. Animated storybook breadcrumb dots fade
 with distance and disappear after three seconds; requesting another hint
 recomputes the route from the current position.
 
+The title menu reads the persisted current level through the optional native
+title-status contract. Holding the secondary action for three seconds fills a
+circular progress indicator, resets solved count and current level, and updates
+the menu to `Level 1`. Releasing early cancels the reset without modifying
+storage.
+
 The target campaign contains 1,000 resolved layouts with seed provenance.
 Early levels use large tiles and short routes; later bands increase board size
 and navigation complexity while preserving legibility. Daily and endless modes

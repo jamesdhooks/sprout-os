@@ -44,6 +44,12 @@ A game defines four global functions:
 - `render()` submits the current frame without advancing time.
 - `snapshot()` returns deterministic text suitable for state comparison in tests.
 
+A package may additionally define `title_status()` and `reset_progress()`.
+When both are present, the native title screen displays the short status text
+and offers a host-timed three-second secondary-action hold. The host owns input
+consumption and progress presentation; the package owns which persisted values
+are reset. Releasing before completion makes no change.
+
 Each lifecycle call has a 500,000-instruction limit, sufficient for bounded
 dense-level generation while still terminating runaway package scripts. The
 Windows host calls `update` at 60 fixed ticks per second and limits catch-up

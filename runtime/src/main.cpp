@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -87,6 +88,7 @@ sprout::runtime::Actions read_actions(SDL_GameController* controller) {
       .primary = key_down(keyboard, SDL_SCANCODE_Z, SDL_SCANCODE_RETURN) ||
                  button(SDL_CONTROLLER_BUTTON_A),
       .secondary = key_down(keyboard, SDL_SCANCODE_X, SDL_SCANCODE_SPACE) ||
+                   keyboard[SDL_SCANCODE_B] != 0 ||
                    keyboard[SDL_SCANCODE_H] != 0 ||
                    button(SDL_CONTROLLER_BUTTON_B),
       .start = keyboard[SDL_SCANCODE_RETURN] != 0 ||
@@ -448,9 +450,31 @@ void fill_rounded_rect(SDL_Renderer* renderer, const SDL_Rect& rectangle,
   }
 }
 
+void draw_hold_progress(SDL_Renderer* renderer, int center_x, int center_y,
+                        int radius, double progress, SDL_Color foreground) {
+  constexpr int segments = 28;
+  constexpr double pi = 3.14159265358979323846;
+  const int completed = static_cast<int>(
+      std::floor(std::clamp(progress, 0.0, 1.0) * segments + 0.5));
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  for (int index = 0; index < segments; ++index) {
+    const double angle = -pi / 2.0 + 2.0 * pi * index / segments;
+    const int x = center_x + static_cast<int>(std::round(std::cos(angle) * radius));
+    const int y = center_y + static_cast<int>(std::round(std::sin(angle) * radius));
+    const bool active = index < completed;
+    SDL_SetRenderDrawColor(renderer, foreground.r, foreground.g,
+                           foreground.b, active ? 255 : 65);
+    const SDL_Rect dot{x - 1, y - 1, 3, 3};
+    SDL_RenderFillRect(renderer, &dot);
+  }
+}
+
 void draw_title_screen(SDL_Renderer* renderer,
                        const sprout::runtime::PackageManifest& package,
-                       SDL_Texture* texture) {
+                       SDL_Texture* texture, std::string_view status = {},
+                       bool can_reset_progress = false,
+                       double reset_progress = 0.0,
+                       bool reset_complete = false) {
   SDL_SetRenderDrawColor(renderer, 16, 32, 25, 255);
   SDL_RenderClear(renderer);
   SDL_Rect destination{0, 0, package.logical_width, package.logical_height};
@@ -485,8 +509,26 @@ void draw_title_screen(SDL_Renderer* renderer,
   const auto& foreground = package.title_screen.controls_foreground;
   fill_rounded_rect(renderer, controls, std::min(controls.h / 2, 12),
                     {background[0], background[1], background[2], background[3]});
-  draw_text(renderer, "A Start    B Back", controls,
-            {foreground[0], foreground[1], foreground[2], foreground[3]});
+  const SDL_Color text_color{foreground[0], foreground[1], foreground[2],
+                             foreground[3]};
+  if (can_reset_progress) {
+    const int row_height = controls.h / 2;
+    const SDL_Rect status_row{controls.x + 6, controls.y + 1,
+                              controls.w - 12, row_height};
+    const SDL_Rect reset_row{controls.x + 6, controls.y + row_height - 1,
+                             controls.w - 34, controls.h - row_height};
+    draw_text(renderer, std::string(status) + "    A Continue", status_row,
+              text_color);
+    draw_text(renderer,
+              reset_complete ? "Progress reset" : "Hold B 3s to reset",
+              reset_row, text_color);
+    draw_hold_progress(renderer, controls.x + controls.w - 17,
+                       controls.y + row_height +
+                           (controls.h - row_height) / 2,
+                       8, reset_progress, text_color);
+  } else {
+    draw_text(renderer, "A Start    B Back", controls, text_color);
+  }
   SDL_RenderPresent(renderer);
 }
 
@@ -562,12 +604,19 @@ int main(int count, char** values) {
       }
     }
 
+    session.start();
+
     SDL_Texture* title_texture = nullptr;
     if (package.title_screen.enabled) {
       title_texture = load_title_texture(renderer, package.title_screen);
-      draw_title_screen(renderer, package, title_texture);
+      auto title_status = session.title_status().value_or("");
+      const bool can_reset_progress = session.can_reset_progress();
+      draw_title_screen(renderer, package, title_texture, title_status,
+                        can_reset_progress);
       if (!arguments.capture_title.empty()) {
         capture_frame(renderer, arguments.capture_title);
+        session.stop();
+        print_events(session);
         SDL_DestroyTexture(title_texture);
         if (controller != nullptr) SDL_GameControllerClose(controller);
         SDL_DestroyRenderer(renderer);
@@ -578,13 +627,19 @@ int main(int count, char** values) {
       }
       bool waiting = arguments.capture.empty();
       bool primary_was_down = false;
+      bool reset_timing = false;
+      bool reset_complete = false;
+      double reset_fraction = 0.0;
+      std::chrono::steady_clock::time_point reset_started{};
       while (waiting) {
         SDL_Event event{};
         while (SDL_PollEvent(&event) != 0) {
           if (event.type == SDL_QUIT) waiting = false;
         }
         const auto actions = read_actions(controller);
-        if (actions.back || actions.secondary) {
+        if (actions.back || (actions.secondary && !can_reset_progress)) {
+          session.stop();
+          print_events(session);
           SDL_DestroyTexture(title_texture);
           if (controller != nullptr) SDL_GameControllerClose(controller);
           SDL_DestroyRenderer(renderer);
@@ -593,8 +648,31 @@ int main(int count, char** values) {
           SDL_Quit();
           return 0;
         }
-        if (actions.primary && !primary_was_down) waiting = false;
+        if (can_reset_progress && actions.secondary) {
+          const auto now = std::chrono::steady_clock::now();
+          if (!reset_timing) {
+            reset_started = now;
+            reset_timing = true;
+            reset_complete = false;
+          }
+          const auto elapsed = std::chrono::duration<double>(now - reset_started);
+          reset_fraction = std::min(1.0, elapsed.count() / 3.0);
+          if (reset_fraction >= 1.0 && !reset_complete) {
+            session.reset_progress();
+            title_status = session.title_status().value_or("");
+            reset_complete = true;
+          }
+        } else {
+          reset_timing = false;
+          reset_complete = false;
+          reset_fraction = 0.0;
+        }
+        if (actions.primary && !actions.secondary && !primary_was_down) {
+          waiting = false;
+        }
         primary_was_down = actions.primary;
+        draw_title_screen(renderer, package, title_texture, title_status,
+                          can_reset_progress, reset_fraction, reset_complete);
         std::this_thread::sleep_for(std::chrono::milliseconds(8));
       }
       SDL_DestroyTexture(title_texture);
@@ -602,7 +680,6 @@ int main(int count, char** values) {
       throw std::runtime_error("Package does not define a title screen");
     }
 
-    session.start();
     if (!arguments.capture_state.empty()) {
       session.apply_capture_scenario(arguments.capture_state);
     }

@@ -113,6 +113,9 @@ int main() {
     auto started = first.drain_events();
     check(started.size() == 1 && started.front().type == "GameStarted",
           "start event was not emitted");
+    check(!first.title_status().has_value() && !first.can_reset_progress() &&
+              !first.reset_progress(),
+          "optional title progress functions were treated as required");
     first.step({.primary = true});
     const std::string first_snapshot = first.snapshot();
     const auto& drawing = first.render();
@@ -394,6 +397,21 @@ int main() {
     check(level_hundred_commands == 612 && level_thousand_commands == 3152 &&
               level_thousand_commands > level_hundred_commands * 5,
           "Mouse Maze campaign density did not continue scaling after level 100");
+
+    sprout::runtime::Session mouse_reset(mouse_package, root / "mouse-reset", 7);
+    mouse_reset.start();
+    mouse_reset.apply_capture_scenario("generated-level-100");
+    check(mouse_reset.can_reset_progress() &&
+              mouse_reset.title_status() == "Level 100" &&
+              mouse_reset.reset_progress() &&
+              mouse_reset.title_status() == "Level 1" &&
+              parse_mouse_snapshot(mouse_reset.snapshot()).level == 1,
+          "Mouse Maze title reset did not return progress to level one");
+    sprout::runtime::Session restored_mouse_reset(
+        mouse_package, root / "mouse-reset", 999);
+    restored_mouse_reset.start();
+    check(restored_mouse_reset.title_status() == "Level 1",
+          "Mouse Maze title reset was not persisted");
 
     sprout::runtime::Session mouse_starts(mouse_package, root / "mouse-starts", 7);
     mouse_starts.start();

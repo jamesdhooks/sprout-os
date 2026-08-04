@@ -652,6 +652,13 @@ struct Session::Impl {
     }
   }
 
+  bool has_function(const char* name) const {
+    lua_getglobal(lua, name);
+    const bool available = lua_isfunction(lua, -1);
+    lua_pop(lua, 1);
+    return available;
+  }
+
   static void instruction_limit(lua_State* state, lua_Debug*) {
     luaL_error(state, "lifecycle instruction limit exceeded");
   }
@@ -783,6 +790,7 @@ void Session::apply_capture_scenario(std::string_view scenario) {
   if (!impl_->started) {
     throw std::runtime_error("Native-game session has not started");
   }
+
   if (impl_->stopped) {
     throw std::runtime_error("Native-game session is stopped");
   }
@@ -833,6 +841,43 @@ std::string Session::snapshot() const {
   const std::string result = lua_tostring(impl_->lua, -1);
   lua_pop(impl_->lua, 1);
   return result;
+}
+
+std::optional<std::string> Session::title_status() const {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  if (!impl_->has_function("title_status")) return std::nullopt;
+  impl_->call("title_status", 0, 1);
+  std::size_t length = 0;
+  const char* value = lua_tolstring(impl_->lua, -1, &length);
+  const bool printable = value != nullptr && length > 0 && length <= 32 &&
+      std::all_of(value, value + length, [](unsigned char character) {
+        return character >= 32 && character <= 126;
+      });
+  if (!printable) {
+    lua_pop(impl_->lua, 1);
+    throw std::runtime_error("Game title_status should return short text");
+  }
+  std::string result(value, length);
+  lua_pop(impl_->lua, 1);
+  return result;
+}
+
+bool Session::can_reset_progress() const {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  return impl_->has_function("reset_progress");
+}
+
+bool Session::reset_progress() {
+  if (!impl_->started) {
+    throw std::runtime_error("Native-game session has not started");
+  }
+  if (!impl_->has_function("reset_progress")) return false;
+  impl_->call("reset_progress", 0);
+  return true;
 }
 
 const PackageManifest& Session::package() const noexcept { return impl_->package; }
