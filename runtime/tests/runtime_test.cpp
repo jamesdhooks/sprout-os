@@ -232,8 +232,8 @@ int main() {
             "Mouse Maze full-screen tilemap ordering changed");
     }
     const int initial_mouse_frame = initial_mouse_sprite->source_x;
-    check(initial_mouse_sprite->width == 138 &&
-              initial_mouse_sprite->height == 138 &&
+    check(initial_mouse_sprite->width == 122 &&
+              initial_mouse_sprite->height == 122 &&
               initial_cheese_sprite.width == 50 &&
               initial_cheese_sprite.height == 50,
           "Mouse Maze body did not scale independently from its overlapping tail");
@@ -276,7 +276,7 @@ int main() {
           "Mouse Maze level-two board did not enter its next size band");
     const auto& second_cheese_sprite = second_maze_drawing[36].sprite;
     const auto& second_mouse_sprite = second_maze_drawing[37].sprite;
-    check(second_mouse_sprite.width == 104 && second_mouse_sprite.height == 104 &&
+    check(second_mouse_sprite.width == 92 && second_mouse_sprite.height == 92 &&
               second_cheese_sprite.width == 38 &&
               second_cheese_sprite.height == 38 &&
               second_mouse_sprite.width < initial_mouse_sprite->width &&

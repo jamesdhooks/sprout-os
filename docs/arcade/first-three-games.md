@@ -30,7 +30,8 @@ richly resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
 than its tail-inclusive extent or transparent 256px atlas cell, so its body
-fills the active cell while the tail can cross a boundary. Rendering uses a
+occupies roughly three quarters of the cell while the tail can cross a
+boundary. Rendering uses a
 floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
 the mouse. Both actors visibly grow with early-level tiles and shrink with later
 density bands.
