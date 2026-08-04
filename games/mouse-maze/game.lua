@@ -1,9 +1,9 @@
 local screen_width, screen_height = 320, 240
 local source_tile_size = 16
 local padding_cells = 1
-local mouse_body_extent = 70
+local mouse_body_extent = 95
 local cheese_visible_extent = 174
-local mouse_cell_coverage = 0.74
+local mouse_cell_coverage = 0.78
 local cheese_cell_coverage = 0.75
 local columns, rows, tile_size = 5, 3, 45
 local frame_x, frame_y = 2, 7

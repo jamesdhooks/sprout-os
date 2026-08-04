@@ -29,8 +29,8 @@ holds the compact level badge. Early levels therefore use very few large,
 richly resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
-than its tail-inclusive extent or transparent 256px atlas cell, so its body
-occupies roughly three quarters of the cell while the tail can cross a
+than its tail-inclusive extent or transparent 256px atlas cell. Its complete
+head-to-rump silhouette remains within the cell while only the tail may cross a
 boundary. Rendering uses a
 floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
 the mouse. Both actors visibly grow with early-level tiles and shrink with later
