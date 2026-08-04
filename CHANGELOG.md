@@ -33,8 +33,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   instead of reusing the former 19x15 cap.
 - Mouse & Cheese Maze advances one second after showing `Cheese!`, with its
   button-to-continue shortcut becoming available after 0.2 seconds.
-- Mouse & Cheese Maze uses a fixed-size top-left numeric level indicator instead
-  of scaling and centering a `Level N` tab with the maze grid.
+- Mouse & Cheese Maze uses a compact fixed-height, content-width top-left numeric
+  indicator with a rounded bottom-right corner instead of scaling and centering
+  a `Level N` tab with the maze grid.
 - Native-game title screens can show package-owned progress and host a
   three-second hold-to-reset action. Mouse & Cheese Maze uses it to show the
   saved level and reset persisted progress to level 1 with a circular indicator.

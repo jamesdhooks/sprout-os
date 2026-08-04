@@ -28,10 +28,10 @@ band maps its odd-dimension grid plus a one-cell perimeter directly onto the
 entire 320x240 play area. X and Y cell extents are derived independently, so
 the perimeter is exactly one grid cell on every side without residual gutters.
 That perimeter uses a quiet forest-ground color and separates playable tiles
-from the display edge. A fixed-size indicator at the top left shows only the
-numeric level and remains independent of maze density. Early levels therefore
-use very few large, richly resampled cells; later levels add cells until
-reaching the densest grid.
+from the display edge. A fixed-height, content-width indicator at the top left
+shows only the numeric level, uses a rounded bottom-right corner, and remains
+independent of maze density. Early levels therefore use very few large, richly
+resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
 than its tail-inclusive extent or transparent 256px atlas cell. Its complete

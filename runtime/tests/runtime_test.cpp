@@ -288,17 +288,20 @@ int main() {
           "Mouse Maze body did not scale independently from its overlapping tail");
     check(initial_mouse_drawing[17].sprite.atlas == mouse_atlas,
           "Mouse Maze actor pass was not submitted after the floor pass");
-    for (std::size_t index = 18; index + 2 < initial_mouse_drawing.size(); ++index) {
+    for (std::size_t index = 18; index + 4 < initial_mouse_drawing.size(); ++index) {
       check(initial_mouse_drawing[index].type ==
                     sprout::runtime::DrawCommandType::Sprite &&
                 initial_mouse_drawing[index].sprite.source_x == 256,
             "Mouse Maze wall pass did not render above its actor pass");
     }
     const auto& initial_level_badge =
-        initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle;
+        initial_mouse_drawing[initial_mouse_drawing.size() - 4].rectangle;
     check(initial_level_badge.x == 0 && initial_level_badge.y == 0 &&
-              initial_level_badge.width == 44 &&
-              initial_level_badge.height == 18,
+              initial_level_badge.width == 22 &&
+              initial_level_badge.height == 12 &&
+              initial_mouse_drawing[initial_mouse_drawing.size() - 2].circle.x == 18 &&
+              initial_mouse_drawing[initial_mouse_drawing.size() - 2].circle.y == 12 &&
+              initial_mouse_drawing[initial_mouse_drawing.size() - 2].circle.radius == 4,
           "Mouse Maze level badge was not fixed at the top left");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
@@ -336,10 +339,10 @@ int main() {
               second_cheese_sprite.width < initial_cheese_sprite.width,
           "Mouse Maze actors did not follow the active level scale");
     const auto& second_level_badge =
-        second_maze_drawing[second_maze_drawing.size() - 2].rectangle;
+        second_maze_drawing[second_maze_drawing.size() - 4].rectangle;
     check(second_level_badge.x == 0 && second_level_badge.y == 0 &&
-              second_level_badge.width == 44 &&
-              second_level_badge.height == 18,
+              second_level_badge.width == 22 &&
+              second_level_badge.height == 12,
           "Mouse Maze level badge changed with its density band");
     check(second_maze_drawing.size() > initial_mouse_drawing.size(),
           "Mouse Maze next level did not increase its layered board density");
@@ -368,19 +371,19 @@ int main() {
     check(mouse_skip.snapshot().starts_with("level:1000:"),
           "Mouse Maze QA chord did not cap at the campaign boundary");
     const auto level_thousand_drawing = mouse_skip.render();
-    check(level_thousand_drawing.size() == 3152 &&
+    check(level_thousand_drawing.size() == 3154 &&
               level_thousand_drawing[1].sprite.x == 6 &&
               level_thousand_drawing[1].sprite.y == 6 &&
               level_thousand_drawing[1].sprite.width == 6 &&
               level_thousand_drawing[1].sprite.height == 6,
           "Mouse Maze level 1,000 did not reach its dense 53x39 band");
     const auto& level_thousand_badge =
-        level_thousand_drawing[level_thousand_drawing.size() - 2].rectangle;
+        level_thousand_drawing[level_thousand_drawing.size() - 4].rectangle;
     const auto& level_thousand_label =
         level_thousand_drawing.back().label;
     check(level_thousand_badge.x == 0 && level_thousand_badge.y == 0 &&
-              level_thousand_badge.width == 44 &&
-              level_thousand_badge.height == 18 &&
+              level_thousand_badge.width == 40 &&
+              level_thousand_badge.height == 12 &&
               level_thousand_label.text == "1000" &&
               level_thousand_label.x >= level_thousand_badge.x &&
               level_thousand_label.x + level_thousand_label.width <=
@@ -394,7 +397,7 @@ int main() {
     const auto level_hundred_commands = mouse_density.render().size();
     mouse_density.apply_capture_scenario("generated-level-1000");
     const auto level_thousand_commands = mouse_density.render().size();
-    check(level_hundred_commands == 612 && level_thousand_commands == 3152 &&
+    check(level_hundred_commands == 614 && level_thousand_commands == 3154 &&
               level_thousand_commands > level_hundred_commands * 5,
           "Mouse Maze campaign density did not continue scaling after level 100");
 
@@ -439,7 +442,9 @@ int main() {
     std::vector<sprout::runtime::DrawCircle> hint_dots;
     for (const auto& command : hint_drawing) {
       if (command.type == sprout::runtime::DrawCommandType::Circle) {
-        hint_dots.push_back(command.circle);
+        if (command.circle.green == 188 || command.circle.green == 247) {
+          hint_dots.push_back(command.circle);
+        }
       }
     }
     check(!hint_dots.empty() && hint_dots.size() <= 24 &&
@@ -453,7 +458,8 @@ int main() {
     const auto animated_hint = std::find_if(
         animated_hint_drawing.begin(), animated_hint_drawing.end(),
         [](const auto& command) {
-          return command.type == sprout::runtime::DrawCommandType::Circle;
+          return command.type == sprout::runtime::DrawCommandType::Circle &&
+              (command.circle.green == 188 || command.circle.green == 247);
         });
     check(animated_hint != animated_hint_drawing.end() &&
               animated_hint->circle.alpha != first_hint_alpha,
@@ -469,7 +475,9 @@ int main() {
     check(std::any_of(chord_hint_drawing.begin(), chord_hint_drawing.end(),
                       [](const auto& command) {
                         return command.type ==
-                            sprout::runtime::DrawCommandType::Circle;
+                                sprout::runtime::DrawCommandType::Circle &&
+                            (command.circle.green == 188 ||
+                             command.circle.green == 247);
                       }),
           "Mouse Maze secret controller hint chord was not accepted");
 

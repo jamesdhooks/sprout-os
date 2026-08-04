@@ -419,9 +419,15 @@ function render()
       cell_width / source_tile_size, cell_height / source_tile_size, 0)
 
   local level_text = tostring(level)
-  local level_width, level_height = 44, 18
-  sprout.rect(0, 0, level_width, level_height, 255, 244, 211, 238)
-  sprout.label(level_text, 4, 0, level_width - 8, level_height,
+  local level_width = math.max(22, 16 + #level_text * 6)
+  local level_height, level_radius = 16, 4
+  sprout.rect(0, 0, level_width, level_height - level_radius,
+      255, 244, 211, 238)
+  sprout.rect(0, 0, level_width - level_radius, level_height,
+      255, 244, 211, 238)
+  sprout.circle(level_width - level_radius, level_height - level_radius,
+      level_radius, 255, 244, 211, 238)
+  sprout.label(level_text, 2, 0, level_width - 4, level_height,
       82, 35, 65)
   if complete then
     sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)
