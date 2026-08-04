@@ -316,7 +316,7 @@ int main() {
     check(mouse.snapshot().starts_with("level:1:") &&
               mouse.snapshot().ends_with(":right:1:24"),
           "Mouse Maze win capture scenario was not applied");
-    for (int tick = 0; tick < 66; ++tick) mouse.step({});
+    for (int tick = 0; tick < 36; ++tick) mouse.step({});
     const auto progressed_mouse = parse_mouse_snapshot(mouse.snapshot());
     check(progressed_mouse.level == 2 &&
               mouse.snapshot().ends_with(":0:0"),

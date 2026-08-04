@@ -12,7 +12,8 @@ local character_scale =
     (actor_cell_size * mouse_cell_coverage) / mouse_body_extent
 local object_scale =
     (actor_cell_size * cheese_cell_coverage) / cheese_visible_extent
-local celebration_duration = 90
+local celebration_duration = 60
+local celebration_skip_delay = 12
 local movement_duration = 6
 local campaign_level_limit = 1000
 local hint_duration = 180
@@ -338,7 +339,8 @@ function update(actions)
 
   if complete then
     completion_ticks = completion_ticks + 1
-    local skip = completion_ticks >= 20 and actions.primary and not previous.primary
+    local skip = completion_ticks >= celebration_skip_delay and
+        actions.primary and not previous.primary
     if completion_ticks >= celebration_duration or skip then
       generate_level(level + 1)
     else
