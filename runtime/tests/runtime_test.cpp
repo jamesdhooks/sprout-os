@@ -1,6 +1,7 @@
 #include "sprout/runtime/package.hpp"
 #include "sprout/runtime/session.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -77,6 +78,7 @@ end
 
 function render()
   sprout.rect(10, 20, 30, 40, 80, 160, 90)
+  sprout.circle(45, 40, 5, 255, 220, 120, 180)
   sprout.label("Ready", 50, 20, 100, 24, 30, 60, 45)
 end
 
@@ -114,9 +116,11 @@ int main() {
     first.step({.primary = true});
     const std::string first_snapshot = first.snapshot();
     const auto& drawing = first.render();
-    check(drawing.size() == 2 &&
+    check(drawing.size() == 3 &&
               drawing.front().type == sprout::runtime::DrawCommandType::Rectangle &&
               drawing.front().rectangle.x == 10 &&
+              drawing[1].type == sprout::runtime::DrawCommandType::Circle &&
+              drawing[1].circle.radius == 5 && drawing[1].circle.alpha == 180 &&
               drawing.back().type == sprout::runtime::DrawCommandType::Label &&
               drawing.back().label.text == "Ready",
           "render command was not captured");
@@ -374,6 +378,42 @@ int main() {
     }
     check(distinct_starts.size() >= 6,
           "Mouse Maze did not vary generated starts across early levels");
+
+    sprout::runtime::Session mouse_hint(mouse_package, root / "mouse-hint", 7);
+    mouse_hint.start();
+    mouse_hint.apply_capture_scenario("generated-level-1000");
+    mouse_hint.step({.secondary = true});
+    const auto& hint_drawing = mouse_hint.render();
+    std::vector<sprout::runtime::DrawCircle> hint_dots;
+    for (const auto& command : hint_drawing) {
+      if (command.type == sprout::runtime::DrawCommandType::Circle) {
+        hint_dots.push_back(command.circle);
+      }
+    }
+    check(!hint_dots.empty() && hint_dots.size() <= 24 &&
+              hint_dots.size() % 2 == 0,
+          "Mouse Maze hint did not produce a bounded dotted path");
+    check(hint_dots.front().alpha > hint_dots[hint_dots.size() - 2].alpha,
+          "Mouse Maze hint dots did not fade with route distance");
+    const auto first_hint_alpha = hint_dots.front().alpha;
+    for (int tick = 0; tick < 6; ++tick) mouse_hint.step({});
+    const auto& animated_hint_drawing = mouse_hint.render();
+    const auto animated_hint = std::find_if(
+        animated_hint_drawing.begin(), animated_hint_drawing.end(),
+        [](const auto& command) {
+          return command.type == sprout::runtime::DrawCommandType::Circle;
+        });
+    check(animated_hint != animated_hint_drawing.end() &&
+              animated_hint->circle.alpha != first_hint_alpha,
+          "Mouse Maze hint dots did not animate at dense cell sizes");
+    mouse_hint.step({.left = true, .primary = true, .start = true});
+    const auto& chord_hint_drawing = mouse_hint.render();
+    check(std::any_of(chord_hint_drawing.begin(), chord_hint_drawing.end(),
+                      [](const auto& command) {
+                        return command.type ==
+                            sprout::runtime::DrawCommandType::Circle;
+                      }),
+          "Mouse Maze secret controller hint chord was not accepted");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";

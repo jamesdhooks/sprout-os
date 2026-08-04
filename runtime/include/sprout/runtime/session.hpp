@@ -51,6 +51,16 @@ struct DrawSprite {
   std::uint8_t alpha{255};
 };
 
+struct DrawCircle {
+  int x{};
+  int y{};
+  int radius{};
+  std::uint8_t red{};
+  std::uint8_t green{};
+  std::uint8_t blue{};
+  std::uint8_t alpha{255};
+};
+
 struct DrawLabel {
   std::string text;
   int x{};
@@ -65,6 +75,7 @@ struct DrawLabel {
 
 enum class DrawCommandType {
   Rectangle,
+  Circle,
   Sprite,
   Label,
 };
@@ -72,6 +83,7 @@ enum class DrawCommandType {
 struct DrawCommand {
   DrawCommandType type{DrawCommandType::Rectangle};
   DrawRect rectangle;
+  DrawCircle circle;
   DrawSprite sprite;
   DrawLabel label;
 };

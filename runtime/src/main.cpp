@@ -87,6 +87,7 @@ sprout::runtime::Actions read_actions(SDL_GameController* controller) {
       .primary = key_down(keyboard, SDL_SCANCODE_Z, SDL_SCANCODE_RETURN) ||
                  button(SDL_CONTROLLER_BUTTON_A),
       .secondary = key_down(keyboard, SDL_SCANCODE_X, SDL_SCANCODE_SPACE) ||
+                   keyboard[SDL_SCANCODE_H] != 0 ||
                    button(SDL_CONTROLLER_BUTTON_B),
       .start = keyboard[SDL_SCANCODE_RETURN] != 0 ||
                button(SDL_CONTROLLER_BUTTON_START),
@@ -176,6 +177,7 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
                 TextureStore& textures, GeometryBuffers& geometry) {
   SDL_SetRenderDrawColor(renderer, 20, 24, 28, 255);
   SDL_RenderClear(renderer);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   const auto& commands = session.render();
   std::size_t command_index = 0;
   while (command_index < commands.size()) {
@@ -186,6 +188,22 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
       SDL_SetRenderDrawColor(renderer, rectangle.red, rectangle.green,
                              rectangle.blue, rectangle.alpha);
       SDL_RenderFillRect(renderer, &target);
+      ++command_index;
+      continue;
+    }
+    if (command.type == sprout::runtime::DrawCommandType::Circle) {
+      const auto& circle = command.circle;
+      SDL_SetRenderDrawColor(renderer, circle.red, circle.green, circle.blue,
+                             circle.alpha);
+      for (int offset_y = -circle.radius; offset_y <= circle.radius;
+           ++offset_y) {
+        const int half_width = static_cast<int>(std::floor(std::sqrt(
+            static_cast<double>(circle.radius * circle.radius -
+                                offset_y * offset_y))));
+        SDL_Rect scanline{circle.x - half_width, circle.y + offset_y,
+                          half_width * 2 + 1, 1};
+        SDL_RenderFillRect(renderer, &scanline);
+      }
       ++command_index;
       continue;
     }

@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mouse & Cheese Maze maps each padded grid across the complete viewport with
   independent cell axes, keeping exactly one padding cell on every edge without
   stretching actor sprites.
+- Mouse & Cheese Maze includes a concealed, time-limited breadcrumb hint that
+  solves from the current cell and reveals at most half the route, capped at 12
+  cells, using animated dots that fade with distance.
+- The native-game renderer supports reusable alpha-blended circle primitives
+  for lightweight effects and indicators.
 - Mouse & Cheese Maze provides debounced action-level QA chords for jumping by
   1, 10, or 100 levels while inspecting its difficulty bands.
 - Shared runtime labels now fit and clip text within both dimensions of their

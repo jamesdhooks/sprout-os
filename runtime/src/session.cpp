@@ -188,6 +188,40 @@ struct Session::Impl {
     return 0;
   }
 
+  static int circle(lua_State* state) {
+    auto& runtime = self(state);
+    DrawCircle circle{
+        .x = static_cast<int>(luaL_checkinteger(state, 1)),
+        .y = static_cast<int>(luaL_checkinteger(state, 2)),
+        .radius = static_cast<int>(luaL_checkinteger(state, 3)),
+        .red = static_cast<std::uint8_t>(luaL_checkinteger(state, 4)),
+        .green = static_cast<std::uint8_t>(luaL_checkinteger(state, 5)),
+        .blue = static_cast<std::uint8_t>(luaL_checkinteger(state, 6)),
+        .alpha = static_cast<std::uint8_t>(luaL_optinteger(state, 7, 255)),
+    };
+    const auto valid_color = [state](int index) {
+      const auto component = lua_tointeger(state, index);
+      return component >= 0 && component <= 255;
+    };
+    if (circle.radius <= 0 ||
+        circle.radius > runtime.package.logical_width ||
+        circle.radius > runtime.package.logical_height ||
+        circle.x - circle.radius < 0 ||
+        circle.y - circle.radius < 0 ||
+        circle.x + circle.radius >= runtime.package.logical_width ||
+        circle.y + circle.radius >= runtime.package.logical_height ||
+        !valid_color(4) || !valid_color(5) || !valid_color(6) ||
+        (lua_gettop(state) >= 7 && !valid_color(7))) {
+      return luaL_error(state, "circle is outside the logical surface");
+    }
+    if (runtime.drawing.size() >= kMaximumDrawCommands) {
+      return luaL_error(state, "frame draw-command limit exceeded");
+    }
+    runtime.drawing.push_back(
+        {.type = DrawCommandType::Circle, .circle = circle});
+    return 0;
+  }
+
   static std::string identifier(lua_State* state, int argument) {
     std::size_t length = 0;
     const char* value = luaL_checklstring(state, argument, &length);
@@ -584,6 +618,7 @@ struct Session::Impl {
     };
     add("random", random);
     add("rect", rect);
+    add("circle", circle);
     add("label", label);
     add("sprite", sprite);
     add("animate", animate);

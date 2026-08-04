@@ -15,6 +15,8 @@ local object_scale =
 local celebration_duration = 90
 local movement_duration = 6
 local campaign_level_limit = 1000
+local hint_duration = 180
+local hint_max_cells = 12
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 
 local grid = {}
@@ -31,6 +33,8 @@ local completion_ticks = 0
 local move_from_x, move_from_y = 1, 1
 local movement_tick = movement_duration
 local queued_direction = nil
+local hint_path = {}
+local hint_age, hint_remaining = 0, 0
 local previous = {}
 
 local level_bands = {
@@ -178,6 +182,49 @@ local function choose_goal()
   end
 end
 
+local function solve_hint_path()
+  local queue = {{x = mouse_x, y = mouse_y}}
+  local predecessors = {}
+  local visited = {[mouse_y * columns + mouse_x] = true}
+  local head = 1
+  while head <= #queue do
+    local current = queue[head]
+    head = head + 1
+    if current.x == goal_x and current.y == goal_y then break end
+    for _, step in ipairs({{x = 0, y = -1}, {x = 1, y = 0},
+                           {x = 0, y = 1}, {x = -1, y = 0}}) do
+      local next_x, next_y = current.x + step.x, current.y + step.y
+      local key = next_y * columns + next_x
+      if next_x >= 0 and next_y >= 0 and next_x < columns and next_y < rows and
+          tile_at(next_x, next_y) == 0 and not visited[key] then
+        visited[key] = true
+        predecessors[key] = {x = current.x, y = current.y}
+        queue[#queue + 1] = {x = next_x, y = next_y}
+      end
+    end
+  end
+
+  local reverse = {}
+  local cursor = {x = goal_x, y = goal_y}
+  while cursor.x ~= mouse_x or cursor.y ~= mouse_y do
+    reverse[#reverse + 1] = cursor
+    cursor = predecessors[cursor.y * columns + cursor.x]
+    if cursor == nil then return {} end
+  end
+
+  local limit = math.min(hint_max_cells, math.max(1, math.floor(#reverse / 2)))
+  local result = {}
+  for offset = 1, limit do
+    result[#result + 1] = reverse[#reverse - offset + 1]
+  end
+  return result
+end
+
+local function show_hint()
+  hint_path = solve_hint_path()
+  hint_age, hint_remaining = 0, hint_duration
+end
+
 local function generate_level(next_level)
   level = next_level
   apply_level_band(level)
@@ -189,6 +236,8 @@ local function generate_level(next_level)
   complete, completion_ticks = false, 0
   move_from_x, move_from_y = mouse_x, mouse_y
   movement_tick, queued_direction = movement_duration, nil
+  hint_path = {}
+  hint_age, hint_remaining = 0, 0
   previous = {}
   sprout.storage_set("current-level", level)
 end
@@ -224,6 +273,13 @@ local function requested_level_skip(actions)
   return 0
 end
 
+local function requested_hint(actions)
+  local secondary = actions.secondary and not previous.secondary
+  local chord = actions.start and actions.primary and actions.left and
+      not (previous.start and previous.primary and previous.left)
+  return secondary or chord
+end
+
 function init()
   campaign_seed = sprout.storage_get("campaign-seed", 0)
   if campaign_seed == 0 then
@@ -239,6 +295,17 @@ function update(actions)
     generate_level(math.min(campaign_level_limit, level + level_skip))
     previous = actions
     return
+  end
+
+  if requested_hint(actions) then
+    show_hint()
+    previous = actions
+    return
+  end
+
+  if hint_remaining > 0 then
+    hint_age = hint_age + 1
+    hint_remaining = hint_remaining - 1
   end
 
   if complete then
@@ -263,6 +330,7 @@ function update(actions)
     movement_tick = movement_tick + 1
     if movement_tick == movement_duration and
         mouse_x == goal_x and mouse_y == goal_y then
+      hint_path, hint_remaining = {}, 0
       complete_level()
       previous = actions
       return
@@ -292,6 +360,21 @@ function render()
   sprout.rect(0, 0, screen_width, screen_height, 43, 75, 49)
   sprout.tilemap("maze.tiles", floor_tiles, columns, origin_x, origin_y,
       cell_width / source_tile_size, cell_height / source_tile_size)
+  if hint_remaining > 0 then
+    local time_fade = math.min(1, hint_remaining / 30)
+    for index, cell in ipairs(hint_path) do
+      local distance_fade = 1 - 0.72 * ((index - 1) / math.max(1, #hint_path))
+      local pulse = (math.sin((hint_age - index * 4) * 0.24) + 1) * 0.5
+      local radius = math.max(2, math.min(5, math.floor(
+          actor_cell_size * (0.075 + pulse * 0.025) + 0.5)))
+      local shimmer = 0.72 + pulse * 0.28
+      local alpha = math.floor(225 * distance_fade * time_fade * shimmer)
+      local x = math.floor(origin_x + (cell.x + 0.5) * cell_width + 0.5)
+      local y = math.floor(origin_y + (cell.y + 0.5) * cell_height + 0.5)
+      sprout.circle(x, y, radius, 255, 188, 82, alpha)
+      sprout.circle(x, y, math.max(1, radius - 2), 255, 247, 204, alpha)
+    end
+  end
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal",
       x = math.floor(origin_x + (goal_x + 0.5) * cell_width + 0.5),
@@ -343,6 +426,13 @@ function capture_scenario(name)
     generate_level(2)
   elseif name == "generated-level-1000" then
     generate_level(1000)
+  elseif name == "hint" then
+    show_hint()
+    hint_age = 18
+  elseif name == "hint-level-1000" then
+    generate_level(1000)
+    show_hint()
+    hint_age = 18
   elseif name == "gameplay" then
     mouse_x, mouse_y = floor_near_center()
     direction, complete, completion_ticks = "right", false, 0

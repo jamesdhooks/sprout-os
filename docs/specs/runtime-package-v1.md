@@ -54,6 +54,7 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 | --- | --- |
 | `sprout.random(maximum)` | Returns a deterministic integer from 1 through `maximum` |
 | `sprout.rect(x, y, width, height, r, g, b, a?)` | Submits an in-bounds rectangle on the logical surface |
+| `sprout.circle(x, y, radius, r, g, b, a?)` | Submits an alpha-blended filled circle on the logical surface |
 | `sprout.label(text, x, y, width, height, r, g, b, a?)` | Centers bounded printable text using the shared rounded UI font |
 | `sprout.sprite(...)` | Submits one declared atlas frame |
 | `sprout.animate(...)` | Resolves a declared animation from the fixed session tick |

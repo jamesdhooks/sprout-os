@@ -60,6 +60,13 @@ cell axis and therefore never stretch.
 The curated 1,000-layout campaign, loop insertion, and exported metrics remain
 planned content-pipeline work.
 
+An undisclosed hint is available through the secondary action (`H` on the
+Windows host) or the Start+A+Left inspection chord. It solves from the mouse's
+current cell to the cheese using breadth-first search and draws only the first
+half of that route, capped at 12 cells. Animated storybook breadcrumb dots fade
+with distance and disappear after three seconds; requesting another hint
+recomputes the route from the current position.
+
 The target campaign contains 1,000 resolved layouts with seed provenance.
 Early levels use large tiles and short routes; later bands increase board size
 and navigation complexity while preserving legibility. Daily and endless modes
