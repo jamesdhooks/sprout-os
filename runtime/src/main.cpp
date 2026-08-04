@@ -520,7 +520,7 @@ void draw_title_screen(SDL_Renderer* renderer,
     draw_text(renderer, std::string(status) + "    A Continue", status_row,
               text_color);
     draw_text(renderer,
-              reset_complete ? "Progress reset" : "Hold B 3s to reset",
+              reset_complete ? "Progress reset" : "Hold B Reset",
               reset_row, text_color);
     draw_hold_progress(renderer, controls.x + controls.w - 17,
                        controls.y + row_height +
