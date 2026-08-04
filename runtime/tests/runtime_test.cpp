@@ -294,6 +294,30 @@ int main() {
     check(second_maze_drawing.size() > initial_mouse_drawing.size(),
           "Mouse Maze next level did not increase its layered board density");
 
+    sprout::runtime::Session mouse_skip(mouse_package, root / "mouse-skip", 7);
+    mouse_skip.start();
+    const sprout::runtime::Actions skip_one{
+        .right = true, .primary = true, .start = true};
+    mouse_skip.step(skip_one);
+    check(mouse_skip.snapshot().starts_with("level:2:"),
+          "Mouse Maze QA chord did not skip one level");
+    mouse_skip.step(skip_one);
+    check(mouse_skip.snapshot().starts_with("level:2:"),
+          "Mouse Maze QA chord repeated while held");
+    mouse_skip.step({});
+    mouse_skip.step({.up = true, .primary = true, .start = true});
+    check(mouse_skip.snapshot().starts_with("level:12:"),
+          "Mouse Maze QA chord did not skip ten levels");
+    mouse_skip.step({});
+    const sprout::runtime::Actions skip_hundred{
+        .down = true, .primary = true, .start = true};
+    for (int jump = 0; jump < 10; ++jump) {
+      mouse_skip.step(skip_hundred);
+      mouse_skip.step({});
+    }
+    check(mouse_skip.snapshot().starts_with("level:1000:"),
+          "Mouse Maze QA chord did not cap at the campaign boundary");
+
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";
     const auto blocks_package = sprout::runtime::load_package(blocks_path);

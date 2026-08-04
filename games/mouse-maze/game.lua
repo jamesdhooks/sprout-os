@@ -12,6 +12,7 @@ local character_scale = (tile_size * mouse_cell_coverage) / mouse_body_extent
 local object_scale = (tile_size * cheese_cell_coverage) / cheese_visible_extent
 local celebration_duration = 90
 local movement_duration = 6
+local campaign_level_limit = 1000
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 
 local grid = {}
@@ -189,6 +190,18 @@ local function complete_level()
   sprout.emit("LevelCompleted", string.format("maze-%04d", level))
 end
 
+local function requested_level_skip(actions)
+  if not actions.start or not actions.primary then return 0 end
+  local function pressed(direction)
+    return actions[direction] and
+        not (previous.start and previous.primary and previous[direction])
+  end
+  if pressed("down") then return 100 end
+  if pressed("up") then return 10 end
+  if pressed("right") then return 1 end
+  return 0
+end
+
 function init()
   campaign_seed = sprout.storage_get("campaign-seed", 0)
   if campaign_seed == 0 then
@@ -199,6 +212,13 @@ function init()
 end
 
 function update(actions)
+  local level_skip = requested_level_skip(actions)
+  if level_skip > 0 then
+    generate_level(math.min(campaign_level_limit, level + level_skip))
+    previous = actions
+    return
+  end
+
   if complete then
     completion_ticks = completion_ticks + 1
     local skip = completion_ticks >= 20 and actions.primary and not previous.primary

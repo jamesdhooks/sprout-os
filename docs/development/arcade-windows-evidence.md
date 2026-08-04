@@ -66,6 +66,22 @@ Record the commit, Windows version, build command, input device, profile, packag
 
 If no controller is available, mark controller evidence **Not run**; keyboard success is not a substitute.
 
+### Mouse Maze QA level jumps
+
+Mouse Maze includes edge-triggered development chords for inspecting density
+bands without completing every generated maze:
+
+| Jump | Action chord | Windows keyboard |
+| --- | --- | --- |
+| +1 | Start + A + D-pad Right | Enter + Right |
+| +10 | Start + A + D-pad Up | Enter + Up |
+| +100 | Start + A + D-pad Down | Enter + Down |
+
+Holding a chord triggers once; release it before another jump. Jumps persist the
+new current level and cap at the planned 1,000-level campaign boundary. The
+game consumes logical actions, so the same chord is portable to the Miyoo input
+adapter, but physical-device mapping remains unverified until dev-card testing.
+
 ## Visual check
 
 - Launcher Arcade view is readable at its 640×480 preview size.

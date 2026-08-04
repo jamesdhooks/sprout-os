@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   active grid cell and aligns it flush with the top edge, smoothly resamples its
   high-resolution atlas, persists the current level, and advances automatically
   after a short, uncluttered "Cheese!" celebration.
+- Mouse & Cheese Maze provides debounced action-level QA chords for jumping by
+  1, 10, or 100 levels while inspecting its difficulty bands.
 
 ### Added
 

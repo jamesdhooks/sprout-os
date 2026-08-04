@@ -62,6 +62,10 @@ Early levels use large tiles and short routes; later bands increase board size
 and navigation complexity while preserving legibility. Daily and endless modes
 will generate from a supplied seed using the same versioned generator.
 
+A hidden, edge-triggered QA chord can jump by 1, 10, or 100 levels and caps at
+the target campaign boundary. It uses only portable runtime actions; it is a
+development inspection aid, not player progression.
+
 ### Completion evidence
 
 - The generator is deterministic and connectivity is proven.
