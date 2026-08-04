@@ -6,15 +6,23 @@ These games are the committed consumers for the reusable engine foundation. “C
 
 ### Player experience
 
-- The whole maze remains visible on a 320×240 logical canvas.
+- The whole maze remains visible and fills the 320×240 logical canvas, apart
+  from narrow symmetric side gutters required by the odd-cell maze grid.
 - D-pad moves the mouse one tile per press; held input repeats at a controlled rate.
-- Reaching the cheese completes the level with a short readable celebration.
-- Primary action advances; secondary action asks the host to return.
+- Reaching the cheese completes the level with a short readable celebration,
+  then advances automatically. Primary action may shorten—but not eliminate—the
+  celebration; secondary action asks the host to return.
 - There are no enemies, lives, timers, move limits, or required hints.
 
 ### Content and progression
 
 Use seeded randomized depth-first generation with optional loop insertion. BFS selects a cheese cell within the requested route-distance band. Generation records route length, board dimensions, branches, junctions, dead ends, wrong-branch depth, loop count, generator version, and seed.
+
+The Windows package currently implements deterministic depth-first mazes,
+farthest-reachable BFS goal placement, a persisted campaign seed and current
+level, and automatic next-level flow. The curated 1,000-layout campaign,
+difficulty bands, loop insertion, and exported metrics remain planned content
+pipeline work.
 
 The shipped campaign contains 1,000 resolved layouts with seed provenance. Early levels use large tiles and short routes; later bands increase board size and navigation complexity while preserving legibility. Daily and endless modes generate from a supplied seed using the same versioned generator.
 

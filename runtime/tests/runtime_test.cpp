@@ -166,24 +166,60 @@ int main() {
               mouse_package.assets.animations.size() == 9 &&
               mouse_package.assets.tile_sets.size() == 1,
           "Mouse Maze asset catalogue was not loaded");
+    const auto& mouse_east = mouse_package.assets.sprites.at(
+        mouse_package.assets.sprite_ids.at("rich.mouse-east-01"));
+    check(mouse_east.pivot_x == 154 && mouse_east.pivot_y == 128,
+          "Mouse Maze body-centered directional pivot was not preserved");
     sprout::runtime::Session mouse(mouse_package, root / "mouse", 7);
     mouse.start();
     mouse.apply_capture_scenario("gameplay");
     const auto initial_mouse_drawing = mouse.render();
-    check(initial_mouse_drawing.size() > 160 &&
-              initial_mouse_drawing.back().type ==
-                  sprout::runtime::DrawCommandType::Sprite,
-          "Mouse Maze did not submit its tilemap and animated sprite");
-    const int initial_mouse_frame = initial_mouse_drawing.back().sprite.source_x;
-    check(initial_mouse_drawing.back().sprite.width <
-              initial_mouse_drawing.back().sprite.source_width,
+    const sprout::runtime::DrawSprite* initial_mouse_sprite = nullptr;
+    for (const auto& command : initial_mouse_drawing) {
+      if (command.type == sprout::runtime::DrawCommandType::Sprite) {
+        initial_mouse_sprite = &command.sprite;
+      }
+    }
+    check(initial_mouse_drawing.size() > 285 && initial_mouse_sprite != nullptr,
+          "Mouse Maze did not submit its full-screen tilemap and animated sprite");
+    std::string first_maze_signature;
+    for (std::size_t index = 1; index <= 285; ++index) {
+      check(initial_mouse_drawing[index].type ==
+                sprout::runtime::DrawCommandType::Sprite,
+            "Mouse Maze full-screen tilemap ordering changed");
+      first_maze_signature +=
+          initial_mouse_drawing[index].sprite.source_x == 0 ? '0' : '1';
+    }
+    const int initial_mouse_frame = initial_mouse_sprite->source_x;
+    check(initial_mouse_sprite->width < initial_mouse_sprite->source_width,
           "fractional sprite scaling did not preserve the rich source frame");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
-    check(mouse.render().back().sprite.source_x != initial_mouse_frame,
+    const auto animated_mouse_drawing = mouse.render();
+    const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
+    for (const auto& command : animated_mouse_drawing) {
+      if (command.type == sprout::runtime::DrawCommandType::Sprite) {
+        animated_mouse_sprite = &command.sprite;
+      }
+    }
+    check(animated_mouse_sprite != nullptr &&
+              animated_mouse_sprite->source_x != initial_mouse_frame,
           "engine animation did not advance from the fixed session tick");
     mouse.apply_capture_scenario("win");
-    check(mouse.snapshot() == "13:9:right:1",
+    check(mouse.snapshot().starts_with("level:1:") &&
+              mouse.snapshot().ends_with(":right:1:24"),
           "Mouse Maze win capture scenario was not applied");
+    for (int tick = 0; tick < 66; ++tick) mouse.step({});
+    check(mouse.snapshot().starts_with("level:2:1:1:") &&
+              mouse.snapshot().ends_with(":down:0:0"),
+          "Mouse Maze did not advance automatically after its celebration");
+    const auto second_maze_drawing = mouse.render();
+    std::string second_maze_signature;
+    for (std::size_t index = 1; index <= 285; ++index) {
+      second_maze_signature +=
+          second_maze_drawing[index].sprite.source_x == 0 ? '0' : '1';
+    }
+    check(second_maze_signature != first_maze_signature,
+          "Mouse Maze repeated the same generated layout on the next level");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";
