@@ -438,10 +438,10 @@ struct Session::Impl {
     const int columns = static_cast<int>(luaL_checkinteger(state, 3));
     const int origin_x = static_cast<int>(luaL_checkinteger(state, 4));
     const int origin_y = static_cast<int>(luaL_checkinteger(state, 5));
-    const int scale = static_cast<int>(luaL_optinteger(state, 6, 1));
+    const double scale = static_cast<double>(luaL_optnumber(state, 6, 1.0));
     if (length == 0 || length > kMaximumDrawCommands || columns <= 0 ||
         columns > 256 || length % static_cast<std::size_t>(columns) != 0 ||
-        scale < 1 || scale > 8) {
+        !std::isfinite(scale) || scale < (1.0 / 64.0) || scale > 8.0) {
       return luaL_error(state, "tilemap dimensions are outside bounds");
     }
     const auto& tile_set = runtime.package.assets.tile_sets[found->second];
@@ -453,11 +453,18 @@ struct Session::Impl {
       const int row = static_cast<int>(tile / static_cast<std::size_t>(columns));
       const auto& frame =
           runtime.package.assets.sprites[tile_set.sprites[tiles[tile]]];
-      const int target_x = origin_x + column * tile_set.tile_width * scale;
-      const int target_y = origin_y + row * tile_set.tile_height * scale;
-      const int target_width = tile_set.tile_width * scale;
-      const int target_height = tile_set.tile_height * scale;
+      const int target_x = origin_x + static_cast<int>(std::lround(
+          column * tile_set.tile_width * scale));
+      const int target_y = origin_y + static_cast<int>(std::lround(
+          row * tile_set.tile_height * scale));
+      const int target_right = origin_x + static_cast<int>(std::lround(
+          (column + 1) * tile_set.tile_width * scale));
+      const int target_bottom = origin_y + static_cast<int>(std::lround(
+          (row + 1) * tile_set.tile_height * scale));
+      const int target_width = target_right - target_x;
+      const int target_height = target_bottom - target_y;
       if (target_x < 0 || target_y < 0 ||
+          target_width <= 0 || target_height <= 0 ||
           target_x + target_width > runtime.package.logical_width ||
           target_y + target_height > runtime.package.logical_height ||
           runtime.drawing.size() >= kMaximumDrawCommands) {

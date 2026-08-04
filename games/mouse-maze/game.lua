@@ -1,7 +1,11 @@
-local columns, rows, tile_size = 19, 15, 16
-local origin_x, origin_y = 8, 0
-local character_scale = 5 / 32
-local object_scale = 3 / 32
+local screen_width, screen_height = 320, 240
+local source_tile_size = 16
+local padding_cells = 1
+local columns, rows, tile_size = 5, 3, 45
+local frame_x, frame_y = 2, 7
+local origin_x, origin_y = 47, 52
+local character_scale = (tile_size * 0.9) / 256
+local object_scale = (tile_size * 0.65) / 256
 local celebration_duration = 90
 local movement_duration = 6
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
@@ -20,6 +24,38 @@ local move_from_x, move_from_y = 1, 1
 local movement_tick = movement_duration
 local queued_direction = nil
 local previous = {}
+
+local level_bands = {
+  {through = 1, columns = 5, rows = 3},
+  {through = 3, columns = 7, rows = 5},
+  {through = 6, columns = 9, rows = 7},
+  {through = 10, columns = 11, rows = 9},
+  {through = 15, columns = 13, rows = 9},
+  {through = 24, columns = 15, rows = 11},
+  {through = 39, columns = 17, rows = 13},
+  {through = 2147483647, columns = 19, rows = 15}
+}
+
+local function apply_level_band(next_level)
+  local selected = level_bands[#level_bands]
+  for _, band in ipairs(level_bands) do
+    if next_level <= band.through then
+      selected = band
+      break
+    end
+  end
+  columns, rows = selected.columns, selected.rows
+  local framed_columns = columns + padding_cells * 2
+  local framed_rows = rows + padding_cells * 2
+  tile_size = math.max(8, math.floor(math.min(
+      screen_width / framed_columns, screen_height / framed_rows)))
+  frame_x = math.floor((screen_width - framed_columns * tile_size) / 2)
+  frame_y = math.floor((screen_height - framed_rows * tile_size) / 2)
+  origin_x = frame_x + padding_cells * tile_size
+  origin_y = frame_y + padding_cells * tile_size
+  character_scale = (tile_size * 0.9) / 256
+  object_scale = (tile_size * 0.65) / 256
+end
 
 local function seed_random(value)
   random_state = value % 2147483647
@@ -113,6 +149,7 @@ end
 
 local function generate_level(next_level)
   level = next_level
+  apply_level_band(level)
   seed_random((campaign_seed + level * 104729) % 2147483647)
   carve_maze()
   choose_goal()
@@ -202,19 +239,22 @@ function render()
   local progress = movement_tick / movement_duration
   local rendered_x = move_from_x + (mouse_x - move_from_x) * progress
   local rendered_y = move_from_y + (mouse_y - move_from_y) * progress
-  sprout.rect(0, 0, 320, 240, 49, 39, 61)
-  sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y)
+  sprout.rect(0, 0, screen_width, screen_height, 43, 75, 49)
+  sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
+      tile_size / source_tile_size)
   sprout.sprite_batch({
-    {sprite = "rich.cheese-goal", x = origin_x + goal_x * tile_size + 8,
-      y = origin_y + goal_y * tile_size + 8, scale = object_scale},
+    {sprite = "rich.cheese-goal",
+      x = math.floor(origin_x + (goal_x + 0.5) * tile_size + 0.5),
+      y = math.floor(origin_y + (goal_y + 0.5) * tile_size + 0.5),
+      scale = object_scale},
     {animation = "rich.mouse-walk-" .. rich_direction[direction],
-      x = math.floor(origin_x + rendered_x * tile_size + 8 + 0.5),
-      y = math.floor(origin_y + rendered_y * tile_size + 8 + 0.5),
+      x = math.floor(origin_x + (rendered_x + 0.5) * tile_size + 0.5),
+      y = math.floor(origin_y + (rendered_y + 0.5) * tile_size + 0.5),
       scale = character_scale}
   })
 
-  sprout.rect(origin_x, origin_y, 48, 14, 255, 244, 211, 238)
-  sprout.label("Level " .. level, origin_x + 3, origin_y + 1, 42, 12,
+  sprout.rect(frame_x, frame_y, 48, 14, 255, 244, 211, 238)
+  sprout.label("Level " .. level, frame_x + 3, frame_y + 1, 42, 12,
       82, 35, 65)
   if complete then
     sprout.rect(76, 96, 168, 48, 255, 226, 155, 246)
@@ -241,6 +281,10 @@ end
 
 function capture_scenario(name)
   if name == "gameplay" then
+    mouse_x, mouse_y = floor_near_center()
+    direction, complete, completion_ticks = "right", false, 0
+  elseif name == "gameplay-level-2" then
+    generate_level(2)
     mouse_x, mouse_y = floor_near_center()
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "win" then

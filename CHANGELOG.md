@@ -9,8 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - Mouse & Cheese Maze now fills the gameplay viewport with deterministic
-  seeded mazes, anchors the mouse by its body rather than its tail-inclusive
-  image bounds, uses smoothly interpolated held-direction movement, persists
+  seeded mazes, starts with simple low-density boards and large resampled art,
+  scales through progressively denser board bands, retains one cell of calm
+  forest-colored padding around every maze, anchors the mouse by its body
+  rather than its tail-inclusive image bounds, uses smoothly interpolated held-
+  direction movement, smoothly resamples its high-resolution atlas, persists
   the current level, and advances automatically after a short cheese
   celebration.
 

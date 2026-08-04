@@ -140,7 +140,7 @@ class TextureStore {
                                atlas.id);
     }
 #if SDL_VERSION_ATLEAST(2, 0, 12)
-    SDL_SetTextureScaleMode(textures_[index], SDL_ScaleModeNearest);
+    SDL_SetTextureScaleMode(textures_[index], SDL_ScaleModeLinear);
 #endif
     SDL_SetTextureBlendMode(textures_[index], SDL_BLENDMODE_BLEND);
     return textures_[index];

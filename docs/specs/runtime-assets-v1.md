@@ -21,7 +21,7 @@ The manifest has five required sections:
 
 IDs are package-local. Atlas images are loaded lazily, decoded once, checked
 against their declared dimensions, retained for the session, alpha blended,
-and sampled with nearest-neighbor scaling. Source rectangles must fit their
+and sampled with smooth linear scaling. Source rectangles must fit their
 atlas. Animation frames and tile-set entries must reference declared sprites.
 
 The loader bounds manifests to 512 KiB, atlases to 16, sprites to 2,048,
@@ -46,10 +46,13 @@ explicit phase; rendering never advances animation state.
 Sprite scale is a finite number from 1/64 through 64. This permits a dense
 source frame to render on a compact logical canvas without discarding its
 higher-density source or forcing every future game to share one pixel scale.
-Tilemaps retain integer scale because adjacent tile geometry must stay exact.
-Source frames may be larger than the logical tile. The host resamples each frame
-to the declared tile size, allowing one rich atlas to serve 320×240, 640×480,
-and future higher-density packages without baking a low-resolution source grid.
+Tilemaps accept a finite fractional scale from 1/64 through 8. The host
+rounds shared tile edges from cumulative positions rather than rounding each
+tile independently, so fractional scales remain contiguous without seams or
+overlap. Source frames may be larger than the logical tile. The host resamples
+each frame to the scaled tile geometry, allowing one rich atlas to serve
+different board densities and future higher-density packages without baking a
+low-resolution source grid.
 
 Tilemap bytes are zero-based indices into the declared tile set. This compact
 representation avoids one Lua call per tile and makes invalid tile values fail
@@ -66,8 +69,10 @@ frame therefore crosses Lua once for its tilemap, once for its actor batch, and
 submits the atlas geometry in a single backend draw.
 
 Automated core tests inspect commands without creating a window. Windows
-capture tests exercise PNG decoding, declared-size validation, nearest-neighbor
-sampling, geometry batching, and the actual SDL output path.
+capture tests exercise PNG decoding, declared-size validation, smooth atlas
+sampling, geometry batching, and the actual SDL output path. The current host
+resamples from the full-resolution atlas; it does not yet select from an
+explicit mip chain.
 
 ## Common atlas imports
 

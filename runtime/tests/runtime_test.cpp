@@ -215,10 +215,15 @@ int main() {
         initial_mouse_sprite = &command.sprite;
       }
     }
-    check(initial_mouse_drawing.size() > 285 && initial_mouse_sprite != nullptr,
-          "Mouse Maze did not submit its full-screen tilemap and animated sprite");
+    check(initial_mouse_drawing.size() > 15 && initial_mouse_sprite != nullptr,
+          "Mouse Maze did not submit its scaled tilemap and animated sprite");
+    check(initial_mouse_drawing[1].sprite.x == 47 &&
+              initial_mouse_drawing[1].sprite.y == 52 &&
+              initial_mouse_drawing[1].sprite.width == 45 &&
+              initial_mouse_drawing[1].sprite.height == 45,
+          "Mouse Maze level-one board did not retain one cell of padding");
     std::string first_maze_signature;
-    for (std::size_t index = 1; index <= 285; ++index) {
+    for (std::size_t index = 1; index <= 15; ++index) {
       check(initial_mouse_drawing[index].type ==
                 sprout::runtime::DrawCommandType::Sprite,
             "Mouse Maze full-screen tilemap ordering changed");
@@ -226,8 +231,9 @@ int main() {
           initial_mouse_drawing[index].sprite.source_x == 0 ? '0' : '1';
     }
     const int initial_mouse_frame = initial_mouse_sprite->source_x;
-    check(initial_mouse_sprite->width < initial_mouse_sprite->source_width,
-          "fractional sprite scaling did not preserve the rich source frame");
+    check(initial_mouse_sprite->width <= 45 && initial_mouse_sprite->height <= 45 &&
+              initial_mouse_sprite->width < initial_mouse_sprite->source_width,
+          "scaled Mouse Maze character did not remain within its active cell");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
@@ -248,8 +254,13 @@ int main() {
               mouse.snapshot().ends_with(":down:0:0"),
           "Mouse Maze did not advance automatically after its celebration");
     const auto second_maze_drawing = mouse.render();
+    check(second_maze_drawing[1].sprite.x == 41 &&
+              second_maze_drawing[1].sprite.y == 35 &&
+              second_maze_drawing[1].sprite.width == 34 &&
+              second_maze_drawing[1].sprite.height == 34,
+          "Mouse Maze level-two board did not enter its next size band");
     std::string second_maze_signature;
-    for (std::size_t index = 1; index <= 285; ++index) {
+    for (std::size_t index = 1; index <= 35; ++index) {
       second_maze_signature +=
           second_maze_drawing[index].sprite.source_x == 0 ? '0' : '1';
     }

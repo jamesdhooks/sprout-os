@@ -21,11 +21,33 @@ Use seeded randomized depth-first generation with optional loop insertion. BFS s
 
 The Windows package currently implements deterministic depth-first mazes,
 farthest-reachable BFS goal placement, a persisted campaign seed and current
-level, and automatic next-level flow. The curated 1,000-layout campaign,
-difficulty bands, loop insertion, and exported metrics remain planned content
-pipeline work.
+level, automatic next-level flow, and progressive board-density bands. Each
+band chooses the largest tile size that fits its odd-dimension grid plus a
+one-cell perimeter within the entire 320x240 play area. That perimeter uses a
+quiet forest-ground color, separates playable tiles from the display edge, and
+holds the compact level badge. Early levels therefore use very few large,
+richly resampled cells; later levels add cells until reaching the densest grid.
+Mouse and goal artwork scale as a proportion of the current cell and remain
+centered on it.
 
-The shipped campaign contains 1,000 resolved layouts with seed provenance. Early levels use large tiles and short routes; later bands increase board size and navigation complexity while preserving legibility. Daily and endless modes generate from a supplied seed using the same versioned generator.
+| Levels | Maze grid | Logical tile | Padded frame |
+| --- | --- | --- | --- |
+| 1 | 5x3 | 45px | 315x225 |
+| 2-3 | 7x5 | 34px | 306x238 |
+| 4-6 | 9x7 | 26px | 286x234 |
+| 7-10 | 11x9 | 21px | 273x231 |
+| 11-15 | 13x9 | 21px | 315x231 |
+| 16-24 | 15x11 | 18px | 306x234 |
+| 25-39 | 17x13 | 16px | 304x240 |
+| 40+ | 19x15 | 14px | 294x238 |
+
+The curated 1,000-layout campaign, loop insertion, and exported metrics remain
+planned content-pipeline work.
+
+The target campaign contains 1,000 resolved layouts with seed provenance.
+Early levels use large tiles and short routes; later bands increase board size
+and navigation complexity while preserving legibility. Daily and endless modes
+will generate from a supplied seed using the same versioned generator.
 
 ### Completion evidence
 
