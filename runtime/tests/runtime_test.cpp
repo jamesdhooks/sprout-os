@@ -245,9 +245,12 @@ int main() {
                 initial_mouse_drawing[index].sprite.source_x == 256,
             "Mouse Maze wall pass did not render above its actor pass");
     }
-    check(initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle.x ==
-              136,
-          "Mouse Maze level badge was not centered");
+    const auto& initial_level_badge =
+        initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle;
+    check(initial_level_badge.x == 115 && initial_level_badge.y == 7 &&
+              initial_level_badge.width == 90 &&
+              initial_level_badge.height == 45,
+          "Mouse Maze level badge did not fill and center in the top cell");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
@@ -282,6 +285,12 @@ int main() {
               second_mouse_sprite.width < initial_mouse_sprite->width &&
               second_cheese_sprite.width < initial_cheese_sprite.width,
           "Mouse Maze actors did not follow the active level scale");
+    const auto& second_level_badge =
+        second_maze_drawing[second_maze_drawing.size() - 2].rectangle;
+    check(second_level_badge.x == 126 && second_level_badge.y == 1 &&
+              second_level_badge.width == 68 &&
+              second_level_badge.height == 34,
+          "Mouse Maze level badge did not follow its density band");
     check(second_maze_drawing.size() > initial_mouse_drawing.size(),
           "Mouse Maze next level did not increase its layered board density");
 

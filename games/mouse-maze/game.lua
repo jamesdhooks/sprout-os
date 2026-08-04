@@ -263,9 +263,11 @@ function render()
   sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
       tile_size / source_tile_size, 0)
 
-  local level_x = math.floor((screen_width - 48) / 2)
-  sprout.rect(level_x, frame_y, 48, 14, 255, 244, 211, 238)
-  sprout.label("Level " .. level, level_x + 3, frame_y + 1, 42, 12,
+  local level_width = math.max(48, tile_size * 2)
+  local level_x = math.floor((screen_width - level_width) / 2)
+  sprout.rect(level_x, frame_y, level_width, tile_size, 255, 244, 211, 238)
+  sprout.label("Level " .. level, level_x + 4, frame_y,
+      level_width - 8, tile_size,
       82, 35, 65)
   if complete then
     sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)

@@ -14,9 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   forest-colored padding around every maze, anchors the mouse by its body
   rather than its tail-inclusive image bounds, uses smoothly interpolated held-
   direction movement, scales actors from their visible artwork bounds, renders
-  walls above the mouse's overlapping tail, centers its level badge, smoothly
-  resamples its high-resolution atlas, persists the current level, and advances
-  automatically after a short, uncluttered "Cheese!" celebration.
+  walls above the mouse's overlapping tail, sizes its centered level tab to the
+  active grid cell, smoothly resamples its high-resolution atlas, persists the
+  current level, and advances automatically after a short, uncluttered
+  "Cheese!" celebration.
 
 ### Added
 
