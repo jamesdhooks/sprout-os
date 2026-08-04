@@ -45,7 +45,23 @@ local level_bands = {
   {through = 15, columns = 13, rows = 9},
   {through = 24, columns = 15, rows = 11},
   {through = 39, columns = 17, rows = 13},
-  {through = 2147483647, columns = 19, rows = 15}
+  {through = 59, columns = 19, rows = 15},
+  {through = 89, columns = 21, rows = 15},
+  {through = 129, columns = 23, rows = 17},
+  {through = 169, columns = 25, rows = 19},
+  {through = 219, columns = 27, rows = 19},
+  {through = 279, columns = 29, rows = 21},
+  {through = 349, columns = 31, rows = 23},
+  {through = 429, columns = 33, rows = 23},
+  {through = 509, columns = 35, rows = 25},
+  {through = 599, columns = 37, rows = 27},
+  {through = 689, columns = 39, rows = 27},
+  {through = 769, columns = 41, rows = 29},
+  {through = 839, columns = 43, rows = 31},
+  {through = 899, columns = 45, rows = 31},
+  {through = 949, columns = 47, rows = 33},
+  {through = 979, columns = 49, rows = 35},
+  {through = 2147483647, columns = 53, rows = 39}
 }
 
 local function apply_level_band(next_level)
@@ -391,7 +407,7 @@ function render()
   local level_text = "Level " .. level
   local level_width = math.floor(math.max(48, cell_width * 2,
       44 + #tostring(level) * 8) + 0.5)
-  local level_height = math.floor(cell_height + 0.5)
+  local level_height = math.max(12, math.floor(cell_height + 0.5))
   local level_x = math.floor((screen_width - level_width) / 2)
   sprout.rect(level_x, 0, level_width, level_height, 255, 244, 211, 238)
   sprout.label(level_text, level_x + 4, 0,
@@ -424,6 +440,8 @@ function capture_scenario(name)
     -- Preserve the deterministic start selected during normal initialization.
   elseif name == "generated-level-2" then
     generate_level(2)
+  elseif name == "generated-level-100" then
+    generate_level(100)
   elseif name == "generated-level-1000" then
     generate_level(1000)
   elseif name == "hint" then

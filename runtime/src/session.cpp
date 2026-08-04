@@ -29,6 +29,7 @@ namespace sprout::runtime {
 namespace {
 
 constexpr std::size_t kMaximumDrawCommands = 4096;
+constexpr int kLifecycleInstructionLimit = 500000;
 
 bool has_capability(const PackageManifest& package, std::string_view capability) {
   return std::find(package.capabilities.begin(), package.capabilities.end(),
@@ -640,7 +641,8 @@ struct Session::Impl {
                                name);
     }
     lua_insert(lua, function_index + 1);
-    lua_sethook(lua, instruction_limit, LUA_MASKCOUNT, 100000);
+    lua_sethook(lua, instruction_limit, LUA_MASKCOUNT,
+                kLifecycleInstructionLimit);
     const int result = lua_pcall(lua, arguments, results, 0);
     lua_sethook(lua, nullptr, 0, 0);
     if (result != LUA_OK) {
@@ -739,7 +741,8 @@ void Session::start() {
     lua_pop(impl_->lua, 1);
     throw std::runtime_error("Could not load native game: " + message);
   }
-  lua_sethook(impl_->lua, Impl::instruction_limit, LUA_MASKCOUNT, 100000);
+  lua_sethook(impl_->lua, Impl::instruction_limit, LUA_MASKCOUNT,
+              kLifecycleInstructionLimit);
   const int load_result = lua_pcall(impl_->lua, 0, 0, 0);
   lua_sethook(impl_->lua, nullptr, 0, 0);
   if (load_result != LUA_OK) {

@@ -44,7 +44,11 @@ A game defines four global functions:
 - `render()` submits the current frame without advancing time.
 - `snapshot()` returns deterministic text suitable for state comparison in tests.
 
-Each lifecycle call has a 100,000-instruction limit. The Windows host calls `update` at 60 fixed ticks per second and limits catch-up after a stall. The runtime controls randomness; identical seeds and action frames must produce identical snapshots.
+Each lifecycle call has a 500,000-instruction limit, sufficient for bounded
+dense-level generation while still terminating runaway package scripts. The
+Windows host calls `update` at 60 fixed ticks per second and limits catch-up
+after a stall. The runtime controls randomness; identical seeds and action
+frames must produce identical snapshots.
 
 The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `secondary`, `start`, and `back` fields. Games target actions rather than keyboard keys or controller button numbers.
 

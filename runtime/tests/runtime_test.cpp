@@ -348,18 +348,35 @@ int main() {
     check(mouse_skip.snapshot().starts_with("level:1000:"),
           "Mouse Maze QA chord did not cap at the campaign boundary");
     const auto level_thousand_drawing = mouse_skip.render();
+    check(level_thousand_drawing.size() == 3152 &&
+              level_thousand_drawing[1].sprite.x == 6 &&
+              level_thousand_drawing[1].sprite.y == 6 &&
+              level_thousand_drawing[1].sprite.width == 6 &&
+              level_thousand_drawing[1].sprite.height == 6,
+          "Mouse Maze level 1,000 did not reach its dense 53x39 band");
     const auto& level_thousand_badge =
         level_thousand_drawing[level_thousand_drawing.size() - 2].rectangle;
     const auto& level_thousand_label =
         level_thousand_drawing.back().label;
     check(level_thousand_badge.x == 122 && level_thousand_badge.y == 0 &&
               level_thousand_badge.width == 76 &&
-              level_thousand_badge.height == 14 &&
+              level_thousand_badge.height == 12 &&
               level_thousand_label.text == "Level 1000" &&
               level_thousand_label.x >= level_thousand_badge.x &&
               level_thousand_label.x + level_thousand_label.width <=
                   level_thousand_badge.x + level_thousand_badge.width,
           "Mouse Maze multi-digit level label exceeded its scaled badge");
+
+    sprout::runtime::Session mouse_density(mouse_package,
+                                           root / "mouse-density", 7);
+    mouse_density.start();
+    mouse_density.apply_capture_scenario("generated-level-100");
+    const auto level_hundred_commands = mouse_density.render().size();
+    mouse_density.apply_capture_scenario("generated-level-1000");
+    const auto level_thousand_commands = mouse_density.render().size();
+    check(level_hundred_commands == 612 && level_thousand_commands == 3152 &&
+              level_thousand_commands > level_hundred_commands * 5,
+          "Mouse Maze campaign density did not continue scaling after level 100");
 
     sprout::runtime::Session mouse_starts(mouse_package, root / "mouse-starts", 7);
     mouse_starts.start();

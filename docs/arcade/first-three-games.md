@@ -28,9 +28,10 @@ band maps its odd-dimension grid plus a one-cell perimeter directly onto the
 entire 320x240 play area. X and Y cell extents are derived independently, so
 the perimeter is exactly one grid cell on every side without residual gutters.
 That perimeter uses a quiet forest-ground color, separates playable tiles from
-the display edge, and holds a centered level tab exactly one active cell tall.
-The tab scales with each density band while retaining a minimum readable width
-and expanding for multi-digit level numbers. Early levels therefore use very
+the display edge, and holds a centered level tab one active cell tall while the
+cell remains readable. The tab scales with each density band, retains minimum
+readable width, expands for multi-digit level numbers, and uses a 12-pixel
+height floor in the final ultra-dense bands. Early levels therefore use very
 few large, richly resampled cells; later levels add cells until reaching the
 densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
@@ -55,7 +56,17 @@ cell axis and therefore never stretch.
 | 11-15 | 13x9 | 21.3px | 21.8px |
 | 16-24 | 15x11 | 18.8px | 18.5px |
 | 25-39 | 17x13 | 16.8px | 16.0px |
-| 40+ | 19x15 | 15.2px | 14.1px |
+| 40-59 | 19x15 | 15.2px | 14.1px |
+| 60-89 | 21x15 | 13.9px | 14.1px |
+| 90-129 | 23x17 | 12.8px | 12.6px |
+| 130-219 | 25x19 to 27x19 | 11.9-11.0px | 11.4px |
+| 220-349 | 29x21 to 31x23 | 10.3-9.7px | 10.4-9.6px |
+| 350-509 | 33x23 to 35x25 | 9.1-8.6px | 9.6-8.9px |
+| 510-689 | 37x27 to 39x27 | 8.2-7.8px | 8.3px |
+| 690-839 | 41x29 to 43x31 | 7.4-7.1px | 7.7-7.3px |
+| 840-949 | 45x31 to 47x33 | 6.8-6.5px | 7.3-6.9px |
+| 950-979 | 49x35 | 6.3px | 6.5px |
+| 980-1000 | 53x39 | 5.8px | 5.9px |
 
 The curated 1,000-layout campaign, loop insertion, and exported metrics remain
 planned content-pipeline work.
