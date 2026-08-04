@@ -263,9 +263,8 @@ function render()
   sprout.label("Level " .. level, frame_x + 3, frame_y + 1, 42, 12,
       82, 35, 65)
   if complete then
-    sprout.rect(76, 96, 168, 48, 255, 226, 155, 246)
-    sprout.label("Cheese found!", 88, 100, 144, 24, 82, 35, 65)
-    sprout.label("Next maze...", 104, 123, 112, 14, 82, 35, 65)
+    sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)
+    sprout.label("Cheese!", 112, 108, 96, 24, 82, 35, 65)
   end
 end
 

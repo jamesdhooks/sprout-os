@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   rather than its tail-inclusive image bounds, uses smoothly interpolated held-
   direction movement, scales actors from their visible artwork bounds, smoothly
   resamples its high-resolution atlas, persists the current level, and advances
-  automatically after a short cheese celebration.
+  automatically after a short, uncluttered "Cheese!" celebration.
 
 ### Added
 
