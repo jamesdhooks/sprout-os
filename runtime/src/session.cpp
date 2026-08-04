@@ -439,9 +439,11 @@ struct Session::Impl {
     const int origin_x = static_cast<int>(luaL_checkinteger(state, 4));
     const int origin_y = static_cast<int>(luaL_checkinteger(state, 5));
     const double scale = static_cast<double>(luaL_optnumber(state, 6, 1.0));
+    const int skip_index = static_cast<int>(luaL_optinteger(state, 7, -1));
     if (length == 0 || length > kMaximumDrawCommands || columns <= 0 ||
         columns > 256 || length % static_cast<std::size_t>(columns) != 0 ||
-        !std::isfinite(scale) || scale < (1.0 / 64.0) || scale > 8.0) {
+        !std::isfinite(scale) || scale < (1.0 / 64.0) || scale > 8.0 ||
+        skip_index < -1 || skip_index > 255) {
       return luaL_error(state, "tilemap dimensions are outside bounds");
     }
     const auto& tile_set = runtime.package.assets.tile_sets[found->second];
@@ -449,6 +451,7 @@ struct Session::Impl {
       if (tiles[tile] >= tile_set.sprites.size()) {
         return luaL_error(state, "tilemap contains an unknown tile index");
       }
+      if (tiles[tile] == skip_index) continue;
       const int column = static_cast<int>(tile % static_cast<std::size_t>(columns));
       const int row = static_cast<int>(tile / static_cast<std::size_t>(columns));
       const auto& frame =

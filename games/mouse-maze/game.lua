@@ -1,14 +1,14 @@
 local screen_width, screen_height = 320, 240
 local source_tile_size = 16
 local padding_cells = 1
-local mouse_visible_extent = 151
+local mouse_body_extent = 70
 local cheese_visible_extent = 174
-local mouse_cell_coverage = 0.8
+local mouse_cell_coverage = 0.84
 local cheese_cell_coverage = 0.75
 local columns, rows, tile_size = 5, 3, 45
 local frame_x, frame_y = 2, 7
 local origin_x, origin_y = 47, 52
-local character_scale = (tile_size * mouse_cell_coverage) / mouse_visible_extent
+local character_scale = (tile_size * mouse_cell_coverage) / mouse_body_extent
 local object_scale = (tile_size * cheese_cell_coverage) / cheese_visible_extent
 local celebration_duration = 90
 local movement_duration = 6
@@ -16,6 +16,7 @@ local rich_direction = {up = "north", right = "east", down = "south", left = "we
 
 local grid = {}
 local tiles = ""
+local floor_tiles = ""
 local level = 1
 local campaign_seed = 1
 local random_state = 1
@@ -58,7 +59,7 @@ local function apply_level_band(next_level)
   origin_x = frame_x + padding_cells * tile_size
   origin_y = frame_y + padding_cells * tile_size
   character_scale =
-      (tile_size * mouse_cell_coverage) / mouse_visible_extent
+      (tile_size * mouse_cell_coverage) / mouse_body_extent
   object_scale =
       (tile_size * cheese_cell_coverage) / cheese_visible_extent
 end
@@ -89,6 +90,7 @@ local function build_tiles()
     end
   end
   tiles = table.concat(result)
+  floor_tiles = string.rep(string.char(0), #tiles)
 end
 
 local function carve_maze()
@@ -246,7 +248,7 @@ function render()
   local rendered_x = move_from_x + (mouse_x - move_from_x) * progress
   local rendered_y = move_from_y + (mouse_y - move_from_y) * progress
   sprout.rect(0, 0, screen_width, screen_height, 43, 75, 49)
-  sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
+  sprout.tilemap("maze.tiles", floor_tiles, columns, origin_x, origin_y,
       tile_size / source_tile_size)
   sprout.sprite_batch({
     {sprite = "rich.cheese-goal",
@@ -258,9 +260,12 @@ function render()
       y = math.floor(origin_y + (rendered_y + 0.5) * tile_size + 0.5),
       scale = character_scale}
   })
+  sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
+      tile_size / source_tile_size, 0)
 
-  sprout.rect(frame_x, frame_y, 48, 14, 255, 244, 211, 238)
-  sprout.label("Level " .. level, frame_x + 3, frame_y + 1, 42, 12,
+  local level_x = math.floor((screen_width - 48) / 2)
+  sprout.rect(level_x, frame_y, 48, 14, 255, 244, 211, 238)
+  sprout.label("Level " .. level, level_x + 3, frame_y + 1, 42, 12,
       82, 35, 65)
   if complete then
     sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)

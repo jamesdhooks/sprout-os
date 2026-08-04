@@ -35,7 +35,7 @@ edges to 4,096 pixels, and each rendered frame to 4,096 commands.
 | `sprout.sprite(id, x, y, scale?, flipX?, flipY?, alpha?)` | Submit one declared frame; fractional scale supports high-density masters |
 | `sprout.animate(id, x, y, phase?, scale?, flipX?, flipY?, alpha?)` | Resolve one declared animation with the same fractional scale contract |
 | `sprout.sprite_batch(items)` | Submit many sprite or animation items in one Lua-to-host call |
-| `sprout.tilemap(tileSet, bytes, columns, x, y, scale?)` | Submit a dense tile grid in one Lua-to-host call |
+| `sprout.tilemap(tileSet, bytes, columns, x, y, scale?, skipIndex?)` | Submit a dense tile grid, optionally omitting one tile index for layered rendering |
 | `sprout.label(text, x, y, width, height, r, g, b, a?)` | Submit one bounded shared-font label without a package-specific glyph atlas |
 
 A batch item names exactly one `sprite` or `animation` and supplies integer
@@ -56,7 +56,10 @@ low-resolution source grid.
 
 Tilemap bytes are zero-based indices into the declared tile set. This compact
 representation avoids one Lua call per tile and makes invalid tile values fail
-at the package boundary.
+at the package boundary. An optional `skipIndex` from 0 through 255 omits that
+valid tile value while retaining every cell's position. A package can therefore
+submit a floor pass, actors, and a masked wall pass so foreground geometry
+occludes sprites without expanding the map into per-tile Lua calls.
 
 ## Backend batching
 

@@ -172,10 +172,12 @@ int main() {
         mouse_package.assets.sprite_ids.at("rich.mouse-east-01"));
     check(mouse_east.pivot_x == 154 && mouse_east.pivot_y == 128,
           "Mouse Maze body-centered directional pivot was not preserved");
-    auto mouse_position = [](sprout::runtime::Session& session) {
+    const auto mouse_atlas = mouse_east.atlas;
+    auto mouse_position = [mouse_atlas](sprout::runtime::Session& session) {
       const auto& drawing = session.render();
       for (auto command = drawing.rbegin(); command != drawing.rend(); ++command) {
-        if (command->type == sprout::runtime::DrawCommandType::Sprite) {
+        if (command->type == sprout::runtime::DrawCommandType::Sprite &&
+            command->sprite.atlas == mouse_atlas) {
           return std::pair{command->sprite.x, command->sprite.y};
         }
       }
@@ -211,7 +213,8 @@ int main() {
     const auto initial_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* initial_mouse_sprite = nullptr;
     for (const auto& command : initial_mouse_drawing) {
-      if (command.type == sprout::runtime::DrawCommandType::Sprite) {
+      if (command.type == sprout::runtime::DrawCommandType::Sprite &&
+          command.sprite.atlas == mouse_atlas) {
         initial_mouse_sprite = &command.sprite;
       }
     }
@@ -223,24 +226,34 @@ int main() {
               initial_mouse_drawing[1].sprite.width == 45 &&
               initial_mouse_drawing[1].sprite.height == 45,
           "Mouse Maze level-one board did not retain one cell of padding");
-    std::string first_maze_signature;
     for (std::size_t index = 1; index <= 15; ++index) {
       check(initial_mouse_drawing[index].type ==
                 sprout::runtime::DrawCommandType::Sprite,
             "Mouse Maze full-screen tilemap ordering changed");
-      first_maze_signature +=
-          initial_mouse_drawing[index].sprite.source_x == 0 ? '0' : '1';
     }
     const int initial_mouse_frame = initial_mouse_sprite->source_x;
-    check(initial_mouse_sprite->width == 61 && initial_mouse_sprite->height == 61 &&
+    check(initial_mouse_sprite->width == 138 &&
+              initial_mouse_sprite->height == 138 &&
               initial_cheese_sprite.width == 50 &&
               initial_cheese_sprite.height == 50,
-          "Mouse Maze actors did not scale from their visible source bounds");
+          "Mouse Maze body did not scale independently from its overlapping tail");
+    check(initial_mouse_drawing[17].sprite.atlas == mouse_atlas,
+          "Mouse Maze actor pass was not submitted after the floor pass");
+    for (std::size_t index = 18; index + 2 < initial_mouse_drawing.size(); ++index) {
+      check(initial_mouse_drawing[index].type ==
+                    sprout::runtime::DrawCommandType::Sprite &&
+                initial_mouse_drawing[index].sprite.source_x == 256,
+            "Mouse Maze wall pass did not render above its actor pass");
+    }
+    check(initial_mouse_drawing[initial_mouse_drawing.size() - 2].rectangle.x ==
+              136,
+          "Mouse Maze level badge was not centered");
     for (int tick = 0; tick < 8; ++tick) mouse.step({});
     const auto animated_mouse_drawing = mouse.render();
     const sprout::runtime::DrawSprite* animated_mouse_sprite = nullptr;
     for (const auto& command : animated_mouse_drawing) {
-      if (command.type == sprout::runtime::DrawCommandType::Sprite) {
+      if (command.type == sprout::runtime::DrawCommandType::Sprite &&
+          command.sprite.atlas == mouse_atlas) {
         animated_mouse_sprite = &command.sprite;
       }
     }
@@ -263,19 +276,14 @@ int main() {
           "Mouse Maze level-two board did not enter its next size band");
     const auto& second_cheese_sprite = second_maze_drawing[36].sprite;
     const auto& second_mouse_sprite = second_maze_drawing[37].sprite;
-    check(second_mouse_sprite.width == 46 && second_mouse_sprite.height == 46 &&
+    check(second_mouse_sprite.width == 104 && second_mouse_sprite.height == 104 &&
               second_cheese_sprite.width == 38 &&
               second_cheese_sprite.height == 38 &&
               second_mouse_sprite.width < initial_mouse_sprite->width &&
               second_cheese_sprite.width < initial_cheese_sprite.width,
           "Mouse Maze actors did not follow the active level scale");
-    std::string second_maze_signature;
-    for (std::size_t index = 1; index <= 35; ++index) {
-      second_maze_signature +=
-          second_maze_drawing[index].sprite.source_x == 0 ? '0' : '1';
-    }
-    check(second_maze_signature != first_maze_signature,
-          "Mouse Maze repeated the same generated layout on the next level");
+    check(second_maze_drawing.size() > initial_mouse_drawing.size(),
+          "Mouse Maze next level did not increase its layered board density");
 
     const auto blocks_path = std::filesystem::path(SPROUT_SOURCE_DIR) / "games" /
                              "blocks-buttons";

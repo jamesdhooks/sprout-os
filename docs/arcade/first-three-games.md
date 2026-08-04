@@ -28,9 +28,12 @@ quiet forest-ground color, separates playable tiles from the display edge, and
 holds the compact level badge. Early levels therefore use very few large,
 richly resampled cells; later levels add cells until reaching the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
-centered on it. Coverage is calculated from each asset's opaque source bounds,
-not its transparent 256px atlas cell, so both visibly grow with early-level
-tiles and shrink with later density bands.
+centered on it. Mouse coverage is calculated from its body silhouette rather
+than its tail-inclusive extent or transparent 256px atlas cell, so its body
+fills the active cell while the tail can cross a boundary. Rendering uses a
+floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
+the mouse. Both actors visibly grow with early-level tiles and shrink with later
+density bands.
 
 | Levels | Maze grid | Logical tile | Padded frame |
 | --- | --- | --- | --- |
