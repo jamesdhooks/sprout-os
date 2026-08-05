@@ -51,6 +51,9 @@ def validate(package: Path) -> None:
     assert launch.startswith(b"#!/bin/sh\n"), "launch.sh must use an LF shell shebang"
     assert b"\r\n" not in launch, "launch.sh must not contain CRLF"
     assert b"LD_LIBRARY_PATH" in launch, "launch.sh must set its private library path"
+    assert b"SDL_VIDEODRIVER=mmiyoo" in launch
+    assert b"SDL_AUDIODRIVER=mmiyoo" in launch
+    assert b"EGL_VIDEODRIVER=mmiyoo" in launch
     assert b"sprout-launcher" in launch, "launch.sh must start the launcher"
 
     app_config = json.loads((app / "config.json").read_text(encoding="utf-8"))

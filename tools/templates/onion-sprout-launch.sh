@@ -10,7 +10,10 @@ LOG_FILE="$LOG_ROOT/launcher-$STAMP.log"
 mkdir -p "$DATA_ROOT" "$LOG_ROOT" "$DATA_ROOT/tmp" "$DATA_ROOT/home"
 export HOME="$DATA_ROOT/home"
 export TMPDIR="$DATA_ROOT/tmp"
-export LD_LIBRARY_PATH="$APP_ROOT/lib:/mnt/SDCARD/.tmp_update/lib/parasyte:/mnt/SDCARD/miyoo/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="$APP_ROOT/lib:/lib:/config/lib:/mnt/SDCARD/.tmp_update/lib:/mnt/SDCARD/.tmp_update/lib/parasyte:/mnt/SDCARD/miyoo/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export SDL_VIDEODRIVER=mmiyoo
+export SDL_AUDIODRIVER=mmiyoo
+export EGL_VIDEODRIVER=mmiyoo
 
 "$APP_ROOT/bin/sprout-launcher" \
   --data-dir "$DATA_ROOT" \
