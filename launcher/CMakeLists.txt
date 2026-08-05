@@ -321,6 +321,16 @@ if(BUILD_TESTING)
             --cart "${PROJECT_SOURCE_DIR}/pico8/mouse-cheese/mouse-cheese.p8"
   )
 
+  add_test(
+    NAME pico8-arcade-carts
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/pico8_arcade_build.py"
+            validate
+            "${PROJECT_SOURCE_DIR}/pico8/blocks-buttons/blocks-buttons.p8"
+            "${PROJECT_SOURCE_DIR}/pico8/snake/snake.p8"
+            --shared "${PROJECT_SOURCE_DIR}/pico8/shared/arcade_core.lua"
+  )
+
   add_executable(sprout-launcher-state-test tests/launcher_state_test.cpp)
   target_compile_features(sprout-launcher-state-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-launcher-state-test PRIVATE sprout_launcher_core)
