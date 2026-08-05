@@ -74,6 +74,16 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
         raise FileNotFoundError(f"Native game package is missing: {game}")
     shutil.copytree(game, app / "games" / "blocks-buttons")
 
+    payload_files = sorted(
+        (candidate for candidate in output.rglob("*") if candidate.is_file()),
+        key=lambda path: path.relative_to(output).as_posix(),
+    )
+    checksum_path = output / "deployment-manifest.sha256"
+    with checksum_path.open("w", encoding="utf-8", newline="\n") as handle:
+        for path in payload_files:
+            relative = path.relative_to(output).as_posix()
+            handle.write(f"{sha256(path)}  {relative}\n")
+
     files = {}
     for path in sorted(candidate for candidate in output.rglob("*") if candidate.is_file()):
         relative = path.relative_to(output).as_posix()

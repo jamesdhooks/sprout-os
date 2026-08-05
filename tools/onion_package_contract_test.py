@@ -38,6 +38,7 @@ def validate(package: Path) -> None:
         app / "games" / "blocks-buttons" / "game.lua",
         app / "games" / "blocks-buttons" / "asset-manifest.json",
         app / "config" / "household-seed.json",
+        package / "deployment-manifest.sha256",
         package / "deployment-manifest.json",
     ]
     missing = [str(path.relative_to(package)) for path in required if not path.is_file()]
@@ -79,6 +80,17 @@ def validate(package: Path) -> None:
         path = package / relative
         assert record["size"] == path.stat().st_size, f"size mismatch for {relative}"
         assert record["sha256"] == sha256(path), f"hash mismatch for {relative}"
+
+    checksum_path = package / "deployment-manifest.sha256"
+    payload_files = [
+        relative
+        for relative in actual_files
+        if not relative.startswith("deployment-manifest.")
+    ]
+    expected_checksums = [
+        f"{sha256(package / relative)}  {relative}" for relative in payload_files
+    ]
+    assert checksum_path.read_text(encoding="utf-8").splitlines() == expected_checksums
 
 
 def main() -> int:
