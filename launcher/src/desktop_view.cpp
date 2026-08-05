@@ -544,7 +544,7 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
   if (state.screen() != Screen::ProfileSelect && state.active_profile() != nullptr) {
     constexpr std::string_view prefix = "builtin:";
     const auto& reference = state.active_profile()->background_ref;
-    if (reference.starts_with(prefix)) {
+    if (sprout::launcher::starts_with(reference, prefix)) {
       if (const auto* background =
               find_built_in_background(std::string_view(reference).substr(prefix.size()));
           background != nullptr) {

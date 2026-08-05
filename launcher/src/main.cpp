@@ -1370,9 +1370,11 @@ int main(int argc, char* argv[]) {
             }
           }
           if (child && household_seed.has_value()) {
-            std::erase_if(entries, [](const auto& entry) {
-              return !entry.child_visible;
-            });
+            entries.erase(
+                std::remove_if(entries.begin(), entries.end(), [](const auto& entry) {
+                  return !entry.child_visible;
+                }),
+                entries.end());
           }
         }
         library = std::make_unique<sprout::launcher::LibraryPresentation>(

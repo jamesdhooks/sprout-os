@@ -25,7 +25,8 @@ void validate_keys(yyjson_val* object,
   yyjson_obj_iter iterator = yyjson_obj_iter_with(object);
   while (yyjson_val* key = yyjson_obj_iter_next(&iterator)) {
     const std::string name = yyjson_get_str(key);
-    if (!allowed_keys.contains(name) || !observed.insert(name).second) {
+    if (allowed_keys.find(name) == allowed_keys.end() ||
+        !observed.insert(name).second) {
       throw std::runtime_error(
           "Package manifest contains an unknown or duplicate field: " + name);
     }
@@ -313,7 +314,8 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
         throw std::runtime_error("Package capability should be text");
       }
       const std::string name = yyjson_get_str(capability);
-      if (!supported.contains(name) || !observed.insert(name).second) {
+      if (supported.find(name) == supported.end() ||
+          !observed.insert(name).second) {
         throw std::runtime_error("Package capability is unsupported or duplicated: " +
                                  name);
       }

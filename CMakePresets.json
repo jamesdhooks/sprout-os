@@ -26,7 +26,10 @@
         "BUILD_TESTING": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
         "SPROUT_BUILD_DESKTOP": "OFF",
-        "SPROUT_BUILD_ONION": "ON"
+        "SPROUT_BUILD_ONION": "ON",
+        "SPROUT_BUILD_ONION_UI": "ON",
+        "SPROUT_BUILD_RUNTIME": "ON",
+        "SPROUT_ONION_SDK_ROOT": "/root/workspace/out/onion-sdk"
       }
     }
   ],

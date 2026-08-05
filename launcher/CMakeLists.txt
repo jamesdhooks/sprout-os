@@ -236,7 +236,7 @@ else()
   endif()
 endif()
 
-if(SPROUT_BUILD_DESKTOP)
+if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
   add_library(
     sprout_profile_images
     src/profile_image_crop_presentation.cpp
@@ -250,7 +250,7 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_profile_store
       sprout_managed_profile_images
       sprout_launcher_core
-      SDL2::SDL2-static
+      ${SPROUT_SDL_TARGET}
       SDL2_image
   )
 
@@ -278,9 +278,24 @@ if(SPROUT_BUILD_DESKTOP)
       sprout_recovery
       sprout_startup_health
       SDL2_image
-      SDL2::SDL2main
-      SDL2::SDL2-static
+      ${SPROUT_SDL_TARGET}
   )
+  if(SPROUT_BUILD_DESKTOP)
+    target_link_libraries(sprout-launcher PRIVATE SDL2::SDL2main)
+  else()
+    target_link_libraries(sprout-launcher PRIVATE stdc++fs)
+    target_link_options(
+      sprout-launcher PRIVATE
+      -static-libgcc
+      -static-libstdc++
+      -Wl,--allow-shlib-undefined
+    )
+    add_custom_command(
+      TARGET sprout-launcher POST_BUILD
+      COMMAND "${CMAKE_STRIP}" "$<TARGET_FILE:sprout-launcher>"
+      VERBATIM
+    )
+  endif()
 
   add_custom_command(
     TARGET sprout-launcher POST_BUILD

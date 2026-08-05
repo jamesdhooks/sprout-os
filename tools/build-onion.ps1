@@ -98,12 +98,75 @@ function Invoke-ArtifactAudit {
     Write-Output "needed: $($needed -join ', ')"
 }
 
+function Invoke-UiArtifactAudit {
+    param(
+        [Parameter(Mandatory = $true)][string]$RelativePath,
+        [Parameter(Mandatory = $true)][string[]]$ExpectedLibraries
+    )
+
+    $path = Join-Path $repoRoot $RelativePath
+    if (-not [System.IO.File]::Exists($path)) {
+        throw "Onion UI artifact was not found at $path."
+    }
+    $arguments = @(
+        "run", "--rm", "--platform", "linux/amd64",
+        "--volume", "${repoRoot}:/root/workspace:ro",
+        "--workdir", "/root/workspace",
+        $toolchainImage
+    )
+    $readelf = "/opt/miyoomini-toolchain/bin/arm-linux-gnueabihf-readelf"
+    $format = (& docker @arguments file $RelativePath | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or
+        $format -notmatch "ELF 32-bit LSB executable, ARM, EABI5" -or
+        $format -notmatch "stripped") {
+        throw "Onion UI artifact format audit failed for $RelativePath."
+    }
+    $programHeaders = (& docker @arguments $readelf -l $RelativePath | Out-String)
+    $interpreterMatch = [regex]::Match(
+        $programHeaders,
+        "Requesting program interpreter: ([^\]]+)"
+    )
+    if ($LASTEXITCODE -ne 0 -or -not $interpreterMatch.Success -or
+        $interpreterMatch.Groups[1].Value -ne "/lib/ld-linux-armhf.so.3") {
+        throw "Onion UI artifact interpreter audit failed for $RelativePath."
+    }
+    $dynamic = (& docker @arguments $readelf -d $RelativePath | Out-String)
+    $needed = @(
+        [regex]::Matches($dynamic, "Shared library: \[([^\]]+)\]") |
+            ForEach-Object { $_.Groups[1].Value }
+    )
+    $unexpected = @($needed | Where-Object { $_ -notin $ExpectedLibraries })
+    $missing = @($ExpectedLibraries | Where-Object { $_ -notin $needed })
+    if ($LASTEXITCODE -ne 0 -or $unexpected.Count -ne 0 -or
+        $missing.Count -ne 0 -or $needed.Count -ne $ExpectedLibraries.Count) {
+        throw "Onion UI artifact dependencies differ for ${RelativePath}: $($needed -join ', ')."
+    }
+    $artifact = Get-Item -LiteralPath $path
+    Write-Output "Sprout Onion UI artifact audit passed"
+    Write-Output "path: $RelativePath"
+    Write-Output "size-bytes: $($artifact.Length)"
+    Write-Output "sha256: $(Get-Sha256 -Path $path)"
+    Write-Output "needed: $($needed -join ', ')"
+}
+
+function Invoke-AllArtifactAudits {
+    Invoke-ArtifactAudit
+    Invoke-UiArtifactAudit -RelativePath "out/build/onion-arm/launcher/sprout-launcher" -ExpectedLibraries @(
+        "libSDL2_image-2.0.so.0", "libSDL2-2.0.so.0", "libpthread.so.0",
+        "libm.so.6", "libc.so.6", "ld-linux-armhf.so.3"
+    )
+    Invoke-UiArtifactAudit -RelativePath "out/build/onion-arm/runtime/sprout-runtime" -ExpectedLibraries @(
+        "libSDL2-2.0.so.0", "libSDL2_image-2.0.so.0", "libdl.so.2",
+        "libm.so.6", "libc.so.6", "ld-linux-armhf.so.3"
+    )
+}
+
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     throw "Docker is required for the pinned Onion cross-build."
 }
 
 if ($Action -eq "audit") {
-    Invoke-ArtifactAudit
+    Invoke-AllArtifactAudits
     return
 }
 
@@ -121,7 +184,7 @@ if ($actualHash -ne $cmakeHash) {
 $cmakeExecutable = Join-Path $cmakeDirectory "bin/cmake"
 if (-not (Test-Path -LiteralPath $cmakeExecutable)) {
     $tarCommand = if ([System.Environment]::OSVersion.Platform -eq "Win32NT") {
-        "tar.exe"
+        Join-Path $env:SystemRoot "System32\tar.exe"
     } else {
         "tar"
     }
@@ -149,5 +212,13 @@ if ($Action -eq "build") {
     if ($LASTEXITCODE -ne 0) {
         throw "Onion cross-build failed with exit code $LASTEXITCODE."
     }
-    Invoke-ArtifactAudit
+    Invoke-AllArtifactAudits
+    & python (Join-Path $PSScriptRoot "package_onion.py")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Onion package generation failed with exit code $LASTEXITCODE."
+    }
+    & python (Join-Path $PSScriptRoot "onion_package_contract_test.py")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Onion package contract failed with exit code $LASTEXITCODE."
+    }
 }

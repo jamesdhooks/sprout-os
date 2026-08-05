@@ -98,7 +98,7 @@ NativeLibraryScanResult NativePackageScanner::discover() const {
   result.items.erase(
       std::remove_if(result.items.begin(), result.items.end(),
                      [&](const NativeLibraryItem& item) {
-                       return duplicates.contains(item.id);
+                       return duplicates.find(item.id) != duplicates.end();
                      }),
       result.items.end());
   std::sort(result.items.begin(), result.items.end(),

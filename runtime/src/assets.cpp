@@ -30,7 +30,8 @@ void validate_keys(yyjson_val* object,
   yyjson_obj_iter iterator = yyjson_obj_iter_with(object);
   while (yyjson_val* key = yyjson_obj_iter_next(&iterator)) {
     const std::string name = yyjson_get_str(key);
-    if (!allowed_keys.contains(name) || !observed.insert(name).second) {
+    if (allowed_keys.find(name) == allowed_keys.end() ||
+        !observed.insert(name).second) {
       throw std::runtime_error(std::string(context) +
                                " contains an unknown or duplicate field: " + name);
     }

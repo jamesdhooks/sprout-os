@@ -25,14 +25,30 @@ else()
   target_compile_options(sprout_runtime_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-if(SPROUT_BUILD_DESKTOP)
+if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
   add_executable(sprout-runtime src/main.cpp)
   target_compile_features(sprout-runtime PRIVATE cxx_std_20)
   target_include_directories(sprout-runtime PRIVATE ${PROJECT_SOURCE_DIR}/shared/include)
   target_link_libraries(
     sprout-runtime
-    PRIVATE sprout_runtime_core SDL2::SDL2main SDL2::SDL2-static SDL2_image
+    PRIVATE sprout_runtime_core ${SPROUT_SDL_TARGET} SDL2_image
   )
+  if(SPROUT_BUILD_DESKTOP)
+    target_link_libraries(sprout-runtime PRIVATE SDL2::SDL2main)
+  else()
+    target_link_libraries(sprout-runtime PRIVATE stdc++fs)
+    target_link_options(
+      sprout-runtime PRIVATE
+      -static-libgcc
+      -static-libstdc++
+      -Wl,--allow-shlib-undefined
+    )
+    add_custom_command(
+      TARGET sprout-runtime POST_BUILD
+      COMMAND "${CMAKE_STRIP}" "$<TARGET_FILE:sprout-runtime>"
+      VERBATIM
+    )
+  endif()
   add_custom_command(
     TARGET sprout-runtime POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

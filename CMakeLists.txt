@@ -8,10 +8,15 @@ find_package(Threads REQUIRED)
 
 option(SPROUT_BUILD_DESKTOP "Build the SDL desktop launcher preview" ON)
 option(SPROUT_BUILD_ONION "Build Onion target diagnostics" OFF)
+option(SPROUT_BUILD_ONION_UI "Build the SDL launcher/runtime for Onion" OFF)
+set(SPROUT_ONION_SDK_ROOT "" CACHE PATH "Onion SDL2 SDK overlay root")
 option(SPROUT_BUILD_RUNTIME "Build the native-game runtime" ${SPROUT_BUILD_DESKTOP})
 
 if(SPROUT_BUILD_DESKTOP AND NOT SPROUT_BUILD_RUNTIME)
   message(FATAL_ERROR "The desktop launcher preview requires SPROUT_BUILD_RUNTIME")
+endif()
+if(SPROUT_BUILD_ONION_UI AND NOT SPROUT_BUILD_RUNTIME)
+  message(FATAL_ERROR "The Onion launcher requires SPROUT_BUILD_RUNTIME")
 endif()
 
 FetchContent_Declare(
@@ -75,7 +80,30 @@ target_compile_definitions(
     YYJSON_DISABLE_NON_STANDARD=1
 )
 
-if(SPROUT_BUILD_DESKTOP)
+if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
+  if(SPROUT_BUILD_ONION_UI)
+    if(NOT IS_DIRECTORY "${SPROUT_ONION_SDK_ROOT}/include/SDL2" OR
+       NOT EXISTS "${SPROUT_ONION_SDK_ROOT}/lib/libSDL2-2.0.so.0" OR
+       NOT EXISTS "${SPROUT_ONION_SDK_ROOT}/lib/libSDL2_image-2.0.so.0")
+      message(FATAL_ERROR
+        "SPROUT_ONION_SDK_ROOT must contain the audited Onion SDL2 headers and libraries")
+    endif()
+    add_library(SDL2::SDL2 SHARED IMPORTED GLOBAL)
+    set_target_properties(
+      SDL2::SDL2 PROPERTIES
+      IMPORTED_LOCATION "${SPROUT_ONION_SDK_ROOT}/lib/libSDL2-2.0.so.0"
+      IMPORTED_SONAME "libSDL2-2.0.so.0"
+      INTERFACE_INCLUDE_DIRECTORIES "${SPROUT_ONION_SDK_ROOT}/include/SDL2"
+    )
+    add_library(SDL2_image SHARED IMPORTED GLOBAL)
+    set_target_properties(
+      SDL2_image PROPERTIES
+      IMPORTED_LOCATION "${SPROUT_ONION_SDK_ROOT}/lib/libSDL2_image-2.0.so.0"
+      IMPORTED_SONAME "libSDL2_image-2.0.so.0"
+      INTERFACE_INCLUDE_DIRECTORIES "${SPROUT_ONION_SDK_ROOT}/include/SDL2"
+    )
+    set(SPROUT_SDL_TARGET SDL2::SDL2)
+  else()
   set(SDL_SHARED OFF CACHE BOOL "" FORCE)
   set(SDL_STATIC ON CACHE BOOL "" FORCE)
   set(SDL_TEST OFF CACHE BOOL "" FORCE)
@@ -124,6 +152,8 @@ if(SPROUT_BUILD_DESKTOP)
   )
   FetchContent_MakeAvailable(SDL2_image)
   target_compile_definitions(SDL2_image PRIVATE STBI_MAX_DIMENSIONS=8192)
+    set(SPROUT_SDL_TARGET SDL2::SDL2-static)
+  endif()
 endif()
 
 if(SPROUT_BUILD_RUNTIME)
