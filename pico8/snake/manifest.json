@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pico8:snake",
   "title": "Starlight Snake",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "cart": "snake.p8",
   "onionPlatform": "PICO",
   "libraryArtwork": "library-cover.png",

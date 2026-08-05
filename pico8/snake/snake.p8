@@ -89,7 +89,7 @@ end
 
 function reset_run()
  srand(seed)
- snake={{5,7},{4,7},{3,7}}
+ snake={{5,7},{4,7},{3,7},{2,7},{1,7}}
  dir={1,0} queued={1,0}
  score=0 step=0 speed=9
  put_fruit()
@@ -157,74 +157,144 @@ function draw_stars()
  end
 end
 
+function thick_segment(x1,y1,x2,y2,outer,inner,width)
+ width=width or 2
+ if x1==x2 then
+  for o=-width,width do line(x1+o,y1,x2+o,y2,outer) end
+  for o=-(width-1),width-1 do line(x1+o,y1,x2+o,y2,inner) end
+ elseif y1==y2 then
+  for o=-width,width do line(x1,y1+o,x2,y2+o,outer) end
+  for o=-(width-1),width-1 do line(x1,y1+o,x2,y2+o,inner) end
+ else
+  line(x1,y1,x2,y2,outer) line(x1+1,y1,x2+1,y2,inner)
+ end
+end
+
+function body_tone(i)
+ return i%4<2 and 11 or 3
+end
+
 function draw_title_snake()
- local points={{25,75},{32,75},{39,75},{46,75},{53,75},{60,75},{67,68},{74,61},{81,61},{88,61},{95,61}}
- for i=2,#points do line(points[i-1][1],points[i-1][2],points[i][1],points[i][2],3) end
- for i=2,#points do circfill(points[i][1],points[i][2],5,i%2==0 and 11 or 3) end
- circfill(25,75,7,11)
- circfill(22,73,1,0) circfill(28,73,1,0)
- line(24,79,26,79,8)
- -- crown and prize fruit
- line(20,66,23,61,10) line(23,61,26,66,10) line(26,66,30,61,10) line(30,61,31,67,10)
- circfill(101,54,8,8) rectfill(99,44,102,49,4) pset(96,51,9)
+ local points={{22,82},{31,82},{40,82},{49,82},{58,82},{58,73},{67,73},{76,73},{76,64},{85,64},{94,64}}
+ for i=2,#points do
+  thick_segment(points[i-1][1],points[i-1][2],points[i][1],points[i][2],0,body_tone(i),3)
+ end
+ for i=2,#points-1 do
+  circfill(points[i][1],points[i][2],4,0)
+  circfill(points[i][1],points[i][2],3,body_tone(i))
+  if i%3==0 then pset(points[i][1]-1,points[i][2]-1,10) end
+ end
+ -- tapered tail and expressive crowned head
+ circfill(94,64,3,0) circfill(94,64,2,3) pset(98,64,11)
+ circfill(22,82,7,0) circfill(22,82,6,11)
+ rectfill(15,78,20,86,11)
+ pset(18,79,0) pset(18,85,0) line(14,82,11,82,8)
+ line(16,73,19,67,10) line(19,67,22,73,10)
+ line(22,73,26,67,10) line(26,67,29,74,10) line(16,74,29,74,10)
+ draw_fruit(103,52,3,true)
 end
 
 function draw_title()
  draw_stars()
- for y=35,103,8 do line(8,y,119,y,2) end
- arc_panel(10,5,108,31,2,13)
- arc_center_text("STARLIGHT",11,10)
- arc_center_text("SNAKE",22,11)
+ -- moon-garden terraces and vine frame
+ rectfill(5,38,122,101,2)
+ for y=42,98,8 do line(7,y,120,y,y%3==0 and 5 or 1) end
+ for i=0,15 do
+  local x=8+i*7
+  circfill(x,39+(i%2),2,i%3==0 and 3 or 11)
+  if i%4==0 then pset(x,36,14) pset(x-1,37,8) end
+ end
+ arc_panel(9,4,110,31,2,13)
+ arc_center_text("STARLIGHT",10,10)
+ arc_center_text("SNAKE",21,11)
  draw_title_snake()
  arc_panel(24,108,80,15,5,13)
  arc_center_text("❎  PLAY",113,7)
 end
 
-function terrain_color(x,y)
- local n=(x*17+y*31+seed)%13
- if n==0 then return 1 elseif n==1 then return 5 else return 2 end
-end
-
 function draw_board()
- rectfill(gx-2,gy-2,gx+gw*cs+1,gy+gh*cs+1,13)
+ -- a quiet moonlit garden: large cloudy regions, not a noisy checkerboard
+ rectfill(gx-3,gy-3,gx+gw*cs+2,gy+gh*cs+2,13)
+ rectfill(gx,gy,gx+gw*cs-1,gy+gh*cs-1,1)
  for y=0,gh-1 do for x=0,gw-1 do
+  local h=(x*17+y*31+x*y*7+seed)%43
   local sx=gx+x*cs local sy=gy+y*cs
-  rectfill(sx,sy,sx+cs-1,sy+cs-1,terrain_color(x,y))
-  if (x*9+y*7)%23==0 then pset(sx+2,sy+2,1) end
+  if h<5 then rectfill(sx,sy,sx+cs-1,sy+cs-1,2)
+  elseif h==6 then circfill(sx+3,sy+3,2,5) end
+  if h==12 then pset(sx+2,sy+2,6) pset(sx+4,sy+4,1) end
  end end
+ -- dense vine border with small flowers and leaves
+ for x=gx,gx+gw*cs-1,6 do
+  circfill(x,gy-3,2,(x/6)%2<1 and 3 or 11)
+  circfill(x,gy+gh*cs+2,2,(x/6)%2<1 and 11 or 3)
+  if x%24==0 then pset(x,gy-6,14) pset(x-1,gy-5,8) end
+ end
+ for y=gy,gy+gh*cs-1,6 do
+  circfill(gx-3,y,2,(y/6)%2<1 and 3 or 11)
+  circfill(gx+gw*cs+2,y,2,(y/6)%2<1 and 11 or 3)
+ end
 end
 
-function draw_apple(x,y,big)
- local r=big and 12 or 3
- circfill(x,y,r,8) circfill(x+(big and 8 or 2),y,r,8)
- if big then circfill(x-4,y-5,3,14) else pset(x-1,y-1,14) end
- line(x,y-r,x+1,y-r-(big and 6 or 2),4)
+function draw_fruit(x,y,kind,big)
+ kind=kind or 0
+ local r=big and 9 or 3
+ if kind%4==0 then
+  circfill(x-1,y,r,8) circfill(x+(big and 5 or 2),y,r,8)
+  circfill(x-2,y-r/2,max(1,flr(r/3)),14)
+  line(x,y-r,x+1,y-r-(big and 4 or 2),4)
+ elseif kind%4==1 then
+  circfill(x-r/2,y-r/3,r/2,14) circfill(x+r/2,y-r/3,r/2,14)
+  circfill(x,y+r/3,r/2,8) pset(x,y-r,11)
+ elseif kind%4==2 then
+  for a=0,.8,.2 do line(x,y,x+cos(a)*r,y+sin(a)*r,10) end
+  circfill(x,y,max(1,flr(r/3)),9)
+ else
+  circfill(x,y+1,r,10) circfill(x,y-r/2,max(1,r-1),9)
+  line(x,y-r,x+2,y-r-2,4)
+ end
 end
 
 function draw_snake()
- for i=#snake,2,-1 do
-  local p=snake[i] local q=snake[i-1]
-  local x=gx+p[1]*cs+3 local y=gy+p[2]*cs+3
-  local x2=gx+q[1]*cs+3 local y2=gy+q[2]*cs+3
-  line(x,y,x2,y2,i%2==0 and 11 or 3)
-  circfill(x,y,3,i%2==0 and 11 or 3)
+ if #snake==0 then return end
+ -- connected underlay and inner body guarantee gap-free straight/corner tiles
+ for i=1,#snake-1 do
+  local a=snake[i] local b=snake[i+1]
+  local x1=gx+a[1]*cs+3 local y1=gy+a[2]*cs+3
+  local x2=gx+b[1]*cs+3 local y2=gy+b[2]*cs+3
+  thick_segment(x1,y1,x2,y2,0,body_tone(i),2)
  end
- local h=snake[1]
- if h then
-  local x=gx+h[1]*cs+3 local y=gy+h[2]*cs+3
-  circfill(x,y,4,11)
-  local ex=-dir[2]*2 local ey=dir[1]*2
-  pset(x+dir[1]*2+ex,y+dir[2]*2+ey,0)
-  pset(x+dir[1]*2-ex,y+dir[2]*2-ey,0)
+ -- corner/body nodes cover joins and carry readable highlight scales
+ for i=2,#snake-1 do
+  local p=snake[i] local x=gx+p[1]*cs+3 local y=gy+p[2]*cs+3
+  circfill(x,y,3,0) circfill(x,y,2,body_tone(i))
+  if i%3==0 then pset(x-1,y-1,10) end
  end
+ -- tail tapers away from its preceding segment
+ if #snake>1 then
+  local t=snake[#snake] local before=snake[#snake-1]
+  local x=gx+t[1]*cs+3 local y=gy+t[2]*cs+3
+  local dx=t[1]-before[1] local dy=t[2]-before[2]
+  circfill(x,y,2,0) circfill(x,y,1,3) pset(x+dx*2,y+dy*2,11)
+ end
+ -- head has an oriented snout, two eyes and a warm tongue pixel
+ local h=snake[1] local x=gx+h[1]*cs+3 local y=gy+h[2]*cs+3
+ circfill(x,y,4,0) circfill(x,y,3,11)
+ if dir[1]>0 then rectfill(x+2,y-1,x+4,y+1,11)
+ elseif dir[1]<0 then rectfill(x-4,y-1,x-2,y+1,11)
+ elseif dir[2]>0 then rectfill(x-1,y+2,x+1,y+4,11)
+ else rectfill(x-1,y-4,x+1,y-2,11) end
+ local ex=-dir[2]*2 local ey=dir[1]*2
+ pset(x+dir[1]*2+ex,y+dir[2]*2+ey,0)
+ pset(x+dir[1]*2-ex,y+dir[2]*2-ey,0)
+ pset(x+dir[1]*5,y+dir[2]*5,8)
 end
 
 function draw_play()
- cls(1)
+ draw_stars()
  print(score.."/"..goal,4,7,10)
  print("best:"..flr(best),83,7,6)
  draw_board()
- draw_apple(gx+fruit[1]*cs+2,gy+fruit[2]*cs+3,false)
+ draw_fruit(gx+fruit[1]*cs+3,gy+fruit[2]*cs+3,score%4,false)
  draw_snake()
 end
 
@@ -236,7 +306,7 @@ function draw_card()
  arc_panel(x,y,w,h,arc_card_kind=="win" and 2 or 5,arc_card_kind=="win" and 13 or 8)
  if s>.72 then
   if arc_card_kind=="win" then
-   draw_apple(58,48,true)
+   draw_fruit(58,48,0,true)
    -- crown
    line(47,28,51,20,10) line(51,20,58,27,10)
    line(58,27,65,20,10) line(65,20,70,29,10)
@@ -261,7 +331,10 @@ function _draw()
  else draw_card() end
 end
 
-if qa_capture=="gameplay" then reset_run() step=-9999
+if qa_capture=="gameplay" then
+ reset_run()
+ snake={{10,5},{9,5},{8,5},{8,6},{8,7},{7,7},{6,7},{5,7},{5,8},{5,9}}
+ dir={1,0} queued={1,0} fruit={13,5} score=7 step=-9999
 elseif qa_capture=="win" then
  reset_run() score=goal card_age=18 arc_begin_card("win",32767)
 elseif qa_capture=="fail" then

@@ -171,90 +171,138 @@ function _update60()
  end
 end
 
-function draw_clouds()
+function diamond(cx,cy,r,fill,edge)
+ local hh=max(2,flr(r/2))
+ for yy=-hh,hh do
+  local span=flr(r*(1-abs(yy)/(hh+1)))
+  line(cx-span,cy+yy,cx+span,cy+yy,fill)
+ end
+ line(cx-r,cy,cx,cy-hh,edge)
+ line(cx,cy-hh,cx+r,cy,edge)
+ line(cx-r,cy,cx,cy+hh,edge)
+ line(cx,cy+hh,cx+r,cy,edge)
+end
+
+function prism(cx,cy,r,h,top,left,right,edge)
+ local hh=max(2,flr(r/2))
+ -- vertical faces are deliberately tall so objects read above the board
+ for lift=0,h-1 do
+  line(cx-r,cy-lift,cx,cy+hh-lift,left)
+  line(cx,cy+hh-lift,cx+r,cy-lift,right)
+ end
+ diamond(cx,cy-h,r,top,edge)
+ line(cx-r,cy-h,cx-r,cy,edge)
+ line(cx+r,cy-h,cx+r,cy,edge)
+ line(cx,cy-h+hh,cx,cy+hh,edge)
+end
+
+function iso(x,y)
+ return 64+(x-y)*7,28+(x+y)*4
+end
+
+function draw_workshop_backdrop()
  cls(1)
- for i=0,7 do
-  local x=(i*23+arc_ticks/8)%150-12
-  local y=12+(i%3)*7
-  circfill(x,y,6,12) circfill(x+6,y+1,5,12)
+ rectfill(0,17,127,127,2)
+ for y=20,127,9 do
+  local c=(y/9)%2<1 and 2 or 5
+  line(0,y,127,y,c)
+ end
+ for i=0,22 do
+  local x=(i*37+11)%128 local y=(i*19+arc_ticks/18)%108+19
+  pset(x,y,i%3==0 and 12 or 1)
  end
 end
 
 function draw_title()
- draw_clouds()
- -- floating workshop island
- ovalfill(11,42,116,104,5)
- ovalfill(15,38,112,94,13)
- rectfill(25,51,102,88,6)
- for x=27,99,12 do for y=53,85,12 do rectfill(x,y,x+9,y+9,12) end end
- -- friendly block keeper
- rectfill(31,62,46,79,7) rect(31,62,46,79,10)
- circfill(35,68,2,0) circfill(42,68,2,0)
- line(35,75,42,75,8)
- -- crates and glowing buttons
- draw_crate(65,61,false,1) draw_crate(81,73,true,1)
- circfill(95,60,6,9) circfill(95,60,3,10)
- arc_panel(7,4,114,32,6,12)
- arc_center_text("BLOCKS &",10,7)
- arc_center_text("BUTTONS",21,10)
+ draw_workshop_backdrop()
+ arc_panel(5,3,118,29,6,12)
+ arc_center_text("BLOCKS &",8,7)
+ arc_center_text("BUTTONS",19,10)
+ -- high-angle toy diorama using the same game primitives
+ for y=0,3 do for x=0,4 do
+  local cx=43+(x-y)*8 local cy=55+(x+y)*5
+  diamond(cx,cy,8,(x+y)%2==0 and 13 or 6,1)
+ end end
+ prism(35,78,8,13,9,4,8,1)
+ prism(73,68,8,13,10,9,8,1)
+ draw_iso_button(83,81,false,1)
+ draw_robot(52,76,1)
  arc_panel(25,108,78,15,5,6)
  arc_center_text("❎  PLAY",113,7)
 end
 
-function draw_floor(x,y)
- rectfill(x,y,x+cs-1,y+cs-1,13)
- if ((x+y)/cs)%2<1 then pset(x+2,y+3,6) pset(x+8,y+9,6) end
+function draw_iso_floor(cx,cy,x,y)
+ local color=(x+y)%2==0 and 13 or 6
+ diamond(cx,cy,7,color,1)
+ local h=(x*17+y*29)%11
+ if h==0 then pset(cx-2,cy,12) pset(cx+2,cy-1,12) end
 end
 
-function draw_wall(x,y)
- rectfill(x,y,x+cs-1,y+cs-1,5)
- rectfill(x,y,x+cs-1,y+2,6)
- line(x+2,y+5,x+9,y+5,1)
- line(x+1,y+10,x+7,y+10,1)
+function draw_iso_wall(cx,cy)
+ prism(cx,cy,7,7,3,1,5,0)
+ pset(cx-2,cy-8,11) pset(cx+2,cy-6,11)
 end
 
-function draw_button(x,y,down)
- local c=down and 11 or 9
- circfill(x+6,y+7,5,2) circfill(x+6,y+5,4,c)
- if not down then circfill(x+5,y+4,1,10) end
+function draw_iso_button(cx,cy,down,pulse)
+ local lift=down and 1 or 3
+ prism(cx,cy,5,lift,down and 10 or 9,8,4,1)
+ if not down then
+  pset(cx,cy-lift-1,10)
+  if pulse and sin(arc_ticks/30)>.3 then pset(cx-2,cy-lift,7) end
+ end
 end
 
-function draw_crate(x,y,solved,scale)
+function draw_iso_crate(cx,cy,solved)
+ local top=solved and 10 or 9
+ local left=solved and 9 or 4
+ prism(cx,cy,6,10,top,left,solved and 8 or 2,1)
+ line(cx-3,cy-12,cx+3,cy-8,solved and 7 or 10)
+ line(cx+3,cy-12,cx-3,cy-8,solved and 7 or 10)
+end
+
+function draw_robot(cx,cy,scale)
  scale=scale or 1
- local s=10*scale
- rectfill(x,y,x+s,y+s,solved and 10 or 9)
- rect(x,y,x+s,y+s,solved and 7 or 4)
- line(x+2*scale,y+2*scale,x+s-2*scale,y+s-2*scale,solved and 7 or 4)
- line(x+s-2*scale,y+2*scale,x+2*scale,y+s-2*scale,solved and 7 or 4)
-end
-
-function draw_keeper(x,y)
- local bob=flr(sin(arc_ticks/8)*1.2)
- y+=bob
- circfill(x+6,y+6,5,7)
- rectfill(x+2,y+6,x+10,y+10,7)
- pset(x+4,y+5,0) pset(x+8,y+5,0)
- if facing==0 then line(x+4,y+1,x+4,y-1,10)
- elseif facing==2 then line(x+7,y+11,x+7,y+13,10)
- elseif facing==1 then line(x+11,y+5,x+13,y+5,10)
- else line(x+1,y+5,x-1,y+5,10) end
+ local bob=flr(sin(arc_ticks/12))
+ cy+=bob
+ local w=5*scale local body_h=7*scale
+ -- feet stay planted while the torso and head project upward
+ rectfill(cx-w,cy-3*scale,cx-1,cy,5)
+ rectfill(cx+1,cy-3*scale,cx+w,cy,5)
+ rectfill(cx-w,cy-body_h-3*scale,cx+w,cy-3*scale,12)
+ rect(cx-w,cy-body_h-3*scale,cx+w,cy-3*scale,1)
+ local hy=cy-body_h-9*scale
+ rectfill(cx-w-1,hy,cx+w+1,hy+6*scale,7)
+ rect(cx-w-1,hy,cx+w+1,hy+6*scale,1)
+ circfill(cx-w-1,hy+2*scale,scale,10)
+ circfill(cx+w+1,hy+2*scale,scale,10)
+ local eye_y=hy+2*scale
+ if facing==3 then pset(cx-3*scale,eye_y,0) pset(cx,eye_y,0)
+ elseif facing==1 then pset(cx,eye_y,0) pset(cx+3*scale,eye_y,0)
+ else pset(cx-2*scale,eye_y,0) pset(cx+2*scale,eye_y,0) end
+ line(cx-2*scale,hy+5*scale,cx+2*scale,hy+5*scale,8)
 end
 
 function draw_play()
- cls(1)
- rectfill(0,0,127,19,1)
- print("moves:"..moves,4,6,7) print("pushes:"..pushes,80,6,10)
+ draw_workshop_backdrop()
+ print("moves:"..moves,3,6,7) print("pushes:"..pushes,78,6,10)
+ -- floor first, then depth-sorted walls, buttons, crates and robot
  for y=0,bh-1 do for x=0,bw-1 do
-  local sx=bx+x*cs local sy=by+y*cs
-  if wall(x,y) then draw_wall(sx,sy) else draw_floor(sx,sy) end
+  local cx,cy=iso(x,y)
+  draw_iso_floor(cx,cy,x,y)
  end end
- for t in all(targets) do
-  draw_button(bx+t[1]*cs,by+t[2]*cs,crate_at(t[1],t[2])>0)
+ for depth=0,bw+bh-2 do
+  for y=0,bh-1 do
+   local x=depth-y
+   if x>=0 and x<bw then
+    local cx,cy=iso(x,y)
+    if wall(x,y) then draw_iso_wall(cx,cy) end
+    if target_at(x,y) then draw_iso_button(cx,cy,crate_at(x,y)>0,1) end
+    local ci=crate_at(x,y)
+    if ci>0 then draw_iso_crate(cx,cy,target_at(x,y)) end
+    if px==x and py==y then draw_robot(cx,cy,1) end
+   end
+  end
  end
- for c in all(crates) do
-  draw_crate(bx+c[1]*cs+1,by+c[2]*cs+1,target_at(c[1],c[2]))
- end
- draw_keeper(bx+px*cs,by+py*cs)
 end
 
 function draw_card()
@@ -266,8 +314,9 @@ function draw_card()
  arc_panel(x,y,w,h,arc_card_kind=="win" and 13 or 2,arc_card_kind=="win" and 10 or 8)
  if s>.72 then
   if arc_card_kind=="win" then
-   -- large solved crate with confetti
-   draw_crate(49,38,true,3)
+   -- large high-angle solved crate with confetti
+   prism(64,69,14,23,10,9,8,1)
+   line(57,42,71,50,7) line(71,42,57,50,7)
    for i=0,9 do
     local a=i/10 local r=26+sin((arc_ticks+i)/9)*4
     pset(64+cos(a)*r,53+sin(a)*r,(i%4)+8)

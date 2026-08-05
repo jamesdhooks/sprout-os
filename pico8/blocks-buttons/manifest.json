@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pico8:blocks-buttons",
   "title": "Blocks & Buttons",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "cart": "blocks-buttons.p8",
   "onionPlatform": "PICO",
   "libraryArtwork": "library-cover.png",
