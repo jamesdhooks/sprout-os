@@ -13,6 +13,11 @@ add_library(
 )
 
 add_library(
+  sprout_household_seed
+  src/household_seed.cpp
+)
+
+add_library(
   sprout_managed_profile_images
   src/managed_profile_image.cpp
 )
@@ -67,6 +72,7 @@ add_library(
   src/library_presentation.cpp
   src/local_library.cpp
   src/onion_launch_adapter.cpp
+  src/pico8_catalogue.cpp
 )
 
 add_library(sprout_launch_process src/launch_process.cpp)
@@ -91,6 +97,9 @@ target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
 target_compile_features(sprout_profile_store PUBLIC cxx_std_20)
 target_link_libraries(sprout_profile_store PRIVATE sprout_sqlite)
+target_include_directories(sprout_household_seed PUBLIC include)
+target_compile_features(sprout_household_seed PUBLIC cxx_std_20)
+target_link_libraries(sprout_household_seed PRIVATE sprout_profile_store yyjson)
 target_include_directories(sprout_managed_profile_images PUBLIC include)
 target_compile_features(sprout_managed_profile_images PUBLIC cxx_std_20)
 target_include_directories(sprout_configuration PUBLIC include)
@@ -153,7 +162,7 @@ target_link_libraries(
 )
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
-target_link_libraries(sprout_onion_adapter PUBLIC sprout_launch_process)
+target_link_libraries(sprout_onion_adapter PUBLIC sprout_launch_process PRIVATE yyjson)
 target_include_directories(sprout_launch_process PUBLIC include)
 target_compile_features(sprout_launch_process PUBLIC cxx_std_20)
 
@@ -170,6 +179,7 @@ if(SPROUT_BUILD_ONION)
       sprout_parent_access
       sprout_profile_archive
       sprout_profile_store
+      sprout_household_seed
       sprout_startup_health
       stdc++fs
   )
@@ -185,6 +195,7 @@ endif()
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_household_seed PRIVATE /W4 /permissive-)
   target_compile_options(sprout_managed_profile_images PRIVATE /W4 /permissive-)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
   target_compile_options(sprout_setup PRIVATE /W4 /permissive-)
@@ -205,6 +216,7 @@ if(MSVC)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_household_seed PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_managed_profile_images PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_setup PRIVATE -Wall -Wextra -Wpedantic)
@@ -255,6 +267,7 @@ if(SPROUT_BUILD_DESKTOP)
     PRIVATE
       sprout_launcher_core
       sprout_profile_store
+      sprout_household_seed
       sprout_profile_images
       sprout_parent_access
       sprout_profile_archive
@@ -298,6 +311,16 @@ if(BUILD_TESTING)
             "${PROJECT_SOURCE_DIR}/tools/validate-profile-avatars.py"
   )
 
+  add_test(
+    NAME pico8-mouse-cheese-campaign
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/pico8_mouse_cheese_campaign.py"
+            validate
+            --spec "${PROJECT_SOURCE_DIR}/pico8/mouse-cheese/campaign-spec.json"
+            --campaign "${PROJECT_SOURCE_DIR}/pico8/mouse-cheese/campaign.json"
+            --cart "${PROJECT_SOURCE_DIR}/pico8/mouse-cheese/mouse-cheese.p8"
+  )
+
   add_executable(sprout-launcher-state-test tests/launcher_state_test.cpp)
   target_compile_features(sprout-launcher-state-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-launcher-state-test PRIVATE sprout_launcher_core)
@@ -318,6 +341,13 @@ if(BUILD_TESTING)
       sprout_sqlite
   )
   add_test(NAME profile-store COMMAND sprout-profile-store-test)
+
+  add_executable(sprout-household-seed-test tests/household_seed_test.cpp)
+  target_compile_features(sprout-household-seed-test PRIVATE cxx_std_20)
+  target_compile_definitions(sprout-household-seed-test
+                             PRIVATE SPROUT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+  target_link_libraries(sprout-household-seed-test PRIVATE sprout_household_seed)
+  add_test(NAME household-seed COMMAND sprout-household-seed-test)
 
   add_executable(sprout-profile-avatar-presentation-test
                  tests/profile_avatar_presentation_test.cpp)

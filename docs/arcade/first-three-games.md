@@ -28,10 +28,28 @@ band maps its odd-dimension grid plus a one-cell perimeter directly onto the
 entire 320x240 play area. X and Y cell extents are derived independently, so
 the perimeter is exactly one grid cell on every side without residual gutters.
 That perimeter uses a quiet forest-ground color and separates playable tiles
-from the display edge. A fixed-height, content-width indicator at the top left
-shows only the numeric level, uses a rounded bottom-right corner, and remains
-independent of maze density. Early levels therefore use very few large, richly
-resampled cells; later levels add cells until reaching the densest grid.
+from the display edge.
+
+Mazes with at most 63 logical rooms retain a full rectangular footprint so the
+early campaign remains simple. Larger mazes deterministically grow a connected
+playable footprint from their level seed before carving passages. The omitted
+share begins at roughly four percent and reaches 22 percent at the maximum
+grid, producing irregular edges and occasional interior forest pockets without
+disconnecting any playable room. These omitted cells are intentional terrain
+inside the fixed screen grid; they do not alter the exact one-cell display-edge
+perimeter. Once either cell axis becomes smaller than the 16-pixel indicator,
+the generator excludes every logical room whose complete wall envelope would
+overlap the indicator plus a one-current-cell margin on its right and bottom.
+The reservation therefore expands across more logical rooms as cells become
+smaller, leaving visible background around the UI instead of hiding a playable
+passage or hedge beneath it.
+
+A 28-pixel-high, content-width indicator at the top left shows only the numeric
+level and remains independent of maze density. It uses the shared ExtraBold
+display face inside a fully rounded, layered storybook chip with a soft shadow,
+golden rim, warm cream center, and plum numerals. Early levels therefore use
+very few large, richly resampled cells; later levels add cells until reaching
+the densest grid.
 Mouse and goal artwork scale as a proportion of the current cell and remain
 centered on it. Mouse coverage is calculated from its body silhouette rather
 than its tail-inclusive extent or transparent 256px atlas cell. Its complete
@@ -44,6 +62,19 @@ density bands.
 Floor and wall cells may differ slightly in width and height to satisfy the
 exact screen mapping. Actor sprites retain uniform scale based on the smaller
 cell axis and therefore never stretch.
+
+Footprint generation, passage carving, start selection, and goal placement all
+share the same deterministic level PRNG. Only active footprint rooms are valid
+start candidates; breadth-first goal and hint searches traverse only carved
+floor cells. Omitted cells submit neither floor nor terrain sprites, allowing
+the quiet forest background color to fill the unused space. They remain
+impassable. Shared wall-junction cells are resolved from their cardinal hedge
+neighbours when the render tile buffer is built, keeping the green boundary
+continuous without filling the space beyond it.
+
+Carved passages use the warm dirt texture rather than the pale sand texture.
+This gives the white mouse a strong value contrast at every density while the
+dark-green background remains visually distinct from both paths and hedges.
 
 | Levels | Maze grid | Cell width | Cell height |
 | --- | --- | --- | --- |
@@ -69,12 +100,14 @@ cell axis and therefore never stretch.
 The curated 1,000-layout campaign, loop insertion, and exported metrics remain
 planned content-pipeline work.
 
-An undisclosed hint is available through the secondary action (`H` on the
-Windows host) or the Start+A+Left inspection chord. It solves from the mouse's
-current cell to the cheese using breadth-first search and draws only the first
-half of that route, capped at 12 cells. Animated storybook breadcrumb dots fade
-with distance and disappear after three seconds; requesting another hint
-recomputes the route from the current position.
+An undisclosed hint is available through `H` on the Windows host or the
+Start+A+Left inspection chord. The Windows key synthesizes that same portable
+chord rather than occupying the secondary action. Secondary/B remains reserved
+by the host for returning to Sprout during gameplay. The hint solves from the
+mouse's current cell to the cheese using breadth-first search and draws only
+the first half of that route, capped at 12 cells. Animated storybook breadcrumb
+dots fade with distance and disappear after three seconds; requesting another
+hint recomputes the route from the current position.
 
 The title menu reads the persisted current level through the optional native
 title-status contract. Holding the secondary action for three seconds fills a

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "pico8:mouse-cheese",
+  "title": "Mouse & Cheese Maze",
+  "version": "0.1.0",
+  "cart": "mouse-cheese.p8",
+  "onionPlatform": "PICO",
+  "libraryArtwork": "library-cover.png",
+  "saveTemplate": "sprout_mouse_cheese_v1_{profileHash}",
+  "license": "GPL-3.0-or-later",
+  "backend": "fake-08",
+  "capabilities": ["profile-scoped-progress", "offline-campaign"]
+}

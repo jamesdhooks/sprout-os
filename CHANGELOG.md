@@ -26,21 +26,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   stretching actor sprites.
 - Mouse & Cheese Maze includes a concealed, time-limited breadcrumb hint that
   solves from the current cell and reveals at most half the route, capped at 12
-  cells, using animated dots that fade with distance. Hint buttons consume
-  regular directional input for their complete held duration.
+  cells, using animated dots that fade with distance. Windows `H` synthesizes
+  the portable hint chord while B/secondary remains a host-owned return action;
+  hint buttons consume regular directional input for their complete held
+  duration.
 - Mouse & Cheese Maze continues increasing structural density throughout its
   campaign, growing from a 23x17 maze around level 100 to 53x39 near level 1,000
   instead of reusing the former 19x15 cap.
 - Mouse & Cheese Maze advances one second after showing `Cheese!`, with its
   button-to-continue shortcut becoming available after 0.2 seconds.
-- Mouse & Cheese Maze uses a compact fixed-height, content-width top-left numeric
-  indicator with a rounded bottom-right corner instead of scaling and centering
-  a `Level N` tab with the maze grid.
+- Mouse & Cheese Maze uses a larger content-width top-left numeric indicator
+  built from the reusable rounded-panel primitive, with a soft shadow, golden
+  rim, cream center, and layered Nunito ExtraBold numerals.
+- Larger Mouse & Cheese Maze levels now use deterministic connected footprints
+  with progressively more missing forest chunks and irregular edges. Dense
+  layouts reserve the top-left indicator area as non-playable terrain while
+  retaining the exact one-cell screen perimeter and full maze solvability.
+  Hedge junctions render as a continuous green boundary; omitted cells render
+  no tiles and expose the quiet forest background instead of brown terrain.
+  The UI reservation activates when cells become smaller than the indicator
+  and includes a one-cell right/bottom margin that scales with the active grid.
+- Mouse & Cheese Maze now uses its warm dirt artwork for carved paths, giving
+  the white mouse stronger contrast than the previous pale sand floor.
+- The Windows launcher supports launcher-owned Arcade auto-launch for focused
+  game iteration, preserving a real Sprout return destination behind the game.
 - Native-game title screens can show package-owned progress and host a
   three-second hold-to-reset action. Mouse & Cheese Maze uses it to show the
   saved level and reset persisted progress to level 1 with a circular indicator.
 - The native-game renderer supports reusable alpha-blended circle primitives
   for lightweight effects and indicators.
+- The native-game renderer supports reusable filled rounded panels and the
+  shared Nunito ExtraBold display face, avoiding package-local panel geometry
+  and headline fonts.
 - Mouse & Cheese Maze provides debounced action-level QA chords for jumping by
   1, 10, or 100 levels while inspecting its difficulty bands.
 - Shared runtime labels now fit and clip text within both dimensions of their

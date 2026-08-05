@@ -6,7 +6,7 @@
   "runtimeVersion": 1,
   "entrypoint": "game.lua",
   "assetManifest": "rich-asset-manifest.json",
-  "logicalResolution": [320, 240],
+  "logicalResolution": [640, 480],
   "titleScreen": {
     "image": "assets/title.png",
     "dimensions": [1536, 1152],

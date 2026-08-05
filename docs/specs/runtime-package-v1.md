@@ -60,12 +60,22 @@ The `actions` table contains boolean `up`, `down`, `left`, `right`, `primary`, `
 
 ## API exercised by Snake
 
+`logicalResolution` is the design surface selected independently by each
+package. It is not a global engine grid or a low-resolution framebuffer. The
+runtime renders that surface directly to the active display. Packages targeting
+the Miyoo Mini Plus should normally select `640 x 480`, so vector UI and sprite
+placement can use individual output pixels; a lower surface is an explicit
+compatibility choice, not an engine-wide fidelity ceiling.
+
 | Function | Behavior |
 | --- | --- |
 | `sprout.random(maximum)` | Returns a deterministic integer from 1 through `maximum` |
+| `sprout.surface_size()` | Returns the current package design-surface width and height |
 | `sprout.rect(x, y, width, height, r, g, b, a?)` | Submits an in-bounds rectangle on the logical surface |
+| `sprout.rounded_rect(x, y, width, height, radius, r, g, b, a?)` | Submits one anti-artifact filled rounded panel |
 | `sprout.circle(x, y, radius, r, g, b, a?)` | Submits an alpha-blended filled circle on the logical surface |
 | `sprout.label(text, x, y, width, height, r, g, b, a?)` | Centers bounded printable text using the shared rounded UI font |
+| `sprout.display_label(text, x, y, width, height, r, g, b, a?)` | Centers bounded printable text using the shared ExtraBold display face |
 | `sprout.sprite(...)` | Submits one declared atlas frame |
 | `sprout.animate(...)` | Resolves a declared animation from the fixed session tick |
 | `sprout.sprite_batch(items)` | Submits many sprite or animation records in one host call |
@@ -79,6 +89,11 @@ Storage keys are bounded ASCII identifiers. The launcher gives the runtime a pro
 The runtime, not package code, emits `GameStarted` and `GameExited`. Packages cannot forge policy, time, recommendation, or parent-control events.
 
 ## Presentation and resolution
+
+`logicalResolution` is retained as the manifest key for compatibility, but its
+meaning is a per-package design surface. It does not select a shared 320 x 240
+engine canvas. Mouse Maze now selects the native 640 x 480 Miyoo target and
+uses `sprout.surface_size()` instead of baking that size into script code.
 
 `logicalResolution` belongs to each game. The runtime scales that surface to
 the active display, so the Miyoo Mini Plus 640×480 panel is a target profile,

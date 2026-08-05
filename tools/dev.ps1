@@ -2,7 +2,9 @@ param(
     [ValidateSet("configure", "build", "test", "run", "run-arcade", "arcade-smoke")]
     [string]$Action = "build",
     [string]$SdRoot,
-    [string]$ArcadePackage = "games\snake"
+    [string]$ArcadePackage = "games\snake",
+    [string]$AutoLaunchArcadeItem,
+    [string]$HouseholdSeed
 )
 
 $ErrorActionPreference = "Stop"
@@ -170,6 +172,12 @@ try {
         )
         if ($SdRoot) {
             $launcherArguments += @("--sd-root", $SdRoot)
+        }
+        if ($AutoLaunchArcadeItem) {
+            $launcherArguments += @("--launch-arcade-item", $AutoLaunchArcadeItem)
+        }
+        if ($HouseholdSeed) {
+            $launcherArguments += @("--household-seed", $HouseholdSeed)
         }
         & $executable @launcherArguments
     }

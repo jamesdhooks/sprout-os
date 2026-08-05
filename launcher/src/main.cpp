@@ -1,5 +1,6 @@
 #include "desktop_view.hpp"
 #include "sprout/launcher/daily_time_policy.hpp"
+#include "sprout/launcher/household_seed.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/library_presentation.hpp"
@@ -85,6 +86,7 @@ std::optional<Action> keyboard_action(SDL_Keycode key) {
     case SDLK_ESCAPE:
     case SDLK_BACKSPACE:
     case SDLK_x:
+    case SDLK_b:
       return Action::Back;
     case SDLK_e:
       return Action::ZoomIn;
@@ -189,12 +191,12 @@ std::vector<sprout::launcher::LibraryEntry> discovered_library(
   std::vector<sprout::launcher::LibraryEntry> entries;
   entries.reserve(scan.items.size());
   for (auto item : scan.items) {
+    const auto contract = sprout::launcher::onion_system_contract(item.system);
     entries.push_back(sprout::launcher::LibraryEntry{
         .id = item.id,
         .title = item.title,
-        .platform_label =
-            item.system == sprout::launcher::OnionSystem::GameBoy ? "GB" : "SFC",
-        .artwork_path = {},
+        .platform_label = contract.has_value() ? std::string(contract->id) : "UNKNOWN",
+        .artwork_path = std::move(item.artwork_path),
         .launch_target = sprout::launcher::EmulatedLaunchTarget{
             .item_id = item.id,
             .system = item.system,
@@ -442,6 +444,7 @@ int main(int argc, char* argv[]) {
   bool smoke_test = false;
   bool arcade_smoke_test = false;
   std::optional<std::string> arcade_smoke_item;
+  std::optional<std::string> auto_launch_arcade_item;
   bool screenshot = false;
   const char* screenshot_path = nullptr;
   std::string_view screenshot_screen;
@@ -449,6 +452,7 @@ int main(int argc, char* argv[]) {
   std::optional<std::filesystem::path> sd_card_root;
   std::optional<std::filesystem::path> arcade_root;
   std::optional<std::filesystem::path> runtime_executable;
+  std::optional<std::filesystem::path> household_seed_path;
   for (int index = 1; index < argc; ++index) {
     const std::string_view argument(argv[index]);
     if (argument == "--smoke-test") {
@@ -457,6 +461,8 @@ int main(int argc, char* argv[]) {
       arcade_smoke_test = true;
     } else if (argument == "--arcade-smoke-item" && index + 1 < argc) {
       arcade_smoke_item = argv[++index];
+    } else if (argument == "--launch-arcade-item" && index + 1 < argc) {
+      auto_launch_arcade_item = argv[++index];
     } else if (argument == "--screenshot" && index + 1 < argc) {
       screenshot = true;
       screenshot_path = argv[++index];
@@ -472,6 +478,8 @@ int main(int argc, char* argv[]) {
       arcade_root = std::filesystem::path(argv[++index]);
     } else if (argument == "--runtime" && index + 1 < argc) {
       runtime_executable = std::filesystem::path(argv[++index]);
+    } else if (argument == "--household-seed" && index + 1 < argc) {
+      household_seed_path = std::filesystem::path(argv[++index]);
     } else {
       std::cerr << "Unsupported or incomplete launcher argument: " << argument << '\n';
       return EXIT_FAILURE;
@@ -481,6 +489,15 @@ int main(int argc, char* argv[]) {
   if (arcade_root.has_value() != runtime_executable.has_value() ||
       (arcade_root.has_value() && !data_root.has_value())) {
     std::cerr << "Arcade preview requires --arcade-root, --runtime, and --data-dir together\n";
+    return EXIT_FAILURE;
+  }
+  if (household_seed_path.has_value() && !data_root.has_value()) {
+    std::cerr << "Household seeding requires --data-dir\n";
+    return EXIT_FAILURE;
+  }
+  if (auto_launch_arcade_item.has_value() &&
+      (!arcade_root.has_value() || smoke_test || arcade_smoke_test || screenshot)) {
+    std::cerr << "Arcade auto-launch requires an interactive Arcade preview\n";
     return EXIT_FAILURE;
   }
 
@@ -961,6 +978,7 @@ int main(int argc, char* argv[]) {
   sprout::launcher::SystemLaunchProcess launch_process;
   std::unique_ptr<sprout::launcher::NativeLaunchAdapter> native_launch;
   std::vector<sprout::launcher::LibraryEntry> library_entries;
+  std::optional<sprout::launcher::HouseholdSeed> household_seed;
   std::optional<std::string> parent_credential_ref;
   std::optional<std::filesystem::path> image_source;
   bool image_crop_advances_setup{false};
@@ -970,6 +988,14 @@ int main(int argc, char* argv[]) {
   const auto initialize_persistent_launcher = [&] {
     profiles = std::make_unique<sprout::launcher::ProfileRepository>(
         *data_root / "data" / "profiles.sqlite3");
+    if (household_seed.has_value() && profiles->list_profiles(false).empty()) {
+      sprout::launcher::apply_household_seed(*profiles, *household_seed);
+      auto seeded_configuration = configuration->has_active()
+          ? configuration->load_active()
+          : sprout::launcher::LocalConfiguration{};
+      seeded_configuration.next_setup_step = sprout::launcher::SetupStep::Complete;
+      (void)configuration->save(std::move(seeded_configuration));
+    }
     daily_time_policy =
         std::make_unique<sprout::launcher::DailyTimePolicyStore>(
             *data_root / "data" / "time-policy.sqlite3");
@@ -1014,6 +1040,9 @@ int main(int argc, char* argv[]) {
   };
 
   try {
+    if (household_seed_path.has_value()) {
+      household_seed = sprout::launcher::load_household_seed(*household_seed_path);
+    }
     library_entries = sd_card_root.has_value()
                           ? discovered_library(*sd_card_root)
                           : sprout::launcher::make_demo_library();
@@ -1304,6 +1333,18 @@ int main(int argc, char* argv[]) {
                     .expired;
           }
           for (auto& entry : entries) {
+            if (household_seed.has_value() && child) {
+              const bool curated = sprout::launcher::seed_includes_title(
+                  *household_seed, active_profile->id, entry.platform_label,
+                  entry.title);
+              const bool favorite = sprout::launcher::seed_favorites_title(
+                  *household_seed, active_profile->id, entry.platform_label,
+                  entry.title);
+              // A favorite is always retained even when it was added outside
+              // the original starter curation.
+              entry.favorite = favorite;
+              entry.child_visible = curated || favorite;
+            }
             std::visit(
                 [&](auto& target) {
                   target.launch_allowed = entry.launch_allowed;
@@ -1327,6 +1368,11 @@ int main(int argc, char* argv[]) {
               entry.launch_allowed = false;
               entry.unavailable_reason = "DAILY PLAY TIME IS USED UP";
             }
+          }
+          if (child && household_seed.has_value()) {
+            std::erase_if(entries, [](const auto& entry) {
+              return !entry.child_visible;
+            });
           }
         }
         library = std::make_unique<sprout::launcher::LibraryPresentation>(
@@ -1355,6 +1401,43 @@ int main(int argc, char* argv[]) {
       return false;
     }
   };
+
+  if (auto_launch_arcade_item.has_value()) {
+    if (!state.has_value() || setup != nullptr || recovery != nullptr ||
+        access_controller == nullptr || native_launch == nullptr) {
+      std::cerr << "Arcade auto-launch requires completed launcher setup\n";
+      running = false;
+    } else {
+      running = handle_session_action(Action::Confirm);
+      for (int step = 0; step < 3 && running; ++step) {
+        running = handle_session_action(Action::Right);
+      }
+      if (running) running = handle_session_action(Action::Confirm);
+      if (running && library != nullptr) {
+        const auto entries = library->entries();
+        const auto selected = std::find_if(
+            entries.begin(), entries.end(), [&](const auto& entry) {
+              return entry.id == *auto_launch_arcade_item;
+            });
+        if (selected == entries.end()) {
+          std::cerr << "Arcade auto-launch item was not found: "
+                    << *auto_launch_arcade_item << '\n';
+          running = false;
+        } else {
+          const auto offset = static_cast<std::size_t>(
+              std::distance(entries.begin(), selected));
+          for (std::size_t step = 0; step < offset && running; ++step) {
+            running = handle_session_action(Action::Right);
+          }
+          if (running) running = handle_session_action(Action::Confirm);
+        }
+      } else if (running) {
+        std::cerr << "Arcade auto-launch could not open the Arcade library\n";
+        running = false;
+      }
+      dirty = true;
+    }
+  }
 
   while (running) {
     SDL_Event event{};

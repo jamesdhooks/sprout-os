@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "displayTiers": {"schemaVersion": 1, "tiers": ["large", "standard", "compact", "advanced"]},
+  "bands": [
+    {"through": 20, "columns": 7, "rows": 7, "min_distance": 14, "loop_count": 0, "omission_percent": 0, "shape_chunks": 1, "max_chunk_depth": 1},
+    {"through": 45, "columns": 9, "rows": 9, "min_distance": 24, "loop_count": 1, "omission_percent": 2, "shape_chunks": 2, "max_chunk_depth": 1},
+    {"through": 75, "columns": 11, "rows": 11, "min_distance": 36, "loop_count": 3, "omission_percent": 5, "shape_chunks": 3, "max_chunk_depth": 2},
+    {"through": 100, "columns": 13, "rows": 13, "min_distance": 50, "loop_count": 5, "omission_percent": 8, "shape_chunks": 4, "max_chunk_depth": 2}
+  ]
+}

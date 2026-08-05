@@ -1,4 +1,8 @@
-local screen_width, screen_height = 320, 240
+local screen_width, screen_height = sprout.surface_size()
+local ui_scale = screen_width / 320
+local function ui_pixels(value)
+  return math.floor(value * ui_scale + 0.5)
+end
 local source_tile_size = 16
 local padding_cells = 1
 local mouse_body_extent = 95
@@ -6,7 +10,8 @@ local cheese_visible_extent = 174
 local mouse_cell_coverage = 0.78
 local cheese_cell_coverage = 0.75
 local columns, rows = 5, 3
-local cell_width, cell_height, actor_cell_size = 320 / 7, 240 / 5, 320 / 7
+local cell_width, cell_height, actor_cell_size = screen_width / 7,
+    screen_height / 5, screen_width / 7
 local origin_x, origin_y = cell_width, cell_height
 local character_scale =
     (actor_cell_size * mouse_cell_coverage) / mouse_body_extent
@@ -18,10 +23,17 @@ local movement_duration = 6
 local campaign_level_limit = 1000
 local hint_duration = 180
 local hint_max_cells = 12
+local level_indicator_x, level_indicator_y = ui_pixels(3), ui_pixels(3)
+local level_indicator_height = ui_pixels(28)
+local level_indicator_radius = ui_pixels(8)
+local indicator_reservation_cell_threshold = ui_pixels(16)
+local rectangular_room_limit = 63
+local initial_missing_room_ratio = 0.04
+local maximum_missing_room_ratio = 0.22
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 
 local grid = {}
-local tiles = ""
+local wall_tiles = ""
 local floor_tiles = ""
 local level = 1
 local campaign_seed = 1
@@ -105,26 +117,171 @@ local function tile_at(x, y)
   return grid[y + 1][x + 1]
 end
 
+local function level_indicator_width()
+  return math.max(ui_pixels(36), ui_pixels(18 + #tostring(level) * 11))
+end
+
+local function indicator_reservation_bounds()
+  if cell_width >= indicator_reservation_cell_threshold and
+      cell_height >= indicator_reservation_cell_threshold then
+    return 0, 0
+  end
+  return level_indicator_x + level_indicator_width() + cell_width,
+      level_indicator_y + level_indicator_height + cell_height
+end
+
 local function build_tiles()
-  local result = {}
+  local terrain = ""
   for y = 0, rows - 1 do
+    local row = grid[y + 1]
     for x = 0, columns - 1 do
-      result[#result + 1] = string.char(tile_at(x, y))
+      local tile = row[x + 1]
+      if tile == 2 and x % 2 == 0 and y % 2 == 0 and
+          ((x > 0 and row[x] == 1) or
+           (x < columns - 1 and row[x + 2] == 1) or
+           (y > 0 and grid[y][x + 1] == 1) or
+           (y < rows - 1 and grid[y + 2][x + 1] == 1)) then
+        tile = 1
+      end
+      terrain = terrain .. string.char(tile)
     end
   end
-  tiles = table.concat(result)
-  floor_tiles = string.rep(string.char(0), #tiles)
+  wall_tiles = string.gsub(terrain, string.char(2), string.char(0))
+  floor_tiles = string.gsub(terrain,
+      "[" .. string.char(1) .. string.char(2) .. "]", string.char(1))
+end
+
+local function build_room_footprint()
+  local room_columns = math.floor((columns - 1) / 2)
+  local room_rows = math.floor((rows - 1) / 2)
+  local total_rooms = room_columns * room_rows
+  local maximum_rooms = 26 * 19
+  local footprint_progress = math.max(0, math.min(1,
+      (total_rooms - rectangular_room_limit) /
+      (maximum_rooms - rectangular_room_limit)))
+  local missing_ratio = 0
+  if footprint_progress > 0 then
+    missing_ratio = initial_missing_room_ratio + footprint_progress *
+        (maximum_missing_room_ratio - initial_missing_room_ratio)
+  end
+  local allowed = {}
+  local allowed_count = 0
+  local reservation_width, reservation_height =
+      indicator_reservation_bounds()
+
+  local function room_key(room_x, room_y)
+    return room_y * room_columns + room_x
+  end
+
+  for room_y = 0, room_rows - 1 do
+    for room_x = 0, room_columns - 1 do
+      local grid_x, grid_y = room_x * 2 + 1, room_y * 2 + 1
+      local envelope_left = origin_x + (grid_x - 1) * cell_width
+      local envelope_top = origin_y + (grid_y - 1) * cell_height
+      local overlaps_indicator = reservation_width > 0 and
+          envelope_left < reservation_width and
+          envelope_top < reservation_height
+      if not overlaps_indicator then
+        allowed[room_key(room_x, room_y)] = true
+        allowed_count = allowed_count + 1
+      end
+    end
+  end
+
+  if allowed_count == total_rooms and missing_ratio == 0 then
+    return allowed, 0, 0, room_columns, room_rows
+  end
+
+  local target_count = math.max(1,
+      allowed_count - math.floor(allowed_count * missing_ratio + 0.5))
+  local target_x = math.floor(room_columns / 2) +
+      random(math.max(1, math.floor(room_columns / 3))) -
+      math.ceil(math.max(1, math.floor(room_columns / 3)) / 2)
+  local target_y = math.floor(room_rows / 2) +
+      random(math.max(1, math.floor(room_rows / 3))) -
+      math.ceil(math.max(1, math.floor(room_rows / 3)) / 2)
+  local seed_x, seed_y, seed_distance = 0, 0, 2147483647
+  for room_y = 0, room_rows - 1 do
+    for room_x = 0, room_columns - 1 do
+      if allowed[room_key(room_x, room_y)] then
+        local distance = math.abs(room_x - target_x) +
+            math.abs(room_y - target_y)
+        if distance < seed_distance then
+          seed_x, seed_y, seed_distance = room_x, room_y, distance
+        end
+      end
+    end
+  end
+
+  local active = {}
+  local frontier, frontier_lookup = {}, {}
+  local function add_frontier(room_x, room_y)
+    if room_x < 0 or room_y < 0 or room_x >= room_columns or
+        room_y >= room_rows then return end
+    local key = room_key(room_x, room_y)
+    if allowed[key] and not active[key] and not frontier_lookup[key] then
+      frontier[#frontier + 1] = {x = room_x, y = room_y, key = key}
+      frontier_lookup[key] = true
+    end
+  end
+  local function activate(room_x, room_y)
+    local key = room_key(room_x, room_y)
+    active[key] = true
+    add_frontier(room_x, room_y - 1)
+    add_frontier(room_x + 1, room_y)
+    add_frontier(room_x, room_y + 1)
+    add_frontier(room_x - 1, room_y)
+  end
+
+  activate(seed_x, seed_y)
+  local active_count = 1
+  while active_count < target_count and #frontier > 0 do
+    local index = random(#frontier)
+    local chosen = frontier[index]
+    frontier[index] = frontier[#frontier]
+    table.remove(frontier)
+    frontier_lookup[chosen.key] = nil
+    if not active[chosen.key] then
+      activate(chosen.x, chosen.y)
+      active_count = active_count + 1
+    end
+  end
+  return active, seed_x, seed_y, room_columns, room_rows
 end
 
 local function carve_maze()
+  local active, seed_room_x, seed_room_y, room_columns, room_rows =
+      build_room_footprint()
+  local function active_room_at(room_x, room_y)
+    if room_x < 0 or room_y < 0 or room_x >= room_columns or
+        room_y >= room_rows then return false end
+    return active[room_y * room_columns + room_x] == true
+  end
+  local function room_active(grid_x, grid_y)
+    local room_x, room_y = (grid_x - 1) / 2, (grid_y - 1) / 2
+    return active_room_at(room_x, room_y)
+  end
+
   grid = {}
   for y = 0, rows - 1 do
     grid[y + 1] = {}
-    for x = 0, columns - 1 do grid[y + 1][x + 1] = 1 end
+    for x = 0, columns - 1 do grid[y + 1][x + 1] = 2 end
   end
-
-  local stack = {{x = 1, y = 1}}
-  set_tile(1, 1, 0)
+  for room_y = 0, room_rows - 1 do
+    for room_x = 0, room_columns - 1 do
+      local center_x, center_y = room_x * 2 + 1, room_y * 2 + 1
+      if room_active(center_x, center_y) then
+        set_tile(center_x, center_y, 1)
+        set_tile(center_x, center_y - 1, 1)
+        set_tile(center_x + 1, center_y, 1)
+        set_tile(center_x, center_y + 1, 1)
+        set_tile(center_x - 1, center_y, 1)
+      end
+    end
+  end
+  local seed_x, seed_y = seed_room_x * 2 + 1, seed_room_y * 2 + 1
+  local stack = {{x = seed_x, y = seed_y}}
+  set_tile(seed_x, seed_y, 0)
   while #stack > 0 do
     local current = stack[#stack]
     local candidates = {}
@@ -134,7 +291,7 @@ local function carve_maze()
       local next_x, next_y = current.x + step.x, current.y + step.y
       if next_x > 0 and next_y > 0 and
           next_x < columns - 1 and next_y < rows - 1 and
-          tile_at(next_x, next_y) == 1 then
+          room_active(next_x, next_y) and tile_at(next_x, next_y) == 1 then
         candidates[#candidates + 1] = {x = next_x, y = next_y,
           wall_x = current.x + step.x / 2,
           wall_y = current.y + step.y / 2}
@@ -155,7 +312,9 @@ local function choose_start()
   local cells = {}
   for y = 1, rows - 2, 2 do
     for x = 1, columns - 2, 2 do
-      cells[#cells + 1] = {x = x, y = y}
+      if tile_at(x, y) == 0 then
+        cells[#cells + 1] = {x = x, y = y}
+      end
     end
   end
   local chosen = cells[random(#cells)]
@@ -260,7 +419,7 @@ local function generate_level(next_level)
 end
 
 local function blocked(x, y)
-  return x < 0 or y < 0 or x >= columns or y >= rows or tile_at(x, y) == 1
+  return x < 0 or y < 0 or x >= columns or y >= rows or tile_at(x, y) ~= 0
 end
 
 local function requested_direction(actions)
@@ -389,7 +548,7 @@ function render()
   local rendered_y = move_from_y + (mouse_y - move_from_y) * progress
   sprout.rect(0, 0, screen_width, screen_height, 43, 75, 49)
   sprout.tilemap("maze.tiles", floor_tiles, columns, origin_x, origin_y,
-      cell_width / source_tile_size, cell_height / source_tile_size)
+      cell_width / source_tile_size, cell_height / source_tile_size, 1)
   if hint_remaining > 0 then
     local time_fade = math.min(1, hint_remaining / 30)
     for index, cell in ipairs(hint_path) do
@@ -415,23 +574,31 @@ function render()
       y = math.floor(origin_y + (rendered_y + 0.5) * cell_height + 0.5),
       scale = character_scale}
   })
-  sprout.tilemap("maze.tiles", tiles, columns, origin_x, origin_y,
+  sprout.tilemap("maze.tiles", wall_tiles, columns, origin_x, origin_y,
       cell_width / source_tile_size, cell_height / source_tile_size, 0)
 
   local level_text = tostring(level)
-  local level_width = math.max(22, 16 + #level_text * 6)
-  local level_height, level_radius = 16, 4
-  sprout.rect(0, 0, level_width, level_height - level_radius,
-      255, 244, 211, 238)
-  sprout.rect(0, 0, level_width - level_radius, level_height,
-      255, 244, 211, 238)
-  sprout.circle(level_width - level_radius, level_height - level_radius,
-      level_radius, 255, 244, 211, 238)
-  sprout.label(level_text, 2, 0, level_width - 4, level_height,
-      82, 35, 65)
+  local level_width = level_indicator_width()
+  sprout.rounded_rect(level_indicator_x + 2, level_indicator_y + 3,
+      level_width, level_indicator_height, level_indicator_radius,
+      24, 55, 39, 175)
+  sprout.rounded_rect(level_indicator_x, level_indicator_y,
+      level_width, level_indicator_height, level_indicator_radius,
+      245, 171, 65, 255)
+  sprout.rounded_rect(level_indicator_x + 2, level_indicator_y + 2,
+      level_width - 4, level_indicator_height - 4,
+      level_indicator_radius - 2, 255, 239, 187, 255)
+  sprout.display_label(level_text, level_indicator_x + 4,
+      level_indicator_y + 3, level_width - 6, level_indicator_height - 2,
+      201, 116, 53, 190)
+  sprout.display_label(level_text, level_indicator_x + 3,
+      level_indicator_y + 1, level_width - 6, level_indicator_height - 2,
+      88, 38, 79)
   if complete then
-    sprout.rect(104, 102, 112, 36, 255, 226, 155, 246)
-    sprout.label("Cheese!", 112, 108, 96, 24, 82, 35, 65)
+    sprout.rounded_rect(ui_pixels(104), ui_pixels(102), ui_pixels(112),
+        ui_pixels(36), ui_pixels(10), 255, 226, 155, 246)
+    sprout.display_label("Cheese!", ui_pixels(112), ui_pixels(108),
+        ui_pixels(96), ui_pixels(24), 82, 35, 65)
   end
 end
 

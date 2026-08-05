@@ -650,7 +650,7 @@
         16
       ],
       "sprites": [
-        "rich.floor-plain",
+        "rich.outside-foliage",
         "rich.hedge-solid"
       ]
     }

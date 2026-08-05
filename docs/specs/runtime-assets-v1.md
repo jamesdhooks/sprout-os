@@ -37,6 +37,8 @@ edges to 4,096 pixels, and each rendered frame to 4,096 commands.
 | `sprout.sprite_batch(items)` | Submit many sprite or animation items in one Lua-to-host call |
 | `sprout.tilemap(tileSet, bytes, columns, x, y, scaleX?, scaleY?, skipIndex?)` | Submit a dense tile grid with independent axes and an optional omitted tile index |
 | `sprout.label(text, x, y, width, height, r, g, b, a?)` | Submit one bounded shared-font label without a package-specific glyph atlas |
+| `sprout.display_label(text, x, y, width, height, r, g, b, a?)` | Submit one bounded ExtraBold display label from the shared font atlas |
+| `sprout.rounded_rect(x, y, width, height, radius, r, g, b, a?)` | Submit one filled rounded panel with a bounded corner radius |
 | `sprout.circle(x, y, radius, r, g, b, a?)` | Submit one alpha-blended filled circle for lightweight effects and indicators |
 
 A batch item names exactly one `sprite` or `animation` and supplies integer

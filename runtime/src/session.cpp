@@ -117,6 +117,13 @@ struct Session::Impl {
     return 1;
   }
 
+  static int surface_size(lua_State* state) {
+    const auto& runtime = self(state);
+    lua_pushinteger(state, runtime.package.logical_width);
+    lua_pushinteger(state, runtime.package.logical_height);
+    return 2;
+  }
+
   static int rect(lua_State* state) {
     auto& runtime = self(state);
     DrawRect rectangle{
@@ -149,7 +156,45 @@ struct Session::Impl {
     return 0;
   }
 
-  static int label(lua_State* state) {
+  static int rounded_rect(lua_State* state) {
+    auto& runtime = self(state);
+    DrawRoundedRect rounded{
+        .rectangle = {
+            .x = static_cast<int>(luaL_checkinteger(state, 1)),
+            .y = static_cast<int>(luaL_checkinteger(state, 2)),
+            .width = static_cast<int>(luaL_checkinteger(state, 3)),
+            .height = static_cast<int>(luaL_checkinteger(state, 4)),
+            .red = static_cast<std::uint8_t>(luaL_checkinteger(state, 6)),
+            .green = static_cast<std::uint8_t>(luaL_checkinteger(state, 7)),
+            .blue = static_cast<std::uint8_t>(luaL_checkinteger(state, 8)),
+            .alpha = static_cast<std::uint8_t>(luaL_optinteger(state, 9, 255)),
+        },
+        .radius = static_cast<int>(luaL_checkinteger(state, 5)),
+    };
+    const auto valid_color = [state](int index) {
+      const auto component = lua_tointeger(state, index);
+      return component >= 0 && component <= 255;
+    };
+    const auto& rectangle = rounded.rectangle;
+    if (rectangle.x < 0 || rectangle.y < 0 || rectangle.width <= 0 ||
+        rectangle.height <= 0 ||
+        rectangle.x + rectangle.width > runtime.package.logical_width ||
+        rectangle.y + rectangle.height > runtime.package.logical_height ||
+        rounded.radius <= 0 || rounded.radius * 2 > rectangle.width ||
+        rounded.radius * 2 > rectangle.height ||
+        !valid_color(6) || !valid_color(7) || !valid_color(8) ||
+        (lua_gettop(state) >= 9 && !valid_color(9))) {
+      return luaL_error(state, "rounded rectangle is outside the logical surface");
+    }
+    if (runtime.drawing.size() >= kMaximumDrawCommands) {
+      return luaL_error(state, "frame draw-command limit exceeded");
+    }
+    runtime.drawing.push_back({.type = DrawCommandType::RoundedRectangle,
+                               .rounded_rectangle = rounded});
+    return 0;
+  }
+
+  static int append_label(lua_State* state, bool display) {
     auto& runtime = self(state);
     std::size_t length = 0;
     const char* value = luaL_checklstring(state, 1, &length);
@@ -163,6 +208,7 @@ struct Session::Impl {
         .green = static_cast<std::uint8_t>(luaL_checkinteger(state, 7)),
         .blue = static_cast<std::uint8_t>(luaL_checkinteger(state, 8)),
         .alpha = static_cast<std::uint8_t>(luaL_optinteger(state, 9, 255)),
+        .display = display,
     };
     const auto valid_color = [state](int index) {
       const auto component = lua_tointeger(state, index);
@@ -187,6 +233,11 @@ struct Session::Impl {
     runtime.drawing.push_back(
         {.type = DrawCommandType::Label, .label = std::move(command)});
     return 0;
+  }
+
+  static int label(lua_State* state) { return append_label(state, false); }
+  static int display_label(lua_State* state) {
+    return append_label(state, true);
   }
 
   static int circle(lua_State* state) {
@@ -618,9 +669,12 @@ struct Session::Impl {
       lua_setfield(lua, -2, name);
     };
     add("random", random);
+    add("surface_size", surface_size);
     add("rect", rect);
+    add("rounded_rect", rounded_rect);
     add("circle", circle);
     add("label", label);
+    add("display_label", display_label);
     add("sprite", sprite);
     add("animate", animate);
     add("sprite_batch", sprite_batch);
