@@ -1,4 +1,5 @@
 #include "sprout/launcher/local_library.hpp"
+#include "sprout/launcher/pico8_catalogue.hpp"
 
 #include <algorithm>
 #include <array>
@@ -83,22 +84,39 @@ LibraryScanResult LocalLibraryScanner::discover() const {
     return result;
   }
 
-  for (const auto system :
-       std::array{OnionSystem::GameBoy, OnionSystem::SuperNintendo}) {
+  for (const auto system : onion_supported_systems()) {
     const auto contract = onion_system_contract(system);
     if (!contract.has_value()) {
       continue;
     }
     error.clear();
+    const auto configured_system_root = sd_card_root / contract->rom_directory;
+    if (!std::filesystem::exists(configured_system_root, error) && !error) {
+      continue;
+    }
+    if (error) {
+      result.warnings.push_back(std::string(contract->id) +
+                                " ROM directory is unavailable");
+      continue;
+    }
     const auto system_root = std::filesystem::weakly_canonical(
-        sd_card_root / contract->rom_directory, error);
-    if (error || !within(system_root, sd_card_root) ||
-        !std::filesystem::is_directory(system_root, error) || error) {
+        configured_system_root, error);
+    if (error || !within(system_root, sd_card_root)) {
+      result.warnings.push_back(std::string(contract->id) +
+                                " ROM directory is unavailable");
+      continue;
+    }
+    error.clear();
+    if (!std::filesystem::is_directory(system_root, error) && !error) {
+      continue;
+    }
+    if (error) {
       result.warnings.push_back(std::string(contract->id) +
                                 " ROM directory is unavailable");
       continue;
     }
 
+    Pico8Catalogue pico8_catalogue(sd_card_root);
     std::filesystem::recursive_directory_iterator iterator(
         system_root, std::filesystem::directory_options::skip_permission_denied,
         error);
@@ -119,6 +137,14 @@ LibraryScanResult LocalLibraryScanner::discover() const {
       }
 
       const auto entry_path = iterator->path();
+      // Profile-cart copies are launch material owned by Sprout, not library
+      // items. Skipping the directory also prevents recursive duplicate scans.
+      if (contract->id == "PICO" && iterator->is_directory(error) &&
+          entry_path.filename() == ".sprout-profiles") {
+        iterator.disable_recursion_pending();
+        iterator.increment(error);
+        continue;
+      }
       if (iterator->is_regular_file(error) && !error &&
           supported_extension(*contract, entry_path)) {
         const auto canonical_path =
@@ -127,13 +153,24 @@ LibraryScanResult LocalLibraryScanner::discover() const {
           const auto relative_path =
               std::filesystem::relative(canonical_path, system_root, error);
           if (!error && !relative_path.empty()) {
+            auto item_id = "onion:" + std::string(contract->id) + ":" +
+                           encode_identity_part(path_as_utf8(relative_path));
+            auto title = path_as_utf8(canonical_path.stem());
+            std::filesystem::path artwork_path;
+            if (contract->id == "PICO") {
+              if (const auto known = pico8_catalogue.find(relative_path)) {
+                item_id = known->id;
+                title = known->title;
+                artwork_path = known->artwork_path;
+              }
+            }
             result.items.push_back(EmulatedLibraryItem{
                 .schema_version = EmulatedLibraryItem::kSchemaVersion,
-                .id = "onion:" + std::string(contract->id) + ":" +
-                      encode_identity_part(path_as_utf8(relative_path)),
-                .title = path_as_utf8(canonical_path.stem()),
+                .id = std::move(item_id),
+                .title = std::move(title),
                 .system = system,
                 .rom_path = canonical_path,
+                .artwork_path = std::move(artwork_path),
             });
           }
         }

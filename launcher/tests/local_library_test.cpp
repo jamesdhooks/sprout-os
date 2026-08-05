@@ -1,5 +1,6 @@
 #include "sprout/launcher/local_library.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -74,14 +75,48 @@ void discovers_supported_items_deterministically() {
           "repeated scans should preserve identities and order");
 }
 
+void discovers_the_extended_onion_catalogue() {
+  TemporaryCard card;
+  card.add("Roms/FC/Family Adventure.nes");
+  card.add("Roms/GBC/Color Quest.gbc");
+  card.add("Roms/GBA/Advance Journey.gba");
+  card.add("Roms/MD/Speed Trail.md");
+  card.add("Roms/MS/Classic.sms");
+  card.add("Roms/GG/Pocket.gg");
+  card.add("Roms/SEGACD/Disc Adventure.cue");
+  card.add("Roms/PCE/Bonk.pce");
+  card.add("Roms/NEOGEO/Fighter.zip");
+  card.add("Roms/ARCADE/Cabinet.zip");
+  card.add("Roms/PS/Memory Disc.chd");
+  card.add("Roms/PICO/Cart.p8");
+  card.add("Roms/PICO/Artwork.png");
+  card.add("Roms/PS/cover.png");
+
+  const auto result = LocalLibraryScanner(card.root()).discover();
+  require(result.items.size() == 13,
+          "every registered Tiny Best Set system should discover valid files");
+  require(result.warnings.empty(),
+          "missing unrelated systems must not prevent discovered systems");
+  const auto contains = [&](std::string_view id) {
+    return std::any_of(result.items.begin(), result.items.end(),
+                       [&](const auto& item) { return item.id == id; });
+  };
+  require(contains("onion:NES:Family%20Adventure.nes"),
+          "NES should map Onion FC content to the household seed label");
+  require(contains("onion:PS:Memory%20Disc.chd"),
+          "PlayStation CHD files should be discovered");
+  require(contains("onion:PICO:Cart.p8") &&
+              contains("onion:PICO:Artwork.png"),
+          "PICO-8 carts should include native and PNG cartridge forms");
+}
+
 void missing_roots_degrade_with_warnings() {
   TemporaryCard card;
   std::filesystem::remove_all(card.root() / "Roms/SFC");
   const auto result = LocalLibraryScanner(card.root()).discover();
   require(result.items.empty(), "missing system root should not fabricate items");
-  require(result.warnings.size() == 1 &&
-              result.warnings[0] == "SFC ROM directory is unavailable",
-          "missing system root should produce a recoverable system warning");
+  require(result.warnings.empty(),
+          "uninstalled optional Onion systems should not produce noisy warnings");
 
   const auto unavailable =
       LocalLibraryScanner(card.root() / "missing-card").discover();
@@ -112,6 +147,7 @@ void linked_rom_cannot_escape_system_root() {
 int main() {
   try {
     discovers_supported_items_deterministically();
+    discovers_the_extended_onion_catalogue();
     missing_roots_degrade_with_warnings();
 #ifndef _WIN32
     linked_rom_cannot_escape_system_root();

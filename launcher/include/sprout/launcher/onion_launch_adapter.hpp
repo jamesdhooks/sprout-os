@@ -14,7 +14,19 @@ namespace sprout::launcher {
 
 enum class OnionSystem {
   GameBoy,
+  GameBoyColor,
+  GameBoyAdvance,
+  NintendoEntertainmentSystem,
   SuperNintendo,
+  SegaGenesis,
+  SegaMasterSystem,
+  SegaGameGear,
+  SegaCD,
+  TurboGrafx16,
+  NeoGeo,
+  Arcade,
+  PlayStation,
+  Pico8,
 };
 
 struct OnionSystemContract {
@@ -26,6 +38,7 @@ struct OnionSystemContract {
 
 [[nodiscard]] std::optional<OnionSystemContract> onion_system_contract(
     OnionSystem system);
+[[nodiscard]] ReadOnlyView<OnionSystem> onion_supported_systems();
 
 struct EmulatedLaunchTarget {
   std::string item_id;

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "parent-one",
+      "displayName": "Parent One",
+      "role": "parent",
+      "avatarRef": "builtin:rocket-ship",
+      "backgroundRef": "builtin:treehouse-library",
+      "saveNamespace": "parent-one",
+      "curatedItems": [],
+      "favoriteItems": [{"platform": "NES", "title": "Super Mario Bros. 3"}, {"platform": "SFC", "title": "Super Mario World"}, {"platform": "ARCADE", "title": "Mouse & Cheese Maze"}]
+    },
+    {
+      "id": "parent-two",
+      "displayName": "Parent Two",
+      "role": "parent",
+      "avatarRef": "builtin:sunflower",
+      "backgroundRef": "builtin:garden-morning",
+      "saveNamespace": "parent-two",
+      "curatedItems": [],
+      "favoriteItems": [{"platform": "NES", "title": "Kirby's Adventure"}, {"platform": "SFC", "title": "Tetris Attack"}, {"platform": "ARCADE", "title": "Blocks & Buttons"}]
+    },
+    {
+      "id": "child-one",
+      "displayName": "Child One",
+      "role": "child",
+      "avatarRef": "builtin:red-panda",
+      "backgroundRef": "builtin:sunny-cove",
+      "saveNamespace": "child-one",
+      "contentPolicyRef": "seed:age-appropriate",
+      "timePolicyRef": "time:child-default",
+      "curatedItems": [{"platform": "GB", "title": "Kirby's Dream Land"}, {"platform": "GB", "title": "Tetris"}, {"platform": "NES", "title": "Bubble Bobble"}, {"platform": "SFC", "title": "Super Mario World"}, {"platform": "ARCADE", "title": "Mouse & Cheese Maze"}, {"platform": "ARCADE", "title": "Snake"}, {"platform": "ARCADE", "title": "Blocks & Buttons"}],
+      "favoriteItems": [{"platform": "GB", "title": "Kirby's Dream Land"}, {"platform": "ARCADE", "title": "Mouse & Cheese Maze"}, {"platform": "ARCADE", "title": "Snake"}, {"platform": "ARCADE", "title": "Blocks & Buttons"}]
+    },
+    {
+      "id": "child-two",
+      "displayName": "Child Two",
+      "role": "child",
+      "avatarRef": "builtin:unicorn",
+      "backgroundRef": "builtin:firefly-evening",
+      "saveNamespace": "child-two",
+      "contentPolicyRef": "seed:age-appropriate",
+      "timePolicyRef": "time:child-default",
+      "curatedItems": [{"platform": "NES", "title": "Yoshi's Cookie"}, {"platform": "SFC", "title": "Kirby Super Star"}, {"platform": "SFC", "title": "Super Mario World"}, {"platform": "ARCADE", "title": "Mouse & Cheese Maze"}, {"platform": "ARCADE", "title": "Snake"}, {"platform": "ARCADE", "title": "Blocks & Buttons"}],
+      "favoriteItems": [{"platform": "NES", "title": "Yoshi's Cookie"}, {"platform": "ARCADE", "title": "Mouse & Cheese Maze"}, {"platform": "ARCADE", "title": "Snake"}, {"platform": "ARCADE", "title": "Blocks & Buttons"}]
+    }
+  ]
+}

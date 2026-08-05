@@ -1,10 +1,15 @@
 local width = 20
 local height = 14
-local cell = 14
-local board_x = 20
-local board_y = 36
+local screen_width, screen_height = sprout.surface_size()
+local layout_scale = screen_width / 320
+local function px(value)
+  return math.floor(value * layout_scale + 0.5)
+end
+local cell = px(14)
+local board_x = px(20)
+local board_y = px(36)
 local move_interval = 8
-local half_cell = 7
+local half_cell = math.floor(cell / 2)
 local rich_scale = cell / 256
 
 local snake = {}
@@ -148,10 +153,12 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 25, 22, 74)
-  sprout.label("Snake", 8, 3, 108, 24, 255, 203, 62)
-  sprout.label("Score " .. string.format("%02d", score), 176, 3, 136, 20, 248, 236, 201)
-  sprout.label("Best " .. string.format("%02d", best), 216, 19, 96, 12, 173, 190, 232)
+  sprout.rect(0, 0, screen_width, screen_height, 25, 22, 74)
+  sprout.display_label("Snake", px(8), px(3), px(108), px(24), 255, 203, 62)
+  sprout.label("Score " .. string.format("%02d", score), px(176), px(3),
+      px(136), px(20), 248, 236, 201)
+  sprout.label("Best " .. string.format("%02d", best), px(216), px(19),
+      px(96), px(12), 173, 190, 232)
 
   sprout.rect(board_x - 2, board_y - 2, width * cell + 4, height * cell + 4,
               238, 92, 133)
@@ -175,9 +182,12 @@ function render()
   sprout.sprite_batch(sprites)
 
   if ended then
-    sprout.rect(72, 101, 176, 47, 255, 219, 109)
-    sprout.label("Round over", 82, 106, 156, 23, 86, 31, 82)
-    sprout.label("Press A to try again", 82, 128, 156, 14, 25, 22, 74)
+    sprout.rounded_rect(px(72), px(101), px(176), px(47), px(12),
+        255, 219, 109)
+    sprout.display_label("Round over", px(82), px(106), px(156), px(23),
+        86, 31, 82)
+    sprout.label("Press A to try again", px(82), px(128), px(156), px(14),
+        25, 22, 74)
   end
 end
 

@@ -73,6 +73,7 @@ bool key_down(const std::uint8_t* keyboard, SDL_Scancode first,
 
 sprout::runtime::Actions read_actions(SDL_GameController* controller) {
   const std::uint8_t* keyboard = SDL_GetKeyboardState(nullptr);
+  const bool hint_key = keyboard[SDL_SCANCODE_H] != 0;
   const auto button = [controller](SDL_GameControllerButton value) {
     return controller != nullptr && SDL_GameControllerGetButton(controller, value) != 0;
   };
@@ -82,16 +83,17 @@ sprout::runtime::Actions read_actions(SDL_GameController* controller) {
       .down = key_down(keyboard, SDL_SCANCODE_DOWN, SDL_SCANCODE_S) ||
               button(SDL_CONTROLLER_BUTTON_DPAD_DOWN),
       .left = key_down(keyboard, SDL_SCANCODE_LEFT, SDL_SCANCODE_A) ||
+              hint_key ||
               button(SDL_CONTROLLER_BUTTON_DPAD_LEFT),
       .right = key_down(keyboard, SDL_SCANCODE_RIGHT, SDL_SCANCODE_D) ||
                button(SDL_CONTROLLER_BUTTON_DPAD_RIGHT),
       .primary = key_down(keyboard, SDL_SCANCODE_Z, SDL_SCANCODE_RETURN) ||
+                 hint_key ||
                  button(SDL_CONTROLLER_BUTTON_A),
       .secondary = key_down(keyboard, SDL_SCANCODE_X, SDL_SCANCODE_SPACE) ||
                    keyboard[SDL_SCANCODE_B] != 0 ||
-                   keyboard[SDL_SCANCODE_H] != 0 ||
                    button(SDL_CONTROLLER_BUTTON_B),
-      .start = keyboard[SDL_SCANCODE_RETURN] != 0 ||
+      .start = keyboard[SDL_SCANCODE_RETURN] != 0 || hint_key ||
                button(SDL_CONTROLLER_BUTTON_START),
       .back = keyboard[SDL_SCANCODE_ESCAPE] != 0 ||
               button(SDL_CONTROLLER_BUTTON_BACK),
@@ -173,7 +175,9 @@ struct GeometryBuffers {
 };
 
 void draw_text(SDL_Renderer* renderer, const std::string& text,
-               const SDL_Rect& region, SDL_Color color);
+               const SDL_Rect& region, SDL_Color color, bool display = false);
+void fill_rounded_rect(SDL_Renderer* renderer, const SDL_Rect& rectangle,
+                       int radius, SDL_Color color);
 
 void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
                 TextureStore& textures, GeometryBuffers& geometry) {
@@ -190,6 +194,18 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
       SDL_SetRenderDrawColor(renderer, rectangle.red, rectangle.green,
                              rectangle.blue, rectangle.alpha);
       SDL_RenderFillRect(renderer, &target);
+      ++command_index;
+      continue;
+    }
+    if (command.type == sprout::runtime::DrawCommandType::RoundedRectangle) {
+      const auto& rounded = command.rounded_rectangle;
+      const auto& rectangle = rounded.rectangle;
+      fill_rounded_rect(renderer,
+                        {rectangle.x, rectangle.y, rectangle.width,
+                         rectangle.height},
+                        rounded.radius,
+                        {rectangle.red, rectangle.green, rectangle.blue,
+                         rectangle.alpha});
       ++command_index;
       continue;
     }
@@ -213,7 +229,8 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
       const auto& label = command.label;
       draw_text(renderer, label.text,
                 {label.x, label.y, label.width, label.height},
-                {label.red, label.green, label.blue, label.alpha});
+                {label.red, label.green, label.blue, label.alpha},
+                label.display);
       ++command_index;
       continue;
     }
@@ -327,42 +344,54 @@ SDL_Rect logical_region(const sprout::runtime::NormalizedRegion& region,
 }
 
 void draw_text(SDL_Renderer* renderer, const std::string& text,
-               const SDL_Rect& region, SDL_Color color) {
+               const SDL_Rect& region, SDL_Color color, bool display) {
   static SDL_Renderer* font_renderer = nullptr;
-  static SDL_Texture* font_texture = nullptr;
+  static SDL_Texture* font_textures[2]{};
   if (font_renderer != renderer) {
-    if (font_texture != nullptr) SDL_DestroyTexture(font_texture);
+    for (auto*& texture : font_textures) {
+      if (texture != nullptr) SDL_DestroyTexture(texture);
+      texture = nullptr;
+    }
     char* base = SDL_GetBasePath();
-    const std::filesystem::path path =
+    const std::filesystem::path font_root =
         base == nullptr ? std::filesystem::path{}
-                        : std::filesystem::path(base) / "assets" / "fonts" /
-                              "nunito-semibold.png";
+                        : std::filesystem::path(base) / "assets" / "fonts";
     if (base != nullptr) SDL_free(base);
-    font_texture = path.empty() ? nullptr
-                                : IMG_LoadTexture(renderer, path.string().c_str());
-    if (font_texture != nullptr) {
-      SDL_SetTextureBlendMode(font_texture, SDL_BLENDMODE_BLEND);
+    if (!font_root.empty()) {
+      font_textures[0] = IMG_LoadTexture(
+          renderer, (font_root / "nunito-semibold.png").string().c_str());
+      font_textures[1] = IMG_LoadTexture(
+          renderer, (font_root / "nunito-extrabold.png").string().c_str());
+    }
+    for (auto* texture : font_textures) {
+      if (texture == nullptr) continue;
+      SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
 #if SDL_VERSION_ATLEAST(2, 0, 12)
-      SDL_SetTextureScaleMode(font_texture, SDL_ScaleModeLinear);
+      SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
 #endif
     }
     font_renderer = renderer;
   }
+  SDL_Texture* font_texture = font_textures[display ? 1 : 0];
   if (font_texture != nullptr) {
-    const auto metric_for = [](char character) -> const sprout::ui::UiGlyphMetric& {
+    const auto metric_for = [display](char character)
+        -> const sprout::ui::UiGlyphMetric& {
       const unsigned char value = static_cast<unsigned char>(character);
       const int codepoint = value >= sprout::ui::kUiFontFirstCodepoint &&
                                     value <= sprout::ui::kUiFontLastCodepoint
                                 ? value
                                 : '?';
-      return sprout::ui::kUiFontRegularMetrics[
-          static_cast<std::size_t>(codepoint - sprout::ui::kUiFontFirstCodepoint)];
+      const auto index = static_cast<std::size_t>(
+          codepoint - sprout::ui::kUiFontFirstCodepoint);
+      return display ? sprout::ui::kUiFontHeadingMetrics[index]
+                     : sprout::ui::kUiFontRegularMetrics[index];
     };
     double source_width = 0.0;
     for (const char character : text) {
       source_width += metric_for(character).advance;
     }
-    const int preferred_height = std::max(1, std::min(18, region.h - 8));
+    const int preferred_height = std::max(
+        1, std::min(display ? 24 : 18, region.h - (display ? 4 : 8)));
     const double height_ratio =
         static_cast<double>(preferred_height) / sprout::ui::kUiFontSourceSize;
     const double width_ratio = source_width > 0.0
@@ -391,7 +420,9 @@ void draw_text(SDL_Renderer* renderer, const std::string& text,
         const SDL_Rect destination{
             x + static_cast<int>(std::round(metric.bearing_x * ratio)),
             baseline + static_cast<int>(std::round(
-                           (sprout::ui::kUiFontRegularAscent + metric.bearing_top) *
+                           ((display ? sprout::ui::kUiFontHeadingAscent
+                                     : sprout::ui::kUiFontRegularAscent) +
+                            metric.bearing_top) *
                            ratio)),
             std::max(1, static_cast<int>(std::round(metric.width * ratio))),
             std::max(1, static_cast<int>(std::round(metric.height * ratio)))};
@@ -432,21 +463,86 @@ void fill_rounded_rect(SDL_Renderer* renderer, const SDL_Rect& rectangle,
                        int radius, SDL_Color color) {
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-  SDL_Rect middle{rectangle.x + radius, rectangle.y,
-                  rectangle.w - radius * 2, rectangle.h};
-  SDL_Rect center{rectangle.x, rectangle.y + radius,
-                  rectangle.w, rectangle.h - radius * 2};
-  SDL_RenderFillRect(renderer, &middle);
-  SDL_RenderFillRect(renderer, &center);
-  for (int y = 0; y < radius; ++y) {
-    const int inset = radius - static_cast<int>(
-        std::sqrt(static_cast<double>(radius * radius - (radius - y) * (radius - y))));
-    SDL_Rect top{rectangle.x + inset, rectangle.y + y,
-                 rectangle.w - inset * 2, 1};
-    SDL_Rect bottom{rectangle.x + inset, rectangle.y + rectangle.h - 1 - y,
-                    rectangle.w - inset * 2, 1};
-    SDL_RenderFillRect(renderer, &top);
-    SDL_RenderFillRect(renderer, &bottom);
+  const auto fill = [renderer](const SDL_Rect& target) {
+    if (target.w > 0 && target.h > 0) SDL_RenderFillRect(renderer, &target);
+  };
+  // Keep the opaque interior as five non-overlapping rectangles. The corners
+  // below are then blended once, preserving the requested alpha value.
+  fill({rectangle.x + radius, rectangle.y, rectangle.w - radius * 2, radius});
+  fill({rectangle.x + radius, rectangle.y + rectangle.h - radius,
+        rectangle.w - radius * 2, radius});
+  fill({rectangle.x, rectangle.y + radius, radius, rectangle.h - radius * 2});
+  fill({rectangle.x + rectangle.w - radius, rectangle.y + radius, radius,
+        rectangle.h - radius * 2});
+  fill({rectangle.x + radius, rectangle.y + radius,
+        rectangle.w - radius * 2, rectangle.h - radius * 2});
+
+  // SDL's rectangle primitive has hard pixel edges. Supersample only the four
+  // corner squares and submit their coverage as translucent geometry, so UI
+  // panels stay smooth at a game's selected presentation resolution.
+  constexpr int samples_per_axis = 8;
+  std::vector<SDL_Vertex> vertices;
+  std::vector<int> indices;
+  vertices.reserve(static_cast<std::size_t>(radius * radius * 16));
+  indices.reserve(static_cast<std::size_t>(radius * radius * 24));
+  const auto add_corner = [&](int start_x, int start_y, int center_x,
+                              int center_y) {
+    for (int y = 0; y < radius; ++y) {
+      for (int x = 0; x < radius; ++x) {
+        int covered_samples = 0;
+        for (int sample_y = 0; sample_y < samples_per_axis; ++sample_y) {
+          for (int sample_x = 0; sample_x < samples_per_axis; ++sample_x) {
+            const double point_x = start_x + x +
+                (static_cast<double>(sample_x) + 0.5) / samples_per_axis;
+            const double point_y = start_y + y +
+                (static_cast<double>(sample_y) + 0.5) / samples_per_axis;
+            const double delta_x = point_x - center_x;
+            const double delta_y = point_y - center_y;
+            if (delta_x * delta_x + delta_y * delta_y <= radius * radius) {
+              ++covered_samples;
+            }
+          }
+        }
+        if (covered_samples == 0) continue;
+        const auto alpha = static_cast<Uint8>(std::lround(
+            static_cast<double>(color.a) * covered_samples /
+            (samples_per_axis * samples_per_axis)));
+        const SDL_Color pixel_color{color.r, color.g, color.b, alpha};
+        const int base = static_cast<int>(vertices.size());
+        vertices.push_back({{static_cast<float>(start_x + x),
+                             static_cast<float>(start_y + y)}, pixel_color,
+                            {0.0F, 0.0F}});
+        vertices.push_back({{static_cast<float>(start_x + x + 1),
+                             static_cast<float>(start_y + y)}, pixel_color,
+                            {0.0F, 0.0F}});
+        vertices.push_back({{static_cast<float>(start_x + x + 1),
+                             static_cast<float>(start_y + y + 1)}, pixel_color,
+                            {0.0F, 0.0F}});
+        vertices.push_back({{static_cast<float>(start_x + x),
+                             static_cast<float>(start_y + y + 1)}, pixel_color,
+                            {0.0F, 0.0F}});
+        indices.insert(indices.end(), {base, base + 1, base + 2,
+                                       base, base + 2, base + 3});
+      }
+    }
+  };
+  add_corner(rectangle.x, rectangle.y, rectangle.x + radius,
+             rectangle.y + radius);
+  add_corner(rectangle.x + rectangle.w - radius, rectangle.y,
+             rectangle.x + rectangle.w - radius, rectangle.y + radius);
+  add_corner(rectangle.x, rectangle.y + rectangle.h - radius,
+             rectangle.x + radius, rectangle.y + rectangle.h - radius);
+  add_corner(rectangle.x + rectangle.w - radius,
+             rectangle.y + rectangle.h - radius,
+             rectangle.x + rectangle.w - radius,
+             rectangle.y + rectangle.h - radius);
+  if (!vertices.empty() && SDL_RenderGeometry(renderer, nullptr, vertices.data(),
+                                              static_cast<int>(vertices.size()),
+                                              indices.data(),
+                                              static_cast<int>(indices.size())) != 0) {
+    // All supported renderers use geometry for sprites. This conservative
+    // fallback still keeps a usable panel on an unusual SDL renderer.
+    SDL_RenderFillRect(renderer, &rectangle);
   }
 }
 
@@ -715,7 +811,7 @@ int main(int count, char** values) {
       int steps = 0;
       while (accumulator >= tick && steps < 5 && running) {
         const auto actions = read_actions(controller);
-        if (actions.back) {
+        if (actions.back || actions.secondary) {
           running = false;
           break;
         }

@@ -37,7 +37,13 @@ powershell -ExecutionPolicy Bypass -File .\tools\dev.ps1 -Action run-arcade
 
 This starts the checked-in `games/snake` package with isolated storage under `out/arcade-preview-data`. Arrow keys or WASD control direction, `Z`/Enter or controller A restarts after a round, and Escape or controller Back exits. This is Windows runtime evidence only; it does not validate the Miyoo renderer, input driver, performance, or package installation.
 
-The ordinary launcher preview now discovers direct packages under `games/` and exposes them through **Sprout Arcade** for parent profiles and for child profiles when the manifest declares `audience: family`. Native saves are isolated below `out/preview-data/data/native-games/<profile-id>/<package-id>/`.
+The ordinary launcher preview now discovers direct packages under `games/` and exposes them through **Sprout Arcade** for parent profiles and for child profiles when the manifest declares `audience: family`. Native saves are isolated below `out/preview-data/data/native-games/<profile-id>/<package-id>/`. On Windows, B, X, Backspace, or Escape performs the launcher back action. During native gameplay B/X/Space or controller B returns to the still-running launcher; Escape remains the emergency host-back key. A runtime started directly with `run-arcade` has no parent launcher to reveal, so either return action closes that standalone window.
+
+For launcher-owned game iteration without navigating the menus first, use
+`tools/dev.ps1 -Action run -AutoLaunchArcadeItem arcade:sprout.mouse-maze`.
+The launcher initializes normally, activates the default preview profile, opens
+the requested Arcade item, and remains hidden underneath it. Returning from the
+game reveals the Arcade library rather than terminating the preview session.
 
 Run the noninteractive launcher-to-runtime verification with:
 

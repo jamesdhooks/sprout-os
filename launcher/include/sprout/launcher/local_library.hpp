@@ -16,6 +16,7 @@ struct EmulatedLibraryItem {
   std::string title;
   OnionSystem system;
   std::filesystem::path rom_path;
+  std::filesystem::path artwork_path;
 };
 
 struct LibraryScanResult {

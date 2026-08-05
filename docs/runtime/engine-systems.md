@@ -31,7 +31,8 @@ The runtime retains a frame-local command buffer and platform backends consume i
 - filled rectangle for fallback/debug UI;
 - sprite region with integer position, optional flip, and palette/tint;
 - tilemap region with clipping;
-- shared-font text with measured alignment; and
+- shared SemiBold and ExtraBold text with measured alignment;
+- bounded filled rounded panels; and
 - clip push/pop.
 
 Packages reference asset IDs declared in their manifest. They cannot open paths or upload arbitrary runtime textures. Automated tests can inspect commands without creating an SDL window.

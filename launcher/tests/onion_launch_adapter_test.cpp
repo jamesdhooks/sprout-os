@@ -109,6 +109,34 @@ void test_gb_and_snes_contracts() {
           "SNES ROM path should remain one process argument");
 }
 
+void test_extended_onion_contracts() {
+  TemporaryCard card;
+  RecordingProcess process;
+  OnionLaunchAdapter adapter(card.root(), process);
+  for (const auto system : sprout::launcher::onion_supported_systems()) {
+    const auto contract = sprout::launcher::onion_system_contract(system);
+    require(contract.has_value(), "each registered system must have a launch contract");
+    require(!contract->extensions.empty(), "each system must declare file extensions");
+    std::filesystem::create_directories(card.root() / contract->rom_directory);
+    std::filesystem::create_directories(
+        (card.root() / contract->launcher).parent_path());
+    {
+      std::ofstream launcher(card.root() / contract->launcher, std::ios::binary);
+      launcher << "fixture";
+    }
+    const auto extension = contract->extensions[0];
+    const auto relative_root = contract->rom_directory.lexically_relative("Roms");
+    require(!relative_root.empty(), "Onion ROM roots must remain under Roms");
+    const auto rom = card.rom(
+        (relative_root / (std::string("game") + std::string(extension))).string());
+    const auto result = adapter.launch(allowed(system, rom));
+    require(result.completed(), "each registered system must launch through its contract");
+    require(process.executable ==
+                std::filesystem::canonical(card.root() / contract->launcher),
+            "each system must use its configured Onion launcher");
+  }
+}
+
 void test_rejections_do_not_start_process() {
   TemporaryCard card;
   RecordingProcess process;
@@ -242,6 +270,7 @@ void test_posix_process_runner() {
 int main() {
   try {
     test_gb_and_snes_contracts();
+    test_extended_onion_contracts();
     test_rejections_do_not_start_process();
     test_launcher_and_process_outcomes();
 #ifndef _WIN32

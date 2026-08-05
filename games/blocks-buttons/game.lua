@@ -1,5 +1,12 @@
 local columns, rows = 10, 8
-local origin_x, origin_y = 80, 56
+local screen_width, screen_height = sprout.surface_size()
+local layout_scale = screen_width / 320
+local function px(value)
+  return math.floor(value * layout_scale + 0.5)
+end
+local origin_x, origin_y = px(80), px(56)
+local cell = px(16)
+local half_cell = math.floor(cell / 2)
 local layout = {
   "##########",
   "#........#",
@@ -11,8 +18,8 @@ local layout = {
   "##########"
 }
 local tiles = ""
-local character_scale = 5 / 32
-local object_scale = 3 / 64
+local character_scale = (5 / 32) * layout_scale
+local object_scale = (3 / 64) * layout_scale
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
@@ -109,35 +116,41 @@ function update(actions)
 end
 
 function render()
-  sprout.rect(0, 0, 320, 240, 19, 58, 106)
-  sprout.rect(58, 34, 204, 188, 194, 91, 58)
-  sprout.rect(70, 46, 180, 164, 56, 139, 158)
-  sprout.tilemap("room.tiles", tiles, columns, origin_x, origin_y)
+  sprout.rect(0, 0, screen_width, screen_height, 19, 58, 106)
+  sprout.rect(px(58), px(34), px(204), px(188), 194, 91, 58)
+  sprout.rect(px(70), px(46), px(180), px(164), 56, 139, 158)
+  sprout.tilemap("room.tiles", tiles, columns, origin_x, origin_y,
+      layout_scale, layout_scale)
   local sprites = {}
   for _, button in ipairs(buttons) do
     sprites[#sprites + 1] = {
       sprite = crate_at(button.x, button.y) and "rich.button-down" or "rich.button-up",
-      x = origin_x + button.x * 16 + 8, y = origin_y + button.y * 16 + 8,
+      x = origin_x + button.x * cell + half_cell,
+      y = origin_y + button.y * cell + half_cell,
       scale = object_scale
     }
   end
   for _, crate in ipairs(crates) do
     sprites[#sprites + 1] = {
       sprite = button_at(crate.x, crate.y) and "rich.crate-solved" or "rich.crate-idle",
-      x = origin_x + crate.x * 16 + 8, y = origin_y + crate.y * 16 + 8,
+      x = origin_x + crate.x * cell + half_cell,
+      y = origin_y + crate.y * cell + half_cell,
       scale = object_scale
     }
   end
   sprites[#sprites + 1] = {animation = "rich.hero-walk-" .. rich_direction[direction],
-      x = origin_x + player_x * 16 + 8, y = origin_y + player_y * 16 + 8,
+      x = origin_x + player_x * cell + half_cell,
+      y = origin_y + player_y * cell + half_cell,
       scale = character_scale}
   sprout.sprite_batch(sprites)
   if complete then
-    sprout.rect(84, 6, 152, 27, 255, 207, 61)
-    sprout.label("Puzzle solved!", 92, 8, 136, 22, 15, 50, 94)
+    sprout.rounded_rect(px(84), px(6), px(152), px(27), px(8), 255, 207, 61)
+    sprout.display_label("Puzzle solved!", px(92), px(8), px(136), px(22),
+        15, 50, 94)
   elseif deadlocked then
-    sprout.rect(66, 6, 188, 27, 255, 191, 171)
-    sprout.label("No moves - A retry", 74, 8, 172, 22, 126, 39, 38)
+    sprout.rounded_rect(px(66), px(6), px(188), px(27), px(8), 255, 191, 171)
+    sprout.display_label("No moves - A retry", px(74), px(8), px(172), px(22),
+        126, 39, 38)
   end
 end
 
