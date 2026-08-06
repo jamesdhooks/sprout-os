@@ -331,6 +331,13 @@ if(BUILD_TESTING)
             --shared "${PROJECT_SOURCE_DIR}/pico8/shared/arcade_core.lua"
   )
 
+  add_test(
+    NAME pico8-starter-kit
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/pico8_game.py"
+            self-test
+  )
+
   add_executable(sprout-launcher-state-test tests/launcher_state_test.cpp)
   target_compile_features(sprout-launcher-state-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-launcher-state-test PRIVATE sprout_launcher_core)

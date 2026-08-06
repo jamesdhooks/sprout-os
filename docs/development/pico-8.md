@@ -1,5 +1,8 @@
 # PICO-8 development
 
+For the contributor workflow and copyable starter cartridge, see
+[Writing, testing, and deploying PICO-8 games](pico8-game-development.md).
+
 Sprout ships original `.p8` cartridges for fake-08 through Onion. It does not ship PICO-8 itself, `pico8.dat`, BBS carts, or user save data.
 
 ## Mouse & Cheese
