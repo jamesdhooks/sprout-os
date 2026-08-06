@@ -3,7 +3,9 @@
 This guide is the shortest supported path from an idea to a standalone Sprout
 PICO-8 cartridge. It assumes Windows and the licensed desktop PICO-8 app for
 authoring. Device releases target Onion's PICO integration and must also be
-checked with fake-08.
+checked with fake-08. If you need to learn the console, editor, P8 Lua, graphics,
+map, audio, persistence, or debugging model first, read the
+[PICO-8 authoring handbook](pico8-authoring-handbook.md).
 
 Sprout never bundles the PICO-8 executable, `pico8.dat`, downloaded BBS carts,
 or private save data.

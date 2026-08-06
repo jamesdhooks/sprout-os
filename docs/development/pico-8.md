@@ -7,7 +7,7 @@ Sprout ships original `.p8` cartridges for fake-08 through Onion. It does not sh
 
 ## Mouse & Cheese
 
-`pico8/mouse-cheese/mouse-cheese.p8` is directly loadable and self-contained. Its 1,000 campaign layouts are generated offline from `campaign-spec.json`; `campaign.json` records the accepted seed, metrics, and layout hash for each level. The cartridge receives only the approved seed payload.
+`pico8/mouse-cheese/mouse-cheese.p8` is directly loadable and self-contained. Its 100 campaign layouts are generated offline from `campaign-spec.json`; `campaign.json` records the accepted seed, metrics, and layout hash for each level. The cartridge receives only the approved seed payload.
 
 Regenerate and check it from the repository root:
 

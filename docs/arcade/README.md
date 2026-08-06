@@ -30,6 +30,7 @@ behavior, and device performance remain future validation tracks.
 - [First three games](first-three-games.md): complete v1 requirements and acceptance criteria for Mouse & Cheese Maze, Blocks & Buttons, and Snake.
 - [PICO-8 editions](pico8-editions.md): standalone cart boundaries, shared lifecycle code, review, and deployment.
 - [PICO-8 game development](../development/pico8-game-development.md): create, edit, test, capture, and deploy a new cart.
+- [PICO-8 authoring handbook](../development/pico8-authoring-handbook.md): distilled console, editor, P8 Lua, rendering, map, audio, persistence, debugging, and optimization reference.
 - [Content pipeline](content-pipeline.md): deterministic generation, solving, scoring, curation, and campaign export.
 - [Asset pipeline](assets.md): pixel-art constraints, provenance, generation, packing, and validation.
 - [Runtime overview](../runtime/README.md): reusable engine boundary and implementation sequence.
