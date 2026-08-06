@@ -3,6 +3,7 @@
 #include <yyjson.h>
 
 #include <array>
+#include <cmath>
 #include <fstream>
 #include <limits>
 #include <set>
@@ -71,6 +72,19 @@ std::pair<int, int> pair_of_uints(yyjson_val* object, const char* key,
   }
   return {static_cast<int>(yyjson_get_uint(first)),
           static_cast<int>(yyjson_get_uint(second))};
+}
+
+double positive_number(yyjson_val* object, const char* key,
+                       std::string_view context) {
+  yyjson_val* value = required(object, key, context);
+  if (!yyjson_is_num(value)) {
+    throw std::runtime_error(std::string(context) + " field should be numeric: " + key);
+  }
+  const double number = yyjson_get_num(value);
+  if (!std::isfinite(number) || number <= 0.0 || number > 1.0) {
+    throw std::runtime_error(std::string(context) + " field is outside bounds: " + key);
+  }
+  return number;
 }
 
 std::array<int, 4> rectangle(yyjson_val* object, const char* key,
@@ -166,7 +180,7 @@ AssetCatalogue load_assets(const std::filesystem::path& package_root,
     std::size_t index = 0, maximum = 0;
     yyjson_val* value = nullptr;
     yyjson_arr_foreach(atlases, index, maximum, value) {
-      validate_keys(value, {"id", "image", "size"}, "Atlas");
+      validate_keys(value, {"id", "image", "size", "sampling", "mips"}, "Atlas");
       TextureAtlas atlas;
       atlas.id = text(value, "id", "Atlas");
       if (!atlas_ids.emplace(atlas.id, result.atlases.size()).second) {
@@ -188,6 +202,46 @@ AssetCatalogue load_assets(const std::filesystem::path& package_root,
       }
       atlas.width = size.first;
       atlas.height = size.second;
+      if (yyjson_val* sampling = yyjson_obj_get(value, "sampling")) {
+        if (!yyjson_is_str(sampling)) {
+          throw std::runtime_error("Atlas sampling should be text");
+        }
+        const std::string mode(yyjson_get_str(sampling), yyjson_get_len(sampling));
+        if (mode == "nearest") atlas.sampling = TextureSampling::Nearest;
+        else if (mode != "linear") throw std::runtime_error("Atlas sampling should be nearest or linear");
+      }
+      if (yyjson_val* mips = yyjson_obj_get(value, "mips")) {
+        if (!yyjson_is_arr(mips) || yyjson_arr_size(mips) > 8) {
+          throw std::runtime_error("Atlas mip count is outside bounds");
+        }
+        double previous_scale = 0.0;
+        std::size_t mip_index = 0, mip_maximum = 0;
+        yyjson_val* mip_value = nullptr;
+        yyjson_arr_foreach(mips, mip_index, mip_maximum, mip_value) {
+          validate_keys(mip_value, {"image", "size", "scale"}, "Atlas mip");
+          TextureMip mip;
+          const std::filesystem::path mip_relative = text(mip_value, "image", "Atlas mip");
+          if (mip_relative.is_absolute() || mip_relative.extension() != ".png") {
+            throw std::runtime_error("Atlas mip image should be a relative PNG path");
+          }
+          mip.image = std::filesystem::canonical(package_root / mip_relative, path_error);
+          if (path_error || !std::filesystem::is_regular_file(mip.image) ||
+              !is_within(package_root, mip.image)) {
+            throw std::runtime_error("Atlas mip escapes or is missing from package root");
+          }
+          const auto mip_size = pair_of_uints(mip_value, "size", "Atlas mip", 4096);
+          mip.width = mip_size.first;
+          mip.height = mip_size.second;
+          mip.scale = positive_number(mip_value, "scale", "Atlas mip");
+          if (mip.scale <= previous_scale || mip.scale >= 1.0 ||
+              mip.width != static_cast<int>(std::lround(atlas.width * mip.scale)) ||
+              mip.height != static_cast<int>(std::lround(atlas.height * mip.scale))) {
+            throw std::runtime_error("Atlas mips must be ordered, exact scaled derivatives below 1x");
+          }
+          previous_scale = mip.scale;
+          atlas.mips.push_back(std::move(mip));
+        }
+      }
       result.atlases.push_back(std::move(atlas));
     }
 

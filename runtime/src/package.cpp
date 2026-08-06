@@ -3,6 +3,8 @@
 #include <yyjson.h>
 
 #include <fstream>
+#include <array>
+#include <cstring>
 #include <regex>
 #include <set>
 #include <stdexcept>
@@ -14,6 +16,8 @@ namespace {
 constexpr std::uint32_t kPackageSchemaVersion = 1;
 constexpr std::uint32_t kRuntimeVersion = 1;
 constexpr std::uintmax_t kMaximumManifestBytes = 64U * 1024U;
+constexpr std::uintmax_t kMaximumSoundBytes = 512U * 1024U;
+constexpr std::size_t kMaximumSounds = 64;
 
 void validate_keys(yyjson_val* object,
                    std::initializer_list<std::string_view> allowed) {
@@ -135,6 +139,47 @@ bool is_within(const std::filesystem::path& root,
   return root_part == root.end();
 }
 
+std::uint32_t little_u32(const unsigned char* value) {
+  return static_cast<std::uint32_t>(value[0]) |
+      (static_cast<std::uint32_t>(value[1]) << 8U) |
+      (static_cast<std::uint32_t>(value[2]) << 16U) |
+      (static_cast<std::uint32_t>(value[3]) << 24U);
+}
+
+bool valid_pcm_wave(const std::filesystem::path& path) {
+  std::ifstream stream(path, std::ios::binary);
+  if (!stream) return false;
+  std::array<unsigned char, 12> header{};
+  stream.read(reinterpret_cast<char*>(header.data()), header.size());
+  if (stream.gcount() != static_cast<std::streamsize>(header.size()) ||
+      std::memcmp(header.data(), "RIFF", 4) != 0 ||
+      std::memcmp(header.data() + 8, "WAVE", 4) != 0) return false;
+  bool has_pcm_format = false;
+  bool has_samples = false;
+  while (stream) {
+    std::array<unsigned char, 8> chunk{};
+    stream.read(reinterpret_cast<char*>(chunk.data()), chunk.size());
+    if (stream.gcount() != static_cast<std::streamsize>(chunk.size())) break;
+    const auto length = little_u32(chunk.data() + 4);
+    if (std::memcmp(chunk.data(), "fmt ", 4) == 0) {
+      if (length < 16) return false;
+      std::array<unsigned char, 16> format{};
+      stream.read(reinterpret_cast<char*>(format.data()), format.size());
+      if (stream.gcount() != static_cast<std::streamsize>(format.size())) return false;
+      const auto encoding = static_cast<unsigned>(format[0]) |
+          (static_cast<unsigned>(format[1]) << 8U);
+      const auto channels = static_cast<unsigned>(format[2]) |
+          (static_cast<unsigned>(format[3]) << 8U);
+      has_pcm_format = encoding == 1 && channels >= 1 && channels <= 2;
+      stream.seekg(static_cast<std::streamoff>(length - 16 + (length & 1U)), std::ios::cur);
+    } else {
+      if (std::memcmp(chunk.data(), "data", 4) == 0 && length > 0) has_samples = true;
+      stream.seekg(static_cast<std::streamoff>(length + (length & 1U)), std::ios::cur);
+    }
+  }
+  return has_pcm_format && has_samples;
+}
+
 }  // namespace
 
 PackageManifest load_package(const std::filesystem::path& package_root) {
@@ -160,7 +205,7 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
                   {"schemaVersion", "id", "title", "version", "runtimeVersion",
                    "entrypoint", "logicalResolution", "audience",
                    "capabilities", "assetManifest", "titleScreen",
-                   "libraryArtwork"});
+                   "libraryArtwork", "sounds"});
 
     PackageManifest package{
         .schema_version = read_version(manifest, "schemaVersion"),
@@ -288,6 +333,36 @@ PackageManifest load_package(const std::filesystem::path& package_root) {
                                          "libraryArtwork.dimensions[1]"),
           .fit = presentation_fit,
       };
+    }
+
+    if (yyjson_val* sounds = yyjson_obj_get(manifest, "sounds")) {
+      if (!yyjson_is_arr(sounds) || yyjson_arr_size(sounds) > kMaximumSounds) {
+        throw std::runtime_error("Package sound count is outside supported bounds");
+      }
+      std::set<std::string> sound_ids;
+      std::size_t sound_index = 0, sound_maximum = 0;
+      yyjson_val* sound = nullptr;
+      yyjson_arr_foreach(sounds, sound_index, sound_maximum, sound) {
+        validate_keys(sound, {"id", "file"});
+        const std::string id = read_text(sound, "id");
+        if (!std::regex_match(id, std::regex("^[a-z][a-z0-9.-]{0,63}$")) ||
+            !sound_ids.insert(id).second) {
+          throw std::runtime_error("Package sound id is invalid or duplicated");
+        }
+        const std::filesystem::path relative = read_text(sound, "file");
+        if (relative.is_absolute() || relative.extension() != ".wav") {
+          throw std::runtime_error("Package sound should be a relative WAV file");
+        }
+        std::error_code sound_error;
+        const auto file = std::filesystem::canonical(package.root / relative, sound_error);
+        const auto bytes = sound_error ? 0 : std::filesystem::file_size(file, sound_error);
+        if (sound_error || !std::filesystem::is_regular_file(file) ||
+            !is_within(package.root, file) || bytes > kMaximumSoundBytes ||
+            !valid_pcm_wave(file)) {
+          throw std::runtime_error("Package sound escapes, is missing, or is oversized");
+        }
+        package.sounds.push_back({id, file});
+      }
     }
 
     const auto audience = read_text(manifest, "audience");

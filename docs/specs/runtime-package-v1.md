@@ -13,6 +13,7 @@ manifest.json
 game.lua
 asset-manifest.json   optional
 assets/               optional runtime PNG atlases
+assets/sfx/           optional declared PCM WAV effects
 LICENSE
 ```
 
@@ -29,6 +30,7 @@ The runtime canonicalizes the package root and entrypoint, rejects traversal and
 | `runtimeVersion` | Integer `1` |
 | `entrypoint` | Relative `.lua` file contained by the package root |
 | `assetManifest` | Optional relative `.json` asset manifest contained by the package root |
+| `sounds` | Optional object mapping stable IDs to contained PCM WAV files |
 | `audience` | `family` for child-visible packages or `parent` for parent-only packages |
 | `logicalResolution` | Per-game logical width and height, each 64–4096; independent of the physical display target |
 | `titleScreen` | Optional full-screen art with a baked game title plus a normalized runtime-control region |
@@ -44,11 +46,16 @@ A game defines four global functions:
 - `render()` submits the current frame without advancing time.
 - `snapshot()` returns deterministic text suitable for state comparison in tests.
 
-A package may additionally define `title_status()` and `reset_progress()`.
+A package may additionally define `title_status()`, `title_update(actions)`,
+and `reset_progress()`.
 When both are present, the native title screen displays the short status text
 and offers a host-timed three-second secondary-action hold. The host owns input
 consumption and progress presentation; the package owns which persisted values
-are reset. Releasing before completion makes no change.
+are reset. Releasing before completion makes no change. The host requires B to
+be released after title entry, invokes reset exactly once, displays `Reset!`
+until release, and requires a fresh input before reset or play can begin again.
+`title_update` receives title input not consumed by this state machine, allowing
+package-owned mode selection without duplicating host reset behavior.
 
 Each lifecycle call has a 500,000-instruction limit, sufficient for bounded
 dense-level generation while still terminating runaway package scripts. The
@@ -83,6 +90,13 @@ compatibility choice, not an engine-wide fidelity ceiling.
 | `sprout.emit(type, value?)` | Emits `AchievementUnlocked` or `LevelCompleted` when `events` is declared |
 | `sprout.storage_get(key, fallback?)` | Reads a package integer from local storage |
 | `sprout.storage_set(key, value)` | Atomically writes a package integer when `local-storage` is declared |
+| `sprout.sfx(id, volume?)` | Queues one declared short sound at a bounded volume |
+
+Declared sounds must be contained, regular PCM WAV files no larger than 512
+KiB. They are validated before play, converted to the active SDL device format
+at load time, and mixed across at most eight short voices. Undeclared IDs,
+malformed WAVs, oversized files, and path escapes fail at the package boundary.
+Streamed music is outside native runtime v1.
 
 Storage keys are bounded ASCII identifiers. The launcher gives the runtime a profile-specific storage root, and the runtime adds the package ID, producing `<launcher-data>/native-games/<profile-id>/<package-id>/storage.json`. Direct runtime development commands use their explicitly supplied storage root and remain separate from launcher profile data.
 

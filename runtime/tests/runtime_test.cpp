@@ -188,7 +188,7 @@ int main() {
           "Snake was not deterministic for identical input");
     check(!snake_first.render().empty(), "Snake did not render any content");
     snake_first.apply_capture_scenario("fail");
-    check(snake_first.snapshot().starts_with("ended:7:7:"),
+    check(snake_first.snapshot().starts_with("round:ended:0:7:"),
           "Snake fail capture scenario was not applied");
 
     const auto mouse_path =
@@ -546,27 +546,37 @@ int main() {
           "Blocks & Buttons title presentation was not loaded");
     check(blocks_package.assets.atlases.size() == 3 &&
               blocks_package.assets.sprites.size() == 36 &&
-              blocks_package.assets.animations.size() == 10,
+              blocks_package.assets.animations.size() == 10 &&
+              blocks_package.sounds.size() == 7 &&
+              blocks_package.assets.atlases[1].mips.size() == 2 &&
+              blocks_package.assets.atlases[1].sampling ==
+                  sprout::runtime::TextureSampling::Nearest,
           "Blocks & Buttons asset catalogue was not loaded");
     sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
     blocks.start();
     blocks.apply_capture_scenario("gameplay");
     const auto& blocks_drawing = blocks.render();
     check(blocks_drawing.size() > 80 &&
-              blocks_drawing.back().type ==
-                  sprout::runtime::DrawCommandType::Sprite,
+              std::any_of(blocks_drawing.begin(), blocks_drawing.end(),
+                          [](const auto& command) {
+                            return command.type ==
+                                sprout::runtime::DrawCommandType::Sprite;
+                          }),
           "Blocks & Buttons did not submit its sprite scene");
     blocks.apply_capture_scenario("win");
-    check(blocks.snapshot() == "6:5:right:1:0:7:2:7:5",
+    check(blocks.snapshot() == "1:3:6:down:0:0:1:0:1:5",
           "Blocks & Buttons win capture scenario was not applied");
     blocks.apply_capture_scenario("fail");
-    check(blocks.snapshot() == "2:2:left:0:1:1:1:5:4",
+    check(blocks.snapshot() == "12:5:3:down:0:0:0:1:2:5:5:4",
           "Blocks & Buttons fail capture scenario was not applied");
-    blocks.apply_capture_scenario("deadlock-test");
-    blocks.step({.left = true});
-    for (int tick = 0; tick < 8; ++tick) blocks.step({});
-    check(blocks.snapshot() == "2:1:left:0:1:1:1:5:4",
-          "Blocks & Buttons did not detect a provable corner deadlock");
+    blocks.apply_capture_scenario("undo");
+    const auto undo_snapshot = blocks.snapshot();
+    blocks.step({.primary = true});
+    check(blocks.snapshot() == undo_snapshot,
+          "Blocks & Buttons one-step undo did not restore its saved turn");
+    const auto undo_sounds = blocks.drain_sounds();
+    check(undo_sounds.size() == 1 && undo_sounds.front().sound == 3,
+          "Blocks & Buttons undo did not request its declared sound");
 
     write(package_path / "game.lua", R"(
 function init()

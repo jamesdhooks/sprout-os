@@ -29,6 +29,7 @@ namespace sprout::runtime {
 namespace {
 
 constexpr std::size_t kMaximumDrawCommands = 4096;
+constexpr std::size_t kMaximumSoundRequests = 64;
 constexpr int kLifecycleInstructionLimit = 500000;
 
 bool has_capability(const PackageManifest& package, std::string_view capability) {
@@ -75,6 +76,7 @@ struct Session::Impl {
   std::map<std::string, std::int64_t> storage;
   std::vector<DrawCommand> drawing;
   std::vector<RuntimeEvent> events;
+  std::vector<SoundRequest> sounds;
 
   Impl(PackageManifest loaded_package, std::filesystem::path storage_root,
        std::uint64_t seed)
@@ -115,6 +117,18 @@ struct Session::Impl {
                                              static_cast<std::uint64_t>(maximum)) +
                         1);
     return 1;
+  }
+
+  void push_actions(const Actions& actions) {
+    lua_newtable(lua);
+    const auto add = [this](const char* name, bool active) {
+      lua_pushboolean(lua, active);
+      lua_setfield(lua, -2, name);
+    };
+    add("up", actions.up); add("down", actions.down);
+    add("left", actions.left); add("right", actions.right);
+    add("primary", actions.primary); add("secondary", actions.secondary);
+    add("start", actions.start); add("back", actions.back);
   }
 
   static int surface_size(lua_State* state) {
@@ -597,6 +611,30 @@ struct Session::Impl {
     return 0;
   }
 
+  static int sfx(lua_State* state) {
+    auto& runtime = self(state);
+    std::size_t id_length = 0;
+    const char* id_text = luaL_checklstring(state, 1, &id_length);
+    const std::string_view id(id_text, id_length);
+    const double volume = luaL_optnumber(state, 2, 1.0);
+    if (!std::isfinite(volume) || volume < 0.0 || volume > 1.0) {
+      return luaL_error(state, "sound volume should be between zero and one");
+    }
+    const auto found = std::find_if(
+        runtime.package.sounds.begin(), runtime.package.sounds.end(),
+        [id](const PackageSound& sound) { return sound.id == id; });
+    if (found == runtime.package.sounds.end()) {
+      return luaL_error(state, "sound is not declared by package");
+    }
+    if (runtime.sounds.size() >= kMaximumSoundRequests) {
+      return luaL_error(state, "sound request limit exceeded");
+    }
+    runtime.sounds.push_back({
+        static_cast<std::size_t>(std::distance(runtime.package.sounds.begin(), found)),
+        static_cast<std::uint8_t>(std::lround(volume * 255.0))});
+    return 0;
+  }
+
   static int storage_get(lua_State* state) {
     auto& runtime = self(state);
     if (!has_capability(runtime.package, "local-storage")) {
@@ -680,6 +718,7 @@ struct Session::Impl {
     add("sprite_batch", sprite_batch);
     add("tilemap", tilemap);
     add("emit", emit);
+    add("sfx", sfx);
     add("storage_get", storage_get);
     add("storage_set", storage_set);
     lua_setglobal(lua, "sprout");
@@ -823,21 +862,18 @@ void Session::step(const Actions& actions) {
   if (impl_->stopped) {
     throw std::runtime_error("Native-game session is stopped");
   }
-  lua_newtable(impl_->lua);
-  const auto add = [this](const char* name, bool pressed) {
-    lua_pushboolean(impl_->lua, pressed);
-    lua_setfield(impl_->lua, -2, name);
-  };
-  add("up", actions.up);
-  add("down", actions.down);
-  add("left", actions.left);
-  add("right", actions.right);
-  add("primary", actions.primary);
-  add("secondary", actions.secondary);
-  add("start", actions.start);
-  add("back", actions.back);
+  impl_->push_actions(actions);
   impl_->call("update", 1);
   ++impl_->tick;
+}
+
+void Session::step_title(const Actions& actions) {
+  if (!impl_->started || impl_->stopped) {
+    throw std::runtime_error("Native-game session is not active");
+  }
+  if (!impl_->has_function("title_update")) return;
+  impl_->push_actions(actions);
+  impl_->call("title_update", 1);
 }
 
 void Session::apply_capture_scenario(std::string_view scenario) {
@@ -894,6 +930,12 @@ std::string Session::snapshot() const {
   }
   const std::string result = lua_tostring(impl_->lua, -1);
   lua_pop(impl_->lua, 1);
+  return result;
+}
+
+std::vector<SoundRequest> Session::drain_sounds() {
+  std::vector<SoundRequest> result;
+  result.swap(impl_->sounds);
   return result;
 }
 
