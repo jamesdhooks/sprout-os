@@ -8,7 +8,7 @@ import io
 import json
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,45 +44,64 @@ def rotate(image: Image.Image, degrees: int) -> Image.Image:
     return image.rotate(degrees, resample=Image.Resampling.NEAREST, expand=False)
 
 
-def open_connector(image: Image.Image, edge: str, depth: int = 28) -> Image.Image:
-    """Extend the interior through one declared join edge, removing cross-seams."""
-    result = image.copy()
-    if edge in ("north", "south"):
-        sample_y = depth if edge == "north" else image.height - depth - 1
-        target = range(0, depth + 1) if edge == "north" else range(image.height - depth - 1, image.height)
-        for x in range(image.width):
-            sample = image.getpixel((x, sample_y))
-            if sample[3] >= 128:
-                for y in target:
-                    result.putpixel((x, y), sample)
-    else:
-        sample_x = depth if edge == "west" else image.width - depth - 1
-        target = range(0, depth + 1) if edge == "west" else range(image.width - depth - 1, image.width)
-        for y in range(image.height):
-            sample = image.getpixel((sample_x, y))
-            if sample[3] >= 128:
-                for x in target:
-                    result.putpixel((x, y), sample)
-    return result
+OUTLINE = (28, 24, 69, 255)
+GOLD = (244, 177, 36, 255)
+LIGHT = (255, 218, 79, 255)
+SHADOW = (211, 118, 31, 255)
+CREAM = (255, 240, 189, 255)
+TEAL = (46, 154, 160, 255)
+OUTER_WIDTH = 116
+BODY_WIDTH = 88
 
 
-def soften_body_markings(image: Image.Image) -> Image.Image:
-    """Keep modeled shading but prevent large cream stamps dominating tiny cells."""
-    result = image.copy()
-    for y in range(result.height):
-        for x in range(result.width):
-            red, green, blue, alpha = result.getpixel((x, y))
-            if alpha and red > 225 and green > 205 and blue > 150:
-                result.putpixel((x, y), (255, 190, 45, alpha))
-    return result
+def blank() -> Image.Image:
+    return Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+
+
+def path(points: list[tuple[int, int]]) -> Image.Image:
+    image = blank()
+    draw = ImageDraw.Draw(image)
+    draw.line(points, fill=OUTLINE, width=OUTER_WIDTH, joint="curve")
+    draw.line(points, fill=GOLD, width=BODY_WIDTH, joint="curve")
+    # A contained, narrow highlight reads as material rather than a second body.
+    shifted = [(x - 13, y - 13) for x, y in points]
+    draw.line(shifted, fill=LIGHT, width=9, joint="curve")
+    return image
+
+
+def head_north() -> Image.Image:
+    image = path([(128, 256), (128, 137)])
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((42, 18, 214, 184), fill=OUTLINE)
+    draw.ellipse((54, 29, 202, 172), fill=GOLD)
+    draw.ellipse((67, 40, 187, 105), fill=LIGHT)
+    for x in (86, 150):
+        draw.ellipse((x, 55, x + 25, 85), fill=CREAM)
+        draw.ellipse((x + 8, 60, x + 19, 77), fill=OUTLINE)
+        draw.ellipse((x + 11, 62, x + 15, 67), fill=TEAL)
+    draw.arc((95, 88, 161, 132), 20, 160, fill=OUTLINE, width=8)
+    # Re-open the body connector after the head/body overlap.
+    draw.rectangle((128 - BODY_WIDTH // 2, 165, 128 + BODY_WIDTH // 2, 255), fill=GOLD)
+    draw.rectangle((128 - BODY_WIDTH // 2 + 12, 165, 128 - BODY_WIDTH // 2 + 20, 255), fill=LIGHT)
+    return image
+
+
+def tail_north() -> Image.Image:
+    image = blank()
+    draw = ImageDraw.Draw(image)
+    draw.polygon(((128, 18), (128 - OUTER_WIDTH // 2, 256),
+                  (128 + OUTER_WIDTH // 2, 256)), fill=OUTLINE)
+    draw.polygon(((128, 39), (128 - BODY_WIDTH // 2, 256),
+                  (128 + BODY_WIDTH // 2, 256)), fill=GOLD)
+    draw.line((113, 67, 95, 244), fill=LIGHT, width=8)
+    return image
 
 
 def variants() -> dict[str, Image.Image]:
-    head = open_connector(load("snake-head-north"), "south")
-    straight = soften_body_markings(open_connector(open_connector(load("snake-body-horizontal"), "west"), "east"))
-    # The accepted source connects west+north; other corners are exact rotations.
-    corner_wn = soften_body_markings(open_connector(open_connector(load("snake-body-corner-ne"), "west"), "north"))
-    tail = soften_body_markings(open_connector(load("snake-tail-north"), "south"))
+    head = head_north()
+    straight = path([(0, 128), (255, 128)])
+    corner_wn = path([(0, 128), (128, 128), (128, 0)])
+    tail = tail_north()
     return {
         "snake-head-north": head, "snake-head-east": rotate(head, -90),
         "snake-head-south": rotate(head, 180), "snake-head-west": rotate(head, 90),

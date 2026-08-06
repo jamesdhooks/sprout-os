@@ -68,6 +68,11 @@ if(BUILD_TESTING)
             "${PROJECT_SOURCE_DIR}/tools/build_blocks_buttons_robot_assets.py" --check
   )
   add_test(
+    NAME blocks-buttons-world-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/build_blocks_buttons_world_assets.py" --check
+  )
+  add_test(
     NAME snake-character-assets
     COMMAND "${Python3_EXECUTABLE}"
             "${PROJECT_SOURCE_DIR}/tools/build_snake_character_assets.py" --check

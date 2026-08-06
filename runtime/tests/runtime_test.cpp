@@ -545,8 +545,8 @@ int main() {
     check(blocks_package.title_screen.enabled,
           "Blocks & Buttons title presentation was not loaded");
     check(blocks_package.assets.atlases.size() == 3 &&
-              blocks_package.assets.sprites.size() == 46 &&
-              blocks_package.assets.animations.size() == 11,
+              blocks_package.assets.sprites.size() == 36 &&
+              blocks_package.assets.animations.size() == 10,
           "Blocks & Buttons asset catalogue was not loaded");
     sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
     blocks.start();

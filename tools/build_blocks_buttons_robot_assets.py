@@ -59,7 +59,7 @@ def native_outputs() -> tuple[bytes, bytes]:
             "trimmed": False,
             "spriteSourceSize": {"x": 0, "y": 0, "width": 256, "height": 256},
             "sourceSize": {"width": 256, "height": 256},
-            "pivot": {"x": 0.5, "y": 0.875},
+            "pivot": {"x": 0.5, "y": 1.0},
         }
     animations = {}
     for direction in DIRECTIONS:

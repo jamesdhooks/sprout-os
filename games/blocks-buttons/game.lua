@@ -18,8 +18,8 @@ local layout = {
   "##########"
 }
 local tiles = ""
-local character_scale = (5 / 32) * layout_scale
-local object_scale = (3 / 64) * layout_scale
+local character_scale = (3 / 32) * layout_scale
+local object_scale = (1 / 16) * layout_scale
 local rich_direction = {up = "north", right = "west", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
@@ -140,7 +140,7 @@ function render()
     sprites[#sprites + 1] = {
       sprite = crate_at(button.x, button.y) and "rich.button-down" or "rich.button-up",
       x = origin_x + button.x * cell + half_cell,
-      y = origin_y + button.y * cell + half_cell,
+      y = origin_y + (button.y + 1) * cell,
       scale = object_scale
     }
   end
@@ -154,7 +154,7 @@ function render()
     sprites[#sprites + 1] = {
       sprite = button_at(crate.x, crate.y) and "rich.crate-solved" or "rich.crate-idle",
       x = origin_x + crate_x * cell + half_cell,
-      y = origin_y + crate_y * cell + half_cell,
+      y = origin_y + (crate_y + 1) * cell,
       scale = object_scale
     }
   end
@@ -175,7 +175,7 @@ function render()
   end
   sprites[#sprites + 1] = {sprite = sprite_name,
       x = origin_x + render_x * cell + half_cell,
-      y = origin_y + render_y * cell + half_cell,
+      y = origin_y + (render_y + 1) * cell,
       scale = character_scale,
       flipX = direction == "right"}
   sprout.sprite_batch(sprites)

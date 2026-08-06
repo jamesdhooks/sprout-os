@@ -27,8 +27,8 @@
       "id": "rich-world",
       "image": "assets/rich-world.png",
       "size": [
-        2048,
-        2048
+        1024,
+        512
       ]
     }
   ],
@@ -254,7 +254,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -268,7 +268,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -282,7 +282,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -296,7 +296,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -310,7 +310,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -324,7 +324,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -338,7 +338,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -352,7 +352,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -366,7 +366,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -380,7 +380,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -394,7 +394,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -408,7 +408,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -422,7 +422,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -436,7 +436,7 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
@@ -450,231 +450,91 @@
       ],
       "pivot": [
         128,
-        224
+        256
       ]
     },
     {
       "id": "rich.floor-wood",
       "atlas": "rich-world",
       "rect": [
-        2,
-        2,
-        411,
-        422
+        0,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        206,
-        422
-      ]
-    },
-    {
-      "id": "rich.floor-leaf",
-      "atlas": "rich-world",
-      "rect": [
-        417,
-        2,
-        413,
-        422
-      ],
-      "pivot": [
-        207,
-        422
-      ]
-    },
-    {
-      "id": "rich.floor-stone",
-      "atlas": "rich-world",
-      "rect": [
-        834,
-        2,
-        427,
-        436
-      ],
-      "pivot": [
-        214,
-        436
+        128,
+        256
       ]
     },
     {
       "id": "rich.wall-workshop",
       "atlas": "rich-world",
       "rect": [
-        1265,
-        2,
-        412,
-        422
+        256,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        206,
-        422
+        128,
+        256
       ]
     },
     {
       "id": "rich.crate-idle",
       "atlas": "rich-world",
       "rect": [
-        1681,
-        2,
-        349,
-        361
+        512,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        175,
-        361
-      ]
-    },
-    {
-      "id": "rich.crate-push-left",
-      "atlas": "rich-world",
-      "rect": [
-        2,
-        442,
-        349,
-        361
-      ],
-      "pivot": [
-        175,
-        361
-      ]
-    },
-    {
-      "id": "rich.crate-push-right",
-      "atlas": "rich-world",
-      "rect": [
-        355,
-        442,
-        347,
-        361
-      ],
-      "pivot": [
-        174,
-        361
+        128,
+        256
       ]
     },
     {
       "id": "rich.crate-solved",
       "atlas": "rich-world",
       "rect": [
-        706,
-        442,
-        347,
-        361
+        768,
+        0,
+        256,
+        256
       ],
       "pivot": [
-        174,
-        361
+        128,
+        256
       ]
     },
     {
       "id": "rich.button-up",
       "atlas": "rich-world",
       "rect": [
-        1057,
-        442,
-        297,
-        296
+        0,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        149,
-        296
-      ]
-    },
-    {
-      "id": "rich.button-half",
-      "atlas": "rich-world",
-      "rect": [
-        1358,
-        442,
-        336,
-        361
-      ],
-      "pivot": [
-        168,
-        361
+        128,
+        256
       ]
     },
     {
       "id": "rich.button-down",
       "atlas": "rich-world",
       "rect": [
-        1698,
-        442,
-        335,
-        360
+        256,
+        256,
+        256,
+        256
       ],
       "pivot": [
-        168,
-        360
-      ]
-    },
-    {
-      "id": "rich.button-solved",
-      "atlas": "rich-world",
-      "rect": [
-        2,
-        807,
-        334,
-        360
-      ],
-      "pivot": [
-        167,
-        360
-      ]
-    },
-    {
-      "id": "rich.push-puff-01",
-      "atlas": "rich-world",
-      "rect": [
-        340,
-        807,
-        202,
-        166
-      ],
-      "pivot": [
-        101,
-        166
-      ]
-    },
-    {
-      "id": "rich.push-puff-02",
-      "atlas": "rich-world",
-      "rect": [
-        546,
-        807,
-        217,
-        192
-      ],
-      "pivot": [
-        109,
-        192
-      ]
-    },
-    {
-      "id": "rich.push-puff-03",
-      "atlas": "rich-world",
-      "rect": [
-        767,
-        807,
-        193,
-        200
-      ],
-      "pivot": [
-        97,
-        200
-      ]
-    },
-    {
-      "id": "rich.push-puff-04",
-      "atlas": "rich-world",
-      "rect": [
-        964,
-        807,
-        218,
-        164
-      ],
-      "pivot": [
-        109,
-        164
+        128,
+        256
       ]
     }
   ],
@@ -828,28 +688,6 @@
         {
           "sprite": "rich.hero-west-push",
           "ticks": 8
-        }
-      ]
-    },
-    {
-      "id": "rich.push-puff",
-      "loop": false,
-      "frames": [
-        {
-          "sprite": "rich.push-puff-01",
-          "ticks": 5
-        },
-        {
-          "sprite": "rich.push-puff-02",
-          "ticks": 5
-        },
-        {
-          "sprite": "rich.push-puff-03",
-          "ticks": 5
-        },
-        {
-          "sprite": "rich.push-puff-04",
-          "ticks": 5
         }
       ]
     }

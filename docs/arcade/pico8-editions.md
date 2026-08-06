@@ -18,11 +18,14 @@ Blocks & Buttons uses a top-down toy-workshop renderer aligned to its square
 collision grid. Walls, crates, and buttons add shallow vertical faces for depth
 without rotating the board into an isometric projection. Its robot uses
 reviewed north, south, and west walk/push families; east mirrors west at runtime.
+The west/east family is a strict screen-cardinal side view under the same high
+camera, not a diagonal three-quarter pose. Every character, crate, and button
+uses the bottom of its logical cell as the ground-contact baseline.
 The native edition retains the 256x256 masters while the standalone cart uses
 deterministically derived 16x16 PICO-8 frames. Starlight Snake uses one reviewed
-head, straight, corner, and tail family. Exact rotations produce every required
-direction, and declared connector edges are opened during compilation so the
-7-pixel-cell PICO sprites overlap without seams. Fruit rotates through a small
+head, straight, corner, and tail family. The compiler constructs one exact
+connector width and rotates that geometry for every required direction, so the
+7-pixel-cell PICO sprites overlap without seams or per-piece scaling. Fruit rotates through a small
 visual family without changing the underlying rule.
 
 Blocks & Buttons and Starlight Snake share the small lifecycle source in

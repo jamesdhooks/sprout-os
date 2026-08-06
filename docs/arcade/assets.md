@@ -53,6 +53,11 @@ games/<game>/
 - Directional sprite sheets use uniform cells and center anchors unless a
   documented trimmed-frame contract is required. Runtime capture must confirm
   stable orientation, scale, and silhouette across every frame.
+- Grid actors and raised objects use a bottom-center ground-contact pivot. A
+  high-angle view may extend above its occupied cell, but its feet or base must
+  land on the cell's bottom edge. Cardinal directions remain screen-aligned;
+  they do not rotate the collision grid or substitute a diagonal three-quarter
+  pose.
 
 Initial asset sets are intentionally small:
 
@@ -95,8 +100,10 @@ the intended tooling surface:
 
 Generated atlas bytes must be reproducible from tracked source assets. CI validates and repacks; it fails on a dirty result. Visual review checks each package at its declared logical resolution, not only enlarged contact sheets.
 
-The implemented `tools/generate-arcade-assets.py --check` test verifies the
-Mouse Maze and Blocks & Buttons PNGs byte for byte. Their strict manifests
+The implemented `tools/generate-arcade-assets.py --check`,
+`tools/build_blocks_buttons_robot_assets.py --check`, and
+`tools/build_blocks_buttons_world_assets.py --check` tests verify the
+reproducible runtime atlases. Their strict manifests
 validate atlas dimensions, source rectangles, animation clips, tile sets,
 palette name, source category, license, and generator. Windows captures check
 the actual runtime at 320×240.
