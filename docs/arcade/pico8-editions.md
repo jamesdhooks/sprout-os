@@ -30,6 +30,9 @@ inject these banks without shrinking or palette-fitting the native artwork.
 Blocks & Buttons uses an exact 8x8-by-16px board. Starlight Snake uses a 14x14
 playable garden inside a one-cell 8px boundary. Both compositions account for
 all 128x128 screen pixels and reserve no permanent HUD region.
+Blocks & Buttons keeps 16px collision cells while its raised walls and crates
+use bottom-anchored 16x20 art. A row-ordered painter provides shallow top-down
+depth without rotating the collision board or changing its controls.
 
 Each cart keeps a full-resolution illustrated `title-source.png` separate from
 its literal gameplay sprites. `tools/pico8_title_assets.py` converts that cover

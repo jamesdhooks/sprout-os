@@ -81,6 +81,14 @@ def native_outputs() -> tuple[bytes, bytes]:
 
 
 def pico_gfx() -> str:
+    payload = json.loads(PICO_SOURCE.read_text(encoding="utf-8"))
+    frames = payload.get("frames", {})
+    for name in ("wall", "crate", "crate-solved"):
+        if frames.get(name, {}).get("rect", [None] * 4)[2:] != [16, 20]:
+            raise ValueError(f"{name} must remain a bottom-anchored 16x20 raised frame")
+    for name in FRAME_NAMES:
+        if frames.get(name, {}).get("rect", [None] * 4)[2:] != [16, 16]:
+            raise ValueError(f"{name} must remain a bottom-anchored 16x16 robot frame")
     return compile_gfx(PICO_SOURCE)
 
 
