@@ -1,207 +1,16 @@
 {
   "schema": "sprite-atlas.v1",
+  "id": "blocks-buttons-character",
+  "image": "blocks-buttons-character-atlas.png",
   "size": {
     "width": 1024,
     "height": 1024
   },
-  "image": "blocks-buttons-character-atlas.png",
   "frames": {
-    "hero-north-01": {
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-north-02": {
-      "frame": {
-        "x": 256,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-north-03": {
-      "frame": {
-        "x": 512,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-north-04": {
-      "frame": {
-        "x": 768,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-east-01": {
-      "frame": {
-        "x": 0,
-        "y": 256,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-east-02": {
-      "frame": {
-        "x": 256,
-        "y": 256,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-east-03": {
-      "frame": {
-        "x": 512,
-        "y": 256,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-east-04": {
-      "frame": {
-        "x": 768,
-        "y": 256,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
     "hero-south-01": {
       "frame": {
         "x": 0,
-        "y": 512,
+        "y": 0,
         "width": 256,
         "height": 256
       },
@@ -219,12 +28,180 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
     "hero-south-02": {
       "frame": {
         "x": 256,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-south-03": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-south-04": {
+      "frame": {
+        "x": 768,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-south-push": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-north-01": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-north-02": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-north-03": {
+      "frame": {
+        "x": 768,
+        "y": 256,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-north-04": {
+      "frame": {
+        "x": 0,
         "y": 512,
         "width": 256,
         "height": 256
@@ -243,10 +220,34 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
-    "hero-south-03": {
+    "hero-north-push": {
+      "frame": {
+        "x": 256,
+        "y": 512,
+        "width": 256,
+        "height": 256
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
+      },
+      "sourceSize": {
+        "width": 256,
+        "height": 256
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.875
+      }
+    },
+    "hero-west-01": {
       "frame": {
         "x": 512,
         "y": 512,
@@ -267,10 +268,10 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
-    "hero-south-04": {
+    "hero-west-02": {
       "frame": {
         "x": 768,
         "y": 512,
@@ -291,10 +292,10 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
-    "hero-west-01": {
+    "hero-west-03": {
       "frame": {
         "x": 0,
         "y": 768,
@@ -315,10 +316,10 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
-    "hero-west-02": {
+    "hero-west-04": {
       "frame": {
         "x": 256,
         "y": 768,
@@ -339,10 +340,10 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     },
-    "hero-west-03": {
+    "hero-west-push": {
       "frame": {
         "x": 512,
         "y": 768,
@@ -363,55 +364,11 @@
       },
       "pivot": {
         "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "hero-west-04": {
-      "frame": {
-        "x": 768,
-        "y": 768,
-        "width": 256,
-        "height": 256
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "width": 256,
-        "height": 256
-      },
-      "sourceSize": {
-        "width": 256,
-        "height": 256
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
+        "y": 0.875
       }
     }
   },
   "animations": {
-    "hero-walk-north": {
-      "frames": [
-        "hero-north-01",
-        "hero-north-02",
-        "hero-north-03",
-        "hero-north-04"
-      ],
-      "fps": 8,
-      "loop": true
-    },
-    "hero-walk-east": {
-      "frames": [
-        "hero-east-01",
-        "hero-east-02",
-        "hero-east-03",
-        "hero-east-04"
-      ],
-      "fps": 8,
-      "loop": true
-    },
     "hero-walk-south": {
       "frames": [
         "hero-south-01",
@@ -422,12 +379,43 @@
       "fps": 8,
       "loop": true
     },
+    "hero-push-south": {
+      "frames": [
+        "hero-south-push"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-walk-north": {
+      "frames": [
+        "hero-north-01",
+        "hero-north-02",
+        "hero-north-03",
+        "hero-north-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-push-north": {
+      "frames": [
+        "hero-north-push"
+      ],
+      "fps": 8,
+      "loop": true
+    },
     "hero-walk-west": {
       "frames": [
         "hero-west-01",
         "hero-west-02",
         "hero-west-03",
         "hero-west-04"
+      ],
+      "fps": 8,
+      "loop": true
+    },
+    "hero-push-west": {
+      "frames": [
+        "hero-west-push"
       ],
       "fps": 8,
       "loop": true

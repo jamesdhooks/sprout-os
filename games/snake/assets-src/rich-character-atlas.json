@@ -1,10 +1,11 @@
 {
   "schema": "sprite-atlas.v1",
+  "id": "snake-character",
+  "image": "snake-character-atlas.png",
   "size": {
     "width": 1024,
     "height": 1024
   },
-  "image": "snake-character-atlas.png",
   "frames": {
     "snake-head-north": {
       "frame": {

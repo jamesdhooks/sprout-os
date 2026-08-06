@@ -20,7 +20,7 @@ local layout = {
 local tiles = ""
 local character_scale = (5 / 32) * layout_scale
 local object_scale = (3 / 64) * layout_scale
-local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
+local rich_direction = {up = "north", right = "west", down = "south", left = "west"}
 for row = 1, rows do
   for column = 1, columns do
     local wall = layout[row]:sub(column, column) == "#"
@@ -30,8 +30,9 @@ end
 
 local buttons = {{x = 7, y = 2}, {x = 7, y = 5}}
 local initial_crates = {{x = 4, y = 2}, {x = 5, y = 4}}
-local player_x, player_y, crates, direction, complete, deadlocked
+local player_x, player_y, crates, direction, complete, deadlocked, moving
 local previous = {}
+local move_duration = 8
 
 local function crate_at(x, y)
   for index, crate in ipairs(crates) do
@@ -53,6 +54,7 @@ end
 
 local function reset()
   player_x, player_y, direction, complete, deadlocked = 2, 2, "down", false, false
+  moving = nil
   crates = {}
   for index, crate in ipairs(initial_crates) do
     crates[index] = {x = crate.x, y = crate.y}
@@ -93,6 +95,15 @@ function update(actions)
     previous = actions
     return
   end
+  if moving then
+    moving.tick = moving.tick + 1
+    if moving.tick >= move_duration then
+      moving = nil
+      evaluate()
+    end
+    previous = actions
+    return
+  end
   local dx, dy = 0, 0
   if actions.up and not previous.up then dy, direction = -1, "up"
   elseif actions.down and not previous.down then dy, direction = 1, "down"
@@ -104,11 +115,14 @@ function update(actions)
     if crate_index then
       local crate_x, crate_y = target_x + dx, target_y + dy
       if not wall_at(crate_x, crate_y) and not crate_at(crate_x, crate_y) then
+        moving = {tick = 0, from_x = player_x, from_y = player_y,
+            crate = crate_index, crate_from_x = target_x, crate_from_y = target_y,
+            pushing = true}
         crates[crate_index].x, crates[crate_index].y = crate_x, crate_y
         player_x, player_y = target_x, target_y
-        evaluate()
       end
     elseif not wall_at(target_x, target_y) then
+      moving = {tick = 0, from_x = player_x, from_y = player_y, pushing = false}
       player_x, player_y = target_x, target_y
     end
   end
@@ -130,18 +144,40 @@ function render()
       scale = object_scale
     }
   end
-  for _, crate in ipairs(crates) do
+  local progress = moving and math.min(1, moving.tick / move_duration) or 1
+  for index, crate in ipairs(crates) do
+    local crate_x, crate_y = crate.x, crate.y
+    if moving and moving.crate == index then
+      crate_x = moving.crate_from_x + (crate.x - moving.crate_from_x) * progress
+      crate_y = moving.crate_from_y + (crate.y - moving.crate_from_y) * progress
+    end
     sprites[#sprites + 1] = {
       sprite = button_at(crate.x, crate.y) and "rich.crate-solved" or "rich.crate-idle",
-      x = origin_x + crate.x * cell + half_cell,
-      y = origin_y + crate.y * cell + half_cell,
+      x = origin_x + crate_x * cell + half_cell,
+      y = origin_y + crate_y * cell + half_cell,
       scale = object_scale
     }
   end
-  sprites[#sprites + 1] = {animation = "rich.hero-walk-" .. rich_direction[direction],
-      x = origin_x + player_x * cell + half_cell,
-      y = origin_y + player_y * cell + half_cell,
-      scale = character_scale}
+  local render_x, render_y = player_x, player_y
+  if moving then
+    render_x = moving.from_x + (player_x - moving.from_x) * progress
+    render_y = moving.from_y + (player_y - moving.from_y) * progress
+  end
+  local source_direction = rich_direction[direction]
+  local sprite_name = "rich.hero-" .. source_direction .. "-02"
+  if moving then
+    if moving.pushing then
+      sprite_name = "rich.hero-" .. source_direction .. "-push"
+    else
+      local frame = math.min(4, math.floor(progress * 4) + 1)
+      sprite_name = string.format("rich.hero-%s-%02d", source_direction, frame)
+    end
+  end
+  sprites[#sprites + 1] = {sprite = sprite_name,
+      x = origin_x + render_x * cell + half_cell,
+      y = origin_y + render_y * cell + half_cell,
+      scale = character_scale,
+      flipX = direction == "right"}
   sprout.sprite_batch(sprites)
   if complete then
     sprout.rounded_rect(px(84), px(6), px(152), px(27), px(8), 255, 207, 61)

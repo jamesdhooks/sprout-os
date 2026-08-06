@@ -545,8 +545,8 @@ int main() {
     check(blocks_package.title_screen.enabled,
           "Blocks & Buttons title presentation was not loaded");
     check(blocks_package.assets.atlases.size() == 3 &&
-              blocks_package.assets.sprites.size() == 47 &&
-              blocks_package.assets.animations.size() == 9,
+              blocks_package.assets.sprites.size() == 46 &&
+              blocks_package.assets.animations.size() == 11,
           "Blocks & Buttons asset catalogue was not loaded");
     sprout::runtime::Session blocks(blocks_package, root / "blocks", 7);
     blocks.start();
@@ -564,6 +564,7 @@ int main() {
           "Blocks & Buttons fail capture scenario was not applied");
     blocks.apply_capture_scenario("deadlock-test");
     blocks.step({.left = true});
+    for (int tick = 0; tick < 8; ++tick) blocks.step({});
     check(blocks.snapshot() == "2:1:left:0:1:1:1:5:4",
           "Blocks & Buttons did not detect a provable corner deadlock");
 

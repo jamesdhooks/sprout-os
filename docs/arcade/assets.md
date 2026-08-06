@@ -93,7 +93,7 @@ the intended tooling surface:
 - `asset-preview`: nearest-neighbor contact sheet at native and 2× scale.
 - `asset-audit`: source/license/provenance completeness and unused-asset detection.
 
-Generated atlas bytes must be reproducible from tracked source assets. CI validates and repacks; it fails on a dirty result. Visual review checks the actual runtime at 320×240, not only enlarged contact sheets.
+Generated atlas bytes must be reproducible from tracked source assets. CI validates and repacks; it fails on a dirty result. Visual review checks each package at its declared logical resolution, not only enlarged contact sheets.
 
 The implemented `tools/generate-arcade-assets.py --check` test verifies the
 Mouse Maze and Blocks & Buttons PNGs byte for byte. Their strict manifests

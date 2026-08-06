@@ -244,129 +244,17 @@
       ]
     },
     {
-      "id": "rich.hero-north-01",
-      "atlas": "rich-character",
-      "rect": [
-        0,
-        0,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-north-02",
-      "atlas": "rich-character",
-      "rect": [
-        256,
-        0,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-north-03",
-      "atlas": "rich-character",
-      "rect": [
-        512,
-        0,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-north-04",
-      "atlas": "rich-character",
-      "rect": [
-        768,
-        0,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-east-01",
-      "atlas": "rich-character",
-      "rect": [
-        0,
-        256,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-east-02",
-      "atlas": "rich-character",
-      "rect": [
-        256,
-        256,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-east-03",
-      "atlas": "rich-character",
-      "rect": [
-        512,
-        256,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-east-04",
-      "atlas": "rich-character",
-      "rect": [
-        768,
-        256,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
-      ]
-    },
-    {
       "id": "rich.hero-south-01",
       "atlas": "rich-character",
       "rect": [
         0,
-        512,
+        0,
         256,
         256
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
@@ -374,17 +262,129 @@
       "atlas": "rich-character",
       "rect": [
         256,
+        0,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-south-03",
+      "atlas": "rich-character",
+      "rect": [
+        512,
+        0,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-south-04",
+      "atlas": "rich-character",
+      "rect": [
+        768,
+        0,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-south-push",
+      "atlas": "rich-character",
+      "rect": [
+        0,
+        256,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-north-01",
+      "atlas": "rich-character",
+      "rect": [
+        256,
+        256,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-north-02",
+      "atlas": "rich-character",
+      "rect": [
+        512,
+        256,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-north-03",
+      "atlas": "rich-character",
+      "rect": [
+        768,
+        256,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-north-04",
+      "atlas": "rich-character",
+      "rect": [
+        0,
         512,
         256,
         256
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
-      "id": "rich.hero-south-03",
+      "id": "rich.hero-north-push",
+      "atlas": "rich-character",
+      "rect": [
+        256,
+        512,
+        256,
+        256
+      ],
+      "pivot": [
+        128,
+        224
+      ]
+    },
+    {
+      "id": "rich.hero-west-01",
       "atlas": "rich-character",
       "rect": [
         512,
@@ -394,11 +394,11 @@
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
-      "id": "rich.hero-south-04",
+      "id": "rich.hero-west-02",
       "atlas": "rich-character",
       "rect": [
         768,
@@ -408,11 +408,11 @@
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
-      "id": "rich.hero-west-01",
+      "id": "rich.hero-west-03",
       "atlas": "rich-character",
       "rect": [
         0,
@@ -422,11 +422,11 @@
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
-      "id": "rich.hero-west-02",
+      "id": "rich.hero-west-04",
       "atlas": "rich-character",
       "rect": [
         256,
@@ -436,11 +436,11 @@
       ],
       "pivot": [
         128,
-        128
+        224
       ]
     },
     {
-      "id": "rich.hero-west-03",
+      "id": "rich.hero-west-push",
       "atlas": "rich-character",
       "rect": [
         512,
@@ -450,21 +450,7 @@
       ],
       "pivot": [
         128,
-        128
-      ]
-    },
-    {
-      "id": "rich.hero-west-04",
-      "atlas": "rich-character",
-      "rect": [
-        768,
-        768,
-        256,
-        256
-      ],
-      "pivot": [
-        128,
-        128
+        224
       ]
     },
     {
@@ -750,50 +736,6 @@
       ]
     },
     {
-      "id": "rich.hero-walk-north",
-      "loop": true,
-      "frames": [
-        {
-          "sprite": "rich.hero-north-01",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-north-02",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-north-03",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-north-04",
-          "ticks": 8
-        }
-      ]
-    },
-    {
-      "id": "rich.hero-walk-east",
-      "loop": true,
-      "frames": [
-        {
-          "sprite": "rich.hero-east-01",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-east-02",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-east-03",
-          "ticks": 8
-        },
-        {
-          "sprite": "rich.hero-east-04",
-          "ticks": 8
-        }
-      ]
-    },
-    {
       "id": "rich.hero-walk-south",
       "loop": true,
       "frames": [
@@ -816,6 +758,48 @@
       ]
     },
     {
+      "id": "rich.hero-push-south",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-south-push",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-walk-north",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-north-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-push-north",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-north-push",
+          "ticks": 8
+        }
+      ]
+    },
+    {
       "id": "rich.hero-walk-west",
       "loop": true,
       "frames": [
@@ -833,6 +817,16 @@
         },
         {
           "sprite": "rich.hero-west-04",
+          "ticks": 8
+        }
+      ]
+    },
+    {
+      "id": "rich.hero-push-west",
+      "loop": true,
+      "frames": [
+        {
+          "sprite": "rich.hero-west-push",
           "ticks": 8
         }
       ]

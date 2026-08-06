@@ -14,13 +14,16 @@ cart is a standalone `.p8` file suitable for Onion's PICO/fake-08 emulator.
 | Blocks & Buttons | Seat every crate on a button | Provable corner deadlock | Completion flag |
 | Starlight Snake | Collect 12 fruit | Wall or body collision | Best score |
 
-Blocks & Buttons uses a high-angle pseudo-isometric toy-workshop renderer. Its
-floor, walls, buttons, crates, and robot share one diamond-grid projection and
-depth order; tall objects expose distinct top and side faces rather than flat
-top-down icons. Starlight Snake uses gap-free connected body rendering with
-oriented head, straight and corner joins, highlighted body nodes, and a tapered
-tail against a moon-garden board. Fruit rotates through a small visual family
-without changing the underlying rule.
+Blocks & Buttons uses a top-down toy-workshop renderer aligned to its square
+collision grid. Walls, crates, and buttons add shallow vertical faces for depth
+without rotating the board into an isometric projection. Its robot uses
+reviewed north, south, and west walk/push families; east mirrors west at runtime.
+The native edition retains the 256x256 masters while the standalone cart uses
+deterministically derived 16x16 PICO-8 frames. Starlight Snake uses one reviewed
+head, straight, corner, and tail family. Exact rotations produce every required
+direction, and declared connector edges are opened during compilation so the
+7-pixel-cell PICO sprites overlap without seams. Fruit rotates through a small
+visual family without changing the underlying rule.
 
 Blocks & Buttons and Starlight Snake share the small lifecycle source in
 `pico8/shared/arcade_core.lua`. `tools/pico8_arcade_build.py` injects that
