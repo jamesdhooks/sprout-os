@@ -10,19 +10,15 @@ from pathlib import Path
 
 from PIL import Image
 
+from pico8_sprite_source import compile_gfx
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "games" / "blocks-buttons" / "assets-src" / "robot"
 NATIVE_IMAGE = ROOT / "games" / "blocks-buttons" / "assets" / "rich-character.png"
 NATIVE_MANIFEST = ROOT / "games" / "blocks-buttons" / "assets-src" / "rich-character-atlas.json"
 PICO_CART = ROOT / "pico8" / "blocks-buttons" / "blocks-buttons.p8"
-
-PALETTE = (
-    (0, 0, 0), (29, 43, 83), (126, 37, 83), (0, 135, 81),
-    (171, 82, 54), (95, 87, 79), (194, 195, 199), (255, 241, 232),
-    (255, 0, 77), (255, 163, 0), (255, 236, 39), (0, 228, 54),
-    (41, 173, 255), (131, 118, 156), (255, 119, 168), (255, 204, 170),
-)
+PICO_SOURCE = ROOT / "pico8" / "blocks-buttons" / "sprites.json"
 
 DIRECTIONS = ("south", "north", "west")
 FRAME_NAMES = tuple(
@@ -84,36 +80,8 @@ def native_outputs() -> tuple[bytes, bytes]:
     return encoded.getvalue(), (json.dumps(manifest, indent=2) + "\n").encode()
 
 
-def nearest_palette(rgb: tuple[int, int, int]) -> int:
-    # PICO colour zero is transparency, so opaque pixels only target 1..15.
-    return min(range(1, 16), key=lambda i: sum((rgb[c] - PALETTE[i][c]) ** 2 for c in range(3)))
-
-
-def pico_sprite(image: Image.Image) -> Image.Image:
-    alpha = image.getchannel("A")
-    bbox = alpha.getbbox()
-    if bbox is None:
-        raise ValueError("cannot make a PICO sprite from a blank frame")
-    cropped = image.crop(bbox)
-    scale = min(14 / cropped.width, 15 / cropped.height)
-    size = (max(1, round(cropped.width * scale)), max(1, round(cropped.height * scale)))
-    reduced = cropped.resize(size, Image.Resampling.NEAREST)
-    sprite = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    sprite.alpha_composite(reduced, ((16 - size[0]) // 2, 16 - size[1]))
-    return sprite
-
-
 def pico_gfx() -> str:
-    pixels = [[0 for _ in range(128)] for _ in range(128)]
-    for index, name in enumerate(FRAME_NAMES):
-        sprite = pico_sprite(source_image(name))
-        ox, oy = (index % 5) * 16, (index // 5) * 16
-        for y in range(16):
-            for x in range(16):
-                pixel = sprite.getpixel((x, y))
-                if pixel[3] >= 128:
-                    pixels[oy + y][ox + x] = nearest_palette(pixel[:3])
-    return "\n".join("".join(format(value, "x") for value in row) for row in pixels)
+    return compile_gfx(PICO_SOURCE)
 
 
 def cart_with_gfx(gfx: str) -> bytes:

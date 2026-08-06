@@ -103,7 +103,10 @@ Generated atlas bytes must be reproducible from tracked source assets. CI valida
 The implemented `tools/generate-arcade-assets.py --check`,
 `tools/build_blocks_buttons_robot_assets.py --check`, and
 `tools/build_blocks_buttons_world_assets.py --check` tests verify the
-reproducible runtime atlases. Their strict manifests
+reproducible runtime atlases. The PICO-specific hand-authored sources live in
+`pico8/blocks-buttons/sprites.json` and `pico8/snake/sprites.json`; their
+builders validate exact dimensions, palette indices, non-overlap, and injected
+cart bytes. The strict manifests
 validate atlas dimensions, source rectangles, animation clips, tile sets,
 palette name, source category, license, and generator. Windows captures check
 the actual runtime at 320×240.

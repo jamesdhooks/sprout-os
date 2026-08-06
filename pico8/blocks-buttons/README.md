@@ -1,12 +1,16 @@
 # Blocks & Buttons PICO-8 Edition
 
-Standalone PICO-8 port of the Sprout Arcade crate puzzle. D-pad moves, Z/A
-starts or retries, and X/B returns to the title. Seating both crates triggers
-an animated celebration card, then returns to the beginning.
+The canonical PICO artwork is `sprites.json`. Every frame is a literal palette
+index grid: fifteen 16x16 robot frames plus hand-authored floor, wall, button,
+crate, and solved-crate tiles. East-facing robot frames mirror west at runtime.
 
-The live renderer is a depth-sorted pseudo-isometric toy workshop. Every floor
-cell, wall, button, crate, and robot uses the same high-angle projection, with
-vertical faces for readable height and overlap.
+After editing a grid, rebuild and validate:
 
-Run `python tools/pico8_arcade_build.py inject pico8/blocks-buttons/blocks-buttons.p8`
-after changing the shared arcade core.
+```powershell
+python tools/build_blocks_buttons_robot_assets.py
+python tools/build_blocks_buttons_robot_assets.py --check
+python tools/pico8_arcade_build.py validate pico8/blocks-buttons/blocks-buttons.p8
+```
+
+The native 256x256 robot masters remain a separate art family and are not
+downsampled into this cart.

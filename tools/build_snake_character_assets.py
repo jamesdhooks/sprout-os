@@ -10,17 +10,15 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+from pico8_sprite_source import compile_gfx
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "games" / "snake" / "assets-src" / "snake"
 NATIVE_IMAGE = ROOT / "games" / "snake" / "assets" / "rich-character.png"
 NATIVE_MANIFEST = ROOT / "games" / "snake" / "assets-src" / "rich-character-atlas.json"
 PICO_CART = ROOT / "pico8" / "snake" / "snake.p8"
-PALETTE = ((0, 0, 0), (29, 43, 83), (126, 37, 83), (0, 135, 81),
-           (171, 82, 54), (95, 87, 79), (194, 195, 199), (255, 241, 232),
-           (255, 0, 77), (255, 163, 0), (255, 236, 39), (0, 228, 54),
-           (41, 173, 255), (131, 118, 156), (255, 119, 168), (255, 204, 170))
-
+PICO_SOURCE = ROOT / "pico8" / "snake" / "sprites.json"
 FRAME_NAMES = (
     "snake-head-north", "snake-head-east", "snake-head-south", "snake-head-west",
     "snake-body-vertical", "snake-body-horizontal",
@@ -136,21 +134,8 @@ def native_outputs(images: dict[str, Image.Image]) -> tuple[bytes, bytes]:
     return encoded.getvalue(), (json.dumps(manifest, indent=2) + "\n").encode()
 
 
-def palette_index(rgb: tuple[int, int, int]) -> int:
-    return min(range(1, 16), key=lambda i: sum((rgb[c] - PALETTE[i][c]) ** 2 for c in range(3)))
-
-
-def pico_gfx(images: dict[str, Image.Image]) -> str:
-    pixels = [[0] * 128 for _ in range(128)]
-    for index, name in enumerate(FRAME_NAMES):
-        frame = images[name].resize((8, 8), Image.Resampling.NEAREST)
-        ox = index * 8
-        for y in range(8):
-            for x in range(8):
-                pixel = frame.getpixel((x, y))
-                if pixel[3] >= 128:
-                    pixels[y][ox + x] = palette_index(pixel[:3])
-    return "\n".join("".join(format(value, "x") for value in row) for row in pixels)
+def pico_gfx(_images: dict[str, Image.Image]) -> str:
+    return compile_gfx(PICO_SOURCE)
 
 
 def cart_bytes(gfx: str) -> bytes:

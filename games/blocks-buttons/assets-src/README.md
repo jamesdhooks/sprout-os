@@ -13,10 +13,12 @@ The reviewed robot source consists of fifteen transparent 256x256 masters in
 `robot/`: four walk frames and one push frame for north, south, and west.
 East deliberately mirrors west at runtime, avoiding a redundant horizontal
 source family. `tools/build_blocks_buttons_robot_assets.py` validates those
-masters, packs the 1024x1024 native atlas, and derives the cart's 16x16 PICO-8
-frames with nearest-neighbour resampling and deterministic palette mapping.
-Its `--check` mode verifies exact atlas pixels plus byte-stable metadata and
-cartridge payloads, avoiding false failures from PNG encoder-version changes.
+masters and packs the 1024x1024 native atlas. The cart does not downsample
+these masters: its 16x16 robot, floor, wall, button, and crate frames are
+hand-authored as hexadecimal pixel grids in
+`pico8/blocks-buttons/sprites.json`. The same builder validates and injects
+that independent PICO bank. Its `--check` mode verifies exact atlas pixels,
+byte-stable metadata, and cartridge payloads.
 
 The four reviewed world masters in `world/` use the same fixed high-angle,
 unrotated projection. Floor is a flat walking plane; walls, crates, and buttons
