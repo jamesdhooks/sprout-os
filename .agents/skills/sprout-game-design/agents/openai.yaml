@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout Game Design"
+  short_description: "Design scoped Sprout game experiences"
+  default_prompt: "Use $sprout-game-design to define a scoped Sprout game or edition before implementation."

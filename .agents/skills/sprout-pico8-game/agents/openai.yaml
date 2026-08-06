@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout PICO-8 Game"
+  short_description: "Build constrained standalone PICO-8 editions"
+  default_prompt: "Use $sprout-pico8-game to create, test, or refine a Sprout PICO-8 cartridge."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout Game QA"
+  short_description: "Capture and verify complete game-state evidence"
+  default_prompt: "Use $sprout-game-qa to validate a Sprout game across its observable states and targets."
