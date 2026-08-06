@@ -13,6 +13,8 @@ Treat each cart as a complete PICO-8 game, not a mechanically downscaled native 
 2. Read the relevant portions of `docs/development/pico8-authoring-handbook.md`.
 3. Read `docs/arcade/pico8-editions.md`, the target cart, its manifest, and its README.
 4. Read `references/cart-contract.md`.
+5. For unfamiliar PICO-8 mechanics, use `references/tutorial-routing.md` to select the smallest relevant tutorial.
+6. For movement, collision, animation, feedback, onboarding, or audio work, apply `references/gameplay-patterns.md`.
 
 ## Start and structure
 

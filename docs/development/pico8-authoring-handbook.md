@@ -674,3 +674,21 @@ large architecture before you understand the machine.
 - [Official PICO-8 resources](https://www.lexaloffle.com/pico-8.php?page=resources)
 - [Onion PICO-8/fake-08 notes](https://onionui.github.io/docs/emulators/pico-8)
 - [Sprout creation and deployment workflow](pico8-game-development.md)
+
+## Guided tutorials
+
+[NerdyTeachers' PICO-8 tutorials](https://nerdyteachers.com/PICO-8/Tutorials/)
+provide approachable, runnable examples for collision, movement, animation,
+particles, onboarding, game design, and audio. Use them to learn one mechanic at
+a time, then adapt the result to this handbook's `_update60()`, controller,
+budget, persistence, and fake-08 requirements. The tutorial examples supplement
+rather than replace the official manual.
+
+Recommended starting points:
+
+- [Map collision and sprite flags](https://nerdyteachers.com/PICO-8/Collision/98)
+- [Sprite animation](https://nerdyteachers.com/PICO-8/Game_Mechanics/4)
+- [Advanced movement](https://nerdyteachers.com/PICO-8/game_mechanics/10)
+- [Particle effects](https://nerdyteachers.com/PICO-8/Game_Mechanics/14)
+- [Player-onboarding principles](https://nerdyteachers.com/PICO-8/Game_Design/105)
+- [Player-onboarding methods](https://nerdyteachers.com/PICO-8/Game_Design/106)
