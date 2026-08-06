@@ -21,6 +21,13 @@
     "dimensions": [1280, 720],
     "fit": "cover"
   },
+  "sounds": [
+    {"id": "eat", "file": "assets/sfx/eat.wav"},
+    {"id": "speed", "file": "assets/sfx/speed.wav"},
+    {"id": "win", "file": "assets/sfx/win.wav"},
+    {"id": "collision", "file": "assets/sfx/collision.wav"},
+    {"id": "reset", "file": "assets/sfx/reset.wav"}
+  ],
   "audience": "family",
   "capabilities": ["events", "local-storage"]
 }

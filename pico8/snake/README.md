@@ -5,6 +5,10 @@ and X/B returns to the title. Collecting 12 fruit completes a round and shows
 an animated celebration card before returning to the beginning. Collision
 retains a separate retry card.
 
+Left/right selects Round or Endless on the title. Round has the explicit
+12-fruit win; Endless continues until collision and retains its own best score.
+A three-second B hold on the title resets both best scores and completed rounds.
+
 The snake is rendered as one connected form: outlined straight and corner
 joins, an oriented head, and a tapered tail. `sprites.json` is the canonical
 hand-authored 8x8 source for every segment, fruit, and garden detail. A 14x14

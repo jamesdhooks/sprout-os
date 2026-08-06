@@ -160,10 +160,16 @@ title_data="f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0e01df0401dd012f0f0a01660151f471f15
 title_dirty=true
 
 -- A 14x14 playable garden plus one exact 8px boundary cell fills 128x128.
-gw=14 gh=14 cs=8 gx=8 gy=8
-goal=12 snake={} dir={1,0} queued={1,0}
-fruit={12,7} score=0 best=dget(0) step=0 speed=9
-card_age=0 seed=24731
+gw=14 gh=14 cs=8 gx=8 gy=8 goal=12
+snake={} dir={1,0} queued={1,0} fruit={12,7}
+score=0 best_round=0 best_endless=0 completed=0 mode=0 step=0 speed=9
+card_age=0 seed=24731 burst=0 reset_hold=0 reset_done=false reset_armed=true
+if dget(0)!=1 then
+ for i=0,4 do dset(i,0) end dset(0,1)
+else
+ mode=mid(0,flr(dget(1)),1) best_round=max(0,flr(dget(2)))
+ best_endless=max(0,flr(dget(3))) completed=max(0,flr(dget(4)))
+end
 
 function occupied(x,y,ignore_tail)
  local last=#snake-(ignore_tail and 1 or 0)
@@ -183,16 +189,19 @@ function reset_run()
  srand(seed)
  snake={{5,7},{4,7},{3,7},{2,7},{1,7}}
  dir={1,0} queued={1,0}
- score=0 step=0 speed=9
+ score=0 step=0 speed=9 burst=0
  put_fruit()
  arc_screen="play"
  title_dirty=true
 end
 
 function end_run(kind)
- if score>best then best=score dset(0,best) end
+ if mode==0 and score>best_round then best_round=score dset(2,best_round) end
+ if mode==1 and score>best_endless then best_endless=score dset(3,best_endless) end
+ if kind=="win" then completed+=1 dset(4,completed) end
  card_age=0
  arc_begin_card(kind,kind=="win" and 96 or 32767)
+ sfx(kind=="win" and 2 or 3)
 end
 
 function choose_direction()
@@ -212,8 +221,10 @@ function advance_snake()
  add(snake,{nx,ny},1)
  if eating then
   score+=1
+  burst=18 sfx(0)
   speed=max(5,9-flr(score/4))
-  if score>=goal then end_run("win") else put_fruit() end
+  if score%4==0 then sfx(1) end
+  if mode==0 and score>=goal then end_run("win") else put_fruit() end
  else
   deli(snake,#snake)
  end
@@ -221,16 +232,28 @@ end
 
 function _update60()
  arc_tick()
+ if qa_capture=="reset-holding" or qa_capture=="reset-cancelled" or qa_capture=="reset-complete" then return end
  if arc_screen=="title" then
-  if arc_pressed(4) then reset_run() end
+  if arc_pressed(0) or arc_pressed(1) then mode=1-mode dset(1,mode) title_dirty=true end
+  if not btn(5) then
+   if reset_hold>0 and not reset_done then reset_hold=0 title_dirty=true end
+   reset_armed=true
+   if reset_done then reset_done=false reset_hold=0 title_dirty=true end
+  elseif reset_armed and not reset_done then
+   reset_hold+=1 title_dirty=true
+   if reset_hold>=180 then
+    best_round=0 best_endless=0 completed=0
+    dset(2,0) dset(3,0) dset(4,0) sfx(4)
+    reset_done=true title_dirty=true
+   end
+  end
+  if arc_pressed(4) and not btn(5) and not reset_done then reset_run() end
  elseif arc_screen=="play" then
-  if arc_pressed(5) then arc_screen="title" return end
+  if arc_pressed(5) then arc_screen="title" reset_armed=false reset_hold=0 title_dirty=true return end
   choose_direction()
+  if burst>0 then burst-=1 end
   step+=1
   if step>=speed then step=0 advance_snake() end
-  -- hidden capture helpers: hold a + left/right
-  if btn(4) and arc_pressed(1) then score=goal card_age=0 arc_begin_card("win",32767)
-  elseif btn(4) and arc_pressed(0) then card_age=0 arc_begin_card("fail",32767) end
  else
   card_age+=1
   if arc_card_kind=="fail" then
@@ -294,6 +317,15 @@ function draw_title()
   for i=1,n do pset(x,y,c) x+=1 if x==128 then x=0 y+=1 end end
   p+=2
  end
+ rectfill(3,106,124,126,1)
+ local label=mode==0 and "< round >" or "< endless >"
+ arc_center_text(label,109,7)
+ local best=mode==0 and best_round or best_endless
+ print("best "..best,6,119,10)
+ if reset_done then print("reset!",94,119,10)
+ elseif reset_hold>0 then
+  rect(74,118,122,124,5) rectfill(75,119,75+flr(reset_hold/180*46),123,12)
+ else print("hold b reset",76,119,6) end
  if true then return end
  draw_stars()
  -- moon-garden terraces and vine frame
@@ -309,7 +341,7 @@ function draw_title()
  arc_center_text("SNAKE",21,11)
  draw_title_snake()
  arc_panel(24,108,80,15,5,13)
- arc_center_text("❎  PLAY",113,7)
+ arc_center_text("z play",113,7)
 end
 
 function draw_board()
@@ -387,6 +419,13 @@ function draw_play()
  draw_board()
  spr(14+score%2,gx+fruit[1]*cs,gy+fruit[2]*cs)
  draw_snake()
+ if burst>0 and #snake>0 then
+  local hx=gx+snake[1][1]*cs+4 local hy=gy+snake[1][2]*cs+4
+  for i=0,5 do
+   local a=i/6 local r=10-flr(burst/3)
+   pset(hx+cos(a)*r,hy+sin(a)*r,i%2==0 and 10 or 14)
+  end
+ end
 end
 
 function draw_card()
@@ -406,12 +445,12 @@ function draw_card()
     local a=i/12 local r=34+sin((arc_ticks+i)/8)*3
     pset(64+cos(a)*r,50+sin(a)*r,(i%4)+8)
    end
-   arc_center_text("FRUIT FEAST!",76,10)
-   arc_center_text("round complete",90,7)
+   arc_center_text("round win!",76,7)
+   arc_center_text("12 fruit!",90,7)
   else
-   arc_center_text("BONK!",43,8)
+   arc_center_text("bonk!",43,8)
    arc_center_text("score "..score,59,10)
-   arc_center_text("❎ retry   🅾️ back",82,7)
+   arc_center_text("z retry   x back",82,7)
   end
  end
 end
@@ -430,9 +469,17 @@ if qa_capture=="gameplay" then
  snake={{10,5},{9,5},{8,5},{8,6},{8,7},{7,7},{6,7},{5,7},{5,8},{5,9}}
  dir={1,0} queued={1,0} fruit={13,5} score=7 step=-9999
 elseif qa_capture=="win" then
- reset_run() score=goal card_age=18 arc_begin_card("win",32767)
+ mode=0 reset_run() score=goal card_age=18 arc_begin_card("win",32767)
 elseif qa_capture=="fail" then
  reset_run() score=7 card_age=18 arc_begin_card("fail",32767)
+elseif qa_capture=="endless-gameplay" then
+ mode=1 reset_run() score=18 snake={{10,5},{9,5},{8,5},{8,6},{8,7},{7,7},{6,7}} fruit={13,8} step=-9999
+elseif qa_capture=="reset-holding" then
+ arc_screen="title" reset_hold=110 reset_done=false title_dirty=true
+elseif qa_capture=="reset-cancelled" then
+ arc_screen="title" reset_hold=0 reset_done=false title_dirty=true
+elseif qa_capture=="reset-complete" then
+ arc_screen="title" reset_hold=180 reset_done=true title_dirty=true
 end
 
 __gfx__
@@ -564,3 +611,12 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+000800001207113061140511504116031000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000700001517014160131501214011130101200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0006000018270192601a2501b2401c2301d2201e22000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000500001b3711a361193511834117331163211532114321000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000800001e4701f460204502144022430000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000a0000175301753017530175301b5301b5301b5301b5301e5301e5301e5301e53014530145301453014530175301753017530175301b5301b5301b5301b5301e5301e5301e5301e53014530145301453014530
+__music__
+00 05414243
