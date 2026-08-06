@@ -1,7 +1,7 @@
 # Blocks & Buttons asset source
 
 The fallback atlas is deterministic original pixel art produced by
-`tools/generate-arcade-assets.py` using the `sprout-arcade-1` palette. Run the
+`tools/generate-arcade-assets.py` using the `blocks-buttons-v1` palette. Run the
 tool after changing its source definitions; `--check` verifies byte-for-byte
 reproducibility.
 
@@ -14,7 +14,7 @@ The reviewed robot source consists of fifteen transparent 256x256 masters in
 East deliberately mirrors west at runtime, avoiding a redundant horizontal
 source family. `tools/build_blocks_buttons_robot_assets.py` validates those
 masters and packs the 1024x1024 native atlas. The cart does not downsample
-these masters: its 16x16 robot, floor, wall, button, and crate frames are
+these masters: its 16x20 robot plus floor, wall, button, and crate frames are
 hand-authored as hexadecimal pixel grids in
 `pico8/blocks-buttons/sprites.json`. The same builder validates and injects
 that independent PICO bank. Its `--check` mode verifies exact atlas pixels,

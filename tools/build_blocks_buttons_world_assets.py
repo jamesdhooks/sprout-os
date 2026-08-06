@@ -6,9 +6,10 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import math
 from pathlib import Path
 
-from PIL import Image, ImageEnhance
+from PIL import Image, ImageDraw, ImageEnhance
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,22 @@ FRAME_NAMES = (
     "floor-wood", "wall-workshop", "crate-idle",
     "crate-solved", "button-up", "button-down",
 )
+NATIVE_PALETTE = tuple(
+    tuple(int(value[index:index + 2], 16) for index in (1, 3, 5))
+    for value in ("#102F5B", "#173B70", "#16579B", "#2584CE", "#39AFCC", "#66768C",
+                  "#A9BCC8", "#E4EEF0", "#8F2C36", "#D93932", "#EF654B", "#704327",
+                  "#B86B38", "#E4A35B", "#FFC53B", "#F6F0DF")
+)
+
+
+def exact_palette(image: Image.Image) -> Image.Image:
+    palette = Image.new("P", (1, 1))
+    values = [component for color in NATIVE_PALETTE for component in color]
+    palette.putpalette(values + [0] * (768 - len(values)))
+    quantized = image.convert("RGB").quantize(
+        palette=palette, dither=Image.Dither.NONE).convert("RGBA")
+    quantized.putalpha(image.getchannel("A"))
+    return quantized
 
 
 def source(name: str) -> Image.Image:
@@ -28,16 +45,34 @@ def source(name: str) -> Image.Image:
     image = Image.open(path).convert("RGBA")
     if image.size != (256, 256):
         raise ValueError(f"{path.name} must be 256x256, got {image.size}")
-    return image
+    return exact_palette(image)
 
 
 def solved_crate() -> Image.Image:
-    image = source("crate-idle")
+    image = crate_with_star()
     color = ImageEnhance.Color(image.convert("RGB")).enhance(1.15).convert("RGBA")
     color.putalpha(image.getchannel("A"))
     overlay = Image.new("RGBA", image.size, (255, 190, 55, 0))
     overlay.putalpha(image.getchannel("A").point(lambda alpha: 38 if alpha else 0))
     return Image.alpha_composite(color, overlay)
+
+
+def star_points(cx: int, cy: int, outer: int, inner: int) -> list[tuple[int, int]]:
+    points = []
+    for index in range(10):
+        radius = outer if index % 2 == 0 else inner
+        angle = -math.pi / 2 + index * math.pi / 5
+        points.append((round(cx + math.cos(angle) * radius),
+                       round(cy + math.sin(angle) * radius)))
+    return points
+
+
+def crate_with_star() -> Image.Image:
+    image = source("crate-idle")
+    draw = ImageDraw.Draw(image)
+    draw.polygon(star_points(128, 112, 42, 19), fill="#704327")
+    draw.polygon(star_points(128, 108, 32, 14), fill="#FFC53B")
+    return image
 
 
 def pressed_button() -> Image.Image:
@@ -53,14 +88,14 @@ def pressed_button() -> Image.Image:
 
 
 def outputs() -> tuple[bytes, bytes]:
-    images = {
+    images = {name: exact_palette(image) for name, image in {
         "floor-wood": source("floor-wood"),
         "wall-workshop": source("wall-workshop"),
-        "crate-idle": source("crate-idle"),
+        "crate-idle": crate_with_star(),
         "crate-solved": solved_crate(),
         "button-up": source("button-up"),
         "button-down": pressed_button(),
-    }
+    }.items()}
     atlas = Image.new("RGBA", (1024, 512), (0, 0, 0, 0))
     frames: dict[str, object] = {}
     for index, name in enumerate(FRAME_NAMES):

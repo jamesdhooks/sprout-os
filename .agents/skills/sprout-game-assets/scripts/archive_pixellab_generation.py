@@ -93,6 +93,24 @@ def main() -> int:
     if not prompt_text:
         raise SystemExit("prompt must not be empty")
 
+    palette = args.metadata_json.get("palette")
+    palette_id = args.metadata_json.get("paletteId")
+    palette_hash = args.metadata_json.get("paletteHash")
+    if not isinstance(palette, list) or not palette or not all(
+        isinstance(colour, str) and re.fullmatch(r"#[0-9A-Fa-f]{6}", colour)
+        for colour in palette
+    ):
+        raise SystemExit("metadata-json requires a non-empty palette of #RRGGBB values")
+    if not isinstance(palette_id, str) or not SAFE_ID.fullmatch(palette_id):
+        raise SystemExit("metadata-json requires a safe paletteId")
+    expected_palette_hash = hashlib.sha256(
+        "\n".join(colour.upper() for colour in palette).encode("ascii")
+    ).hexdigest()
+    if palette_hash is not None and palette_hash != expected_palette_hash:
+        raise SystemExit("metadata-json paletteHash does not match palette")
+    args.metadata_json["palette"] = [colour.upper() for colour in palette]
+    args.metadata_json["paletteHash"] = expected_palette_hash
+
     date_root.mkdir(parents=True, exist_ok=True)
     temp_dir = Path(tempfile.mkdtemp(prefix=f".{args.job_id}.", dir=date_root))
     try:

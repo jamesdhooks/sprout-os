@@ -3,28 +3,28 @@
   "id": "blocks-buttons-character",
   "image": "blocks-buttons-character-atlas.png",
   "size": {
-    "width": 1024,
-    "height": 1024
+    "width": 512,
+    "height": 640
   },
   "frames": {
     "hero-south-01": {
       "frame": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -33,22 +33,22 @@
     },
     "hero-south-02": {
       "frame": {
-        "x": 256,
+        "x": 128,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -57,22 +57,22 @@
     },
     "hero-south-03": {
       "frame": {
-        "x": 512,
+        "x": 256,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -81,22 +81,22 @@
     },
     "hero-south-04": {
       "frame": {
-        "x": 768,
+        "x": 384,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -106,21 +106,21 @@
     "hero-south-push": {
       "frame": {
         "x": 0,
-        "y": 256,
-        "width": 256,
-        "height": 256
+        "y": 160,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -129,22 +129,22 @@
     },
     "hero-north-01": {
       "frame": {
-        "x": 256,
-        "y": 256,
-        "width": 256,
-        "height": 256
+        "x": 128,
+        "y": 160,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -153,22 +153,22 @@
     },
     "hero-north-02": {
       "frame": {
-        "x": 512,
-        "y": 256,
-        "width": 256,
-        "height": 256
+        "x": 256,
+        "y": 160,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -177,22 +177,22 @@
     },
     "hero-north-03": {
       "frame": {
-        "x": 768,
-        "y": 256,
-        "width": 256,
-        "height": 256
+        "x": 384,
+        "y": 160,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -202,21 +202,21 @@
     "hero-north-04": {
       "frame": {
         "x": 0,
-        "y": 512,
-        "width": 256,
-        "height": 256
+        "y": 320,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -225,22 +225,22 @@
     },
     "hero-north-push": {
       "frame": {
-        "x": 256,
-        "y": 512,
-        "width": 256,
-        "height": 256
+        "x": 128,
+        "y": 320,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -249,22 +249,22 @@
     },
     "hero-west-01": {
       "frame": {
-        "x": 512,
-        "y": 512,
-        "width": 256,
-        "height": 256
+        "x": 256,
+        "y": 320,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -273,22 +273,22 @@
     },
     "hero-west-02": {
       "frame": {
-        "x": 768,
-        "y": 512,
-        "width": 256,
-        "height": 256
+        "x": 384,
+        "y": 320,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -298,21 +298,21 @@
     "hero-west-03": {
       "frame": {
         "x": 0,
-        "y": 768,
-        "width": 256,
-        "height": 256
+        "y": 480,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -321,22 +321,22 @@
     },
     "hero-west-04": {
       "frame": {
-        "x": 256,
-        "y": 768,
-        "width": 256,
-        "height": 256
+        "x": 128,
+        "y": 480,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,
@@ -345,22 +345,22 @@
     },
     "hero-west-push": {
       "frame": {
-        "x": 512,
-        "y": 768,
-        "width": 256,
-        "height": 256
+        "x": 256,
+        "y": 480,
+        "width": 128,
+        "height": 160
       },
       "rotated": false,
       "trimmed": false,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "sourceSize": {
-        "width": 256,
-        "height": 256
+        "width": 128,
+        "height": 160
       },
       "pivot": {
         "x": 0.5,

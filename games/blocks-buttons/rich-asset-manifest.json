@@ -4,7 +4,7 @@
     "source": "original-project-artwork",
     "license": "GPL-3.0-or-later",
     "generator": "tools/import-sprite-atlases.py",
-    "palette": "sprout-storybook-1"
+    "palette": "blocks-buttons-v1"
   },
   "atlases": [
     {
@@ -19,8 +19,27 @@
       "id": "rich-character",
       "image": "assets/rich-character.png",
       "size": [
-        1024,
-        1024
+        512,
+        640
+      ],
+      "sampling": "nearest",
+      "mips": [
+        {
+          "image": "assets/rich-character@0.25x.png",
+          "size": [
+            128,
+            160
+          ],
+          "scale": 0.25
+        },
+        {
+          "image": "assets/rich-character@0.5x.png",
+          "size": [
+            256,
+            320
+          ],
+          "scale": 0.5
+        }
       ]
     },
     {
@@ -29,6 +48,25 @@
       "size": [
         1024,
         512
+      ],
+      "sampling": "nearest",
+      "mips": [
+        {
+          "image": "assets/rich-world@0.25x.png",
+          "size": [
+            256,
+            128
+          ],
+          "scale": 0.25
+        },
+        {
+          "image": "assets/rich-world@0.5x.png",
+          "size": [
+            512,
+            256
+          ],
+          "scale": 0.5
+        }
       ]
     }
   ],
@@ -249,54 +287,54 @@
       "rect": [
         0,
         0,
-        256,
-        256
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-south-02",
       "atlas": "rich-character",
       "rect": [
-        256,
+        128,
         0,
-        256,
-        256
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-south-03",
       "atlas": "rich-character",
       "rect": [
-        512,
-        0,
         256,
-        256
+        0,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-south-04",
       "atlas": "rich-character",
       "rect": [
-        768,
+        384,
         0,
-        256,
-        256
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
@@ -304,55 +342,55 @@
       "atlas": "rich-character",
       "rect": [
         0,
-        256,
-        256,
-        256
+        160,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-north-01",
       "atlas": "rich-character",
       "rect": [
-        256,
-        256,
-        256,
-        256
+        128,
+        160,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-north-02",
       "atlas": "rich-character",
       "rect": [
-        512,
         256,
-        256,
-        256
+        160,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-north-03",
       "atlas": "rich-character",
       "rect": [
-        768,
-        256,
-        256,
-        256
+        384,
+        160,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
@@ -360,55 +398,55 @@
       "atlas": "rich-character",
       "rect": [
         0,
-        512,
-        256,
-        256
+        320,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-north-push",
       "atlas": "rich-character",
       "rect": [
-        256,
-        512,
-        256,
-        256
+        128,
+        320,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-west-01",
       "atlas": "rich-character",
       "rect": [
-        512,
-        512,
         256,
-        256
+        320,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-west-02",
       "atlas": "rich-character",
       "rect": [
-        768,
-        512,
-        256,
-        256
+        384,
+        320,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
@@ -416,41 +454,41 @@
       "atlas": "rich-character",
       "rect": [
         0,
-        768,
-        256,
-        256
+        480,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-west-04",
       "atlas": "rich-character",
       "rect": [
-        256,
-        768,
-        256,
-        256
+        128,
+        480,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {
       "id": "rich.hero-west-push",
       "atlas": "rich-character",
       "rect": [
-        512,
-        768,
         256,
-        256
+        480,
+        128,
+        160
       ],
       "pivot": [
-        128,
-        256
+        64,
+        160
       ]
     },
     {

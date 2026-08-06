@@ -10,9 +10,6 @@ from pathlib import Path
 
 from PIL import Image
 
-from pico8_sprite_source import compile_gfx
-
-
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "games" / "blocks-buttons" / "assets-src" / "robot"
 NATIVE_IMAGE = ROOT / "games" / "blocks-buttons" / "assets" / "rich-character.png"
@@ -29,6 +26,12 @@ FRAME_NAMES = tuple(
         f"hero-{direction}-push",
     )
 )
+NATIVE_PALETTE = (
+    "#102F5B", "#173B70", "#16579B", "#2584CE", "#39AFCC", "#66768C",
+    "#A9BCC8", "#E4EEF0", "#8F2C36", "#D93932", "#EF654B", "#704327",
+    "#B86B38", "#E4A35B", "#FFC53B", "#F6F0DF",
+)
+MASTER_SIZE = (128, 160)
 
 
 def source_image(name: str) -> Image.Image:
@@ -43,18 +46,41 @@ def source_image(name: str) -> Image.Image:
     return image
 
 
+def master_image(name: str) -> Image.Image:
+    source = source_image(name)
+    bounds = source.getchannel("A").getbbox()
+    if bounds is None:
+        raise ValueError(f"{name} has no opaque pixels")
+    subject = source.crop(bounds)
+    subject.thumbnail((118, 150), Image.Resampling.NEAREST)
+    result = Image.new("RGBA", MASTER_SIZE, (0, 0, 0, 0))
+    result.alpha_composite(subject, ((MASTER_SIZE[0] - subject.width) // 2,
+                                     MASTER_SIZE[1] - subject.height))
+    colors = [tuple(int(value[index:index + 2], 16) for index in (1, 3, 5))
+              for value in NATIVE_PALETTE]
+    for y in range(result.height):
+        for x in range(result.width):
+            red, green, blue, alpha = result.getpixel((x, y))
+            if not alpha:
+                continue
+            chosen = min(colors, key=lambda color: sum((component - target) ** 2
+                         for component, target in zip(color, (red, green, blue))))
+            result.putpixel((x, y), (*chosen, alpha))
+    return result
+
+
 def native_outputs() -> tuple[bytes, bytes]:
-    atlas = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
+    atlas = Image.new("RGBA", (512, 640), (0, 0, 0, 0))
     frames: dict[str, object] = {}
     for index, name in enumerate(FRAME_NAMES):
-        x, y = (index % 4) * 256, (index // 4) * 256
-        atlas.alpha_composite(source_image(name), (x, y))
+        x, y = (index % 4) * MASTER_SIZE[0], (index // 4) * MASTER_SIZE[1]
+        atlas.alpha_composite(master_image(name), (x, y))
         frames[name] = {
-            "frame": {"x": x, "y": y, "width": 256, "height": 256},
+            "frame": {"x": x, "y": y, "width": MASTER_SIZE[0], "height": MASTER_SIZE[1]},
             "rotated": False,
             "trimmed": False,
-            "spriteSourceSize": {"x": 0, "y": 0, "width": 256, "height": 256},
-            "sourceSize": {"width": 256, "height": 256},
+            "spriteSourceSize": {"x": 0, "y": 0, "width": MASTER_SIZE[0], "height": MASTER_SIZE[1]},
+            "sourceSize": {"width": MASTER_SIZE[0], "height": MASTER_SIZE[1]},
             "pivot": {"x": 0.5, "y": 1.0},
         }
     animations = {}
@@ -71,7 +97,7 @@ def native_outputs() -> tuple[bytes, bytes]:
         "schema": "sprite-atlas.v1",
         "id": "blocks-buttons-character",
         "image": "blocks-buttons-character-atlas.png",
-        "size": {"width": 1024, "height": 1024},
+        "size": {"width": 512, "height": 640},
         "frames": frames,
         "animations": animations,
     }
@@ -98,17 +124,34 @@ def pico_gfx() -> str:
             raise ValueError(f"{name} must retain its red cap and silver housing")
     if "f" not in "".join(frames["crate"]["pixels"]):
         raise ValueError("crate must retain its engraved star")
-    return compile_gfx(PICO_SOURCE)
+    canvas = [["0"] * 128 for _ in range(128)]
+    occupied: set[tuple[int, int]] = set()
+    for name, frame in frames.items():
+        source_x, source_y, width, height = frame["rect"]
+        rows = frame["pixels"]
+        if name.startswith("hero-"):
+            direction = name.split("-")[1]
+            target_y = {"south": 0, "north": 20, "west": 40}[direction]
+            target_x, target_width, target_height = source_x, 16, 20
+            output_rows = [rows[min(15, dy * 16 // 20)] for dy in range(20)]
+        else:
+            target_x, target_y = source_x, source_y + 16
+            target_width, target_height, output_rows = width, height, rows
+        for dy, row in enumerate(output_rows):
+            for dx, value in enumerate(row):
+                point = (target_x + dx, target_y + dy)
+                if point in occupied:
+                    raise ValueError(f"compiled PICO frame {name} overlaps at {point}")
+                occupied.add(point); canvas[point[1]][point[0]] = value
+    return "\n".join("".join(row) for row in canvas)
 
 
 def cart_with_gfx(gfx: str) -> bytes:
     text = PICO_CART.read_text(encoding="utf-8")
     head, tail = text.split("__gfx__\n", 1)
-    if "__gff__" in tail:
-        _, rest = tail.split("__gff__", 1)
-        text = head + "__gfx__\n" + gfx + "\n__gff__" + rest
-    else:
-        text = head + "__gfx__\n" + gfx + "\n"
+    boundary = tail.find("\n__")
+    rest = tail[boundary + 1:] if boundary >= 0 else ""
+    text = head + "__gfx__\n" + gfx + "\n" + rest
     return text.encode("utf-8")
 
 

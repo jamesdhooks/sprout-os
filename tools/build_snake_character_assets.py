@@ -42,18 +42,20 @@ def rotate(image: Image.Image, degrees: int) -> Image.Image:
     return image.rotate(degrees, resample=Image.Resampling.NEAREST, expand=False)
 
 
-OUTLINE = (28, 24, 69, 255)
-GOLD = (244, 177, 36, 255)
-LIGHT = (255, 218, 79, 255)
-SHADOW = (211, 118, 31, 255)
-CREAM = (255, 240, 189, 255)
-TEAL = (46, 154, 160, 255)
-OUTER_WIDTH = 116
-BODY_WIDTH = 88
+OUTLINE = (22, 19, 56, 255)
+GOLD = (239, 182, 62, 255)
+LIGHT = (255, 222, 112, 255)
+SHADOW = (184, 119, 43, 255)
+CREAM = (247, 235, 201, 255)
+TEAL = (61, 118, 98, 255)
+PINK = (238, 106, 145, 255)
+OUTER_WIDTH = 15
+BODY_WIDTH = 11
+TILE_SIZE = 32
 
 
 def blank() -> Image.Image:
-    return Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    return Image.new("RGBA", (TILE_SIZE, TILE_SIZE), (0, 0, 0, 0))
 
 
 def path(points: list[tuple[int, int]]) -> Image.Image:
@@ -62,43 +64,63 @@ def path(points: list[tuple[int, int]]) -> Image.Image:
     draw.line(points, fill=OUTLINE, width=OUTER_WIDTH, joint="curve")
     draw.line(points, fill=GOLD, width=BODY_WIDTH, joint="curve")
     # A contained, narrow highlight reads as material rather than a second body.
-    shifted = [(x - 13, y - 13) for x, y in points]
-    draw.line(shifted, fill=LIGHT, width=9, joint="curve")
+    shifted = [(x - 2, y - 2) for x, y in points]
+    draw.line(shifted, fill=LIGHT, width=2, joint="curve")
+    for index, (x, y) in enumerate(points[::2]):
+        if index % 2 == 0:
+            draw.point((x + 2, y + 2), fill=PINK)
     return image
 
 
 def head_north() -> Image.Image:
-    image = path([(128, 256), (128, 137)])
+    image = path([(16, 32), (16, 17)])
     draw = ImageDraw.Draw(image)
-    draw.ellipse((42, 18, 214, 184), fill=OUTLINE)
-    draw.ellipse((54, 29, 202, 172), fill=GOLD)
-    draw.ellipse((67, 40, 187, 105), fill=LIGHT)
-    for x in (86, 150):
-        draw.ellipse((x, 55, x + 25, 85), fill=CREAM)
-        draw.ellipse((x + 8, 60, x + 19, 77), fill=OUTLINE)
-        draw.ellipse((x + 11, 62, x + 15, 67), fill=TEAL)
-    draw.arc((95, 88, 161, 132), 20, 160, fill=OUTLINE, width=8)
-    # Re-open the body connector after the head/body overlap.
-    draw.rectangle((128 - BODY_WIDTH // 2, 165, 128 + BODY_WIDTH // 2, 255), fill=GOLD)
-    draw.rectangle((128 - BODY_WIDTH // 2 + 12, 165, 128 - BODY_WIDTH // 2 + 20, 255), fill=LIGHT)
+    draw.ellipse((5, 2, 26, 22), fill=OUTLINE)
+    draw.ellipse((7, 4, 24, 20), fill=GOLD)
+    draw.rectangle((11, 16, 21, 31), fill=GOLD)
+    draw.rectangle((11, 16, 12, 31), fill=LIGHT)
+    for x in (10, 19):
+        draw.ellipse((x, 7, x + 4, 12), fill=CREAM)
+        draw.rectangle((x + 2, 8, x + 3, 10), fill=OUTLINE)
+        draw.point((x + 2, 8), fill=TEAL)
+    draw.line((13, 15, 16, 16, 19, 15), fill=OUTLINE, width=1)
     return image
 
 
 def tail_north() -> Image.Image:
     image = blank()
     draw = ImageDraw.Draw(image)
-    draw.polygon(((128, 18), (128 - OUTER_WIDTH // 2, 256),
-                  (128 + OUTER_WIDTH // 2, 256)), fill=OUTLINE)
-    draw.polygon(((128, 39), (128 - BODY_WIDTH // 2, 256),
-                  (128 + BODY_WIDTH // 2, 256)), fill=GOLD)
-    draw.line((113, 67, 95, 244), fill=LIGHT, width=8)
+    draw.polygon(((16, 2), (16 - OUTER_WIDTH // 2, 32),
+                  (16 + OUTER_WIDTH // 2, 32)), fill=OUTLINE)
+    draw.polygon(((16, 5), (16 - BODY_WIDTH // 2, 32),
+                  (16 + BODY_WIDTH // 2, 32)), fill=GOLD)
+    draw.line((14, 8, 12, 30), fill=LIGHT, width=1)
+    return image
+
+
+def fruit(kind: str) -> Image.Image:
+    image = blank()
+    draw = ImageDraw.Draw(image)
+    if kind == "apple":
+        draw.rectangle((15, 3, 17, 8), fill=SHADOW)
+        draw.polygon(((17, 5), (23, 3), (21, 8)), fill=TEAL)
+        draw.ellipse((6, 7, 26, 28), fill=OUTLINE)
+        draw.ellipse((8, 9, 24, 26), fill=(200, 59, 104, 255))
+        draw.rectangle((10, 11, 13, 14), fill=PINK)
+    else:
+        draw.rectangle((15, 2, 17, 7), fill=SHADOW)
+        draw.polygon(((17, 4), (23, 2), (21, 7)), fill=TEAL)
+        draw.ellipse((11, 6, 21, 18), fill=OUTLINE)
+        draw.ellipse((6, 13, 26, 29), fill=OUTLINE)
+        draw.ellipse((13, 8, 19, 18), fill=LIGHT)
+        draw.ellipse((8, 14, 24, 27), fill=LIGHT)
     return image
 
 
 def variants() -> dict[str, Image.Image]:
     head = head_north()
-    straight = path([(0, 128), (255, 128)])
-    corner_wn = path([(0, 128), (128, 128), (128, 0)])
+    straight = path([(0, 16), (31, 16)])
+    corner_wn = path([(0, 16), (16, 16), (16, 0)])
     tail = tail_north()
     return {
         "snake-head-north": head, "snake-head-east": rotate(head, -90),
@@ -108,7 +130,7 @@ def variants() -> dict[str, Image.Image]:
         "snake-corner-sw": rotate(corner_wn, 90), "snake-corner-wn": corner_wn,
         "snake-tail-north": tail, "snake-tail-east": rotate(tail, -90),
         "snake-tail-south": rotate(tail, 180), "snake-tail-west": rotate(tail, 90),
-        "fruit-apple": load("fruit-apple"), "fruit-pear": load("fruit-pear"),
+        "fruit-apple": fruit("apple"), "fruit-pear": fruit("pear"),
     }
 
 
@@ -117,7 +139,7 @@ def native_outputs(images: dict[str, Image.Image]) -> tuple[bytes, bytes]:
     frames = {}
     for index, name in enumerate(FRAME_NAMES):
         x, y = (index % 4) * 256, (index // 4) * 256
-        atlas.alpha_composite(images[name], (x, y))
+        atlas.alpha_composite(images[name].resize((256, 256), Image.Resampling.NEAREST), (x, y))
         frames[name] = {
             "frame": {"x": x, "y": y, "width": 256, "height": 256},
             "rotated": False, "trimmed": False,
@@ -141,11 +163,9 @@ def pico_gfx(_images: dict[str, Image.Image]) -> str:
 def cart_bytes(gfx: str) -> bytes:
     text = PICO_CART.read_text(encoding="utf-8")
     head, tail = text.split("__gfx__\n", 1)
-    if "__gff__" in tail:
-        _, rest = tail.split("__gff__", 1)
-        text = head + "__gfx__\n" + gfx + "\n__gff__" + rest
-    else:
-        text = head + "__gfx__\n" + gfx + "\n"
+    boundary = tail.find("\n__")
+    rest = tail[boundary + 1:] if boundary >= 0 else ""
+    text = head + "__gfx__\n" + gfx + "\n" + rest
     return text.encode()
 
 

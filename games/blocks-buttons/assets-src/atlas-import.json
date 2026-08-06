@@ -5,13 +5,18 @@
     "source": "original-project-artwork",
     "license": "GPL-3.0-or-later",
     "generator": "tools/import-sprite-atlases.py",
-    "palette": "sprout-storybook-1"
+    "palette": "blocks-buttons-v1"
   },
   "atlases": [
     {
       "id": "rich-character",
       "manifest": "rich-character-atlas.json",
       "image": "assets/rich-character.png",
+      "sampling": "nearest",
+      "mips": [
+        {"image": "assets/rich-character@0.25x.png", "size": [128, 160], "scale": 0.25},
+        {"image": "assets/rich-character@0.5x.png", "size": [256, 320], "scale": 0.5}
+      ],
       "prefix": "rich.",
       "animationPrefix": "rich."
     },
@@ -19,6 +24,11 @@
       "id": "rich-world",
       "manifest": "rich-world-atlas.json",
       "image": "assets/rich-world.png",
+      "sampling": "nearest",
+      "mips": [
+        {"image": "assets/rich-world@0.25x.png", "size": [256, 128], "scale": 0.25},
+        {"image": "assets/rich-world@0.5x.png", "size": [512, 256], "scale": 0.5}
+      ],
       "prefix": "rich.",
       "animationPrefix": "rich."
     }
