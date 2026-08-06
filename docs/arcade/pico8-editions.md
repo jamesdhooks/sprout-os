@@ -11,8 +11,8 @@ cart is a standalone `.p8` file suitable for Onion's PICO/fake-08 emulator.
 | Cart | Round completion | Failure | Persistent data |
 | --- | --- | --- | --- |
 | Mouse & Cheese Maze | Find the cheese and advance through the 100-level campaign | None | Current level and solved count |
-| Blocks & Buttons | Seat every crate on a button | Provable corner deadlock | Completion flag |
-| Starlight Snake | Collect 12 fruit | Wall or body collision | Best score |
+| Blocks & Buttons | Complete 30 solver-verified rooms | Precomputed dead square | Room and resumable room state |
+| Starlight Snake | Round: 12 fruit; Endless: score chase | Wall or body collision | Mode bests and completed rounds |
 
 Blocks & Buttons uses a top-down toy-workshop renderer aligned to its square
 collision grid. Walls, crates, and buttons add shallow vertical faces for depth
@@ -22,8 +22,8 @@ The west/east family is a strict screen-cardinal side view under the same high
 camera, not a diagonal three-quarter pose. Every character, crate, and button
 uses the bottom of its logical cell as the ground-contact baseline.
 The native editions retain their 256x256 masters, while the standalone carts
-use independent hand-authored palette-index grids. Blocks & Buttons defines
-16x16 robot and workshop tiles in `pico8/blocks-buttons/sprites.json`.
+use independent hand-authored palette-index grids. Blocks & Buttons defines a
+16x20 robot and raised workshop props in `pico8/blocks-buttons/sprites.json`.
 Starlight Snake defines its heads, straight sections, corners, tails, fruit,
 and garden details at 8x8 in `pico8/snake/sprites.json`. Builders validate and
 inject these banks without shrinking or palette-fitting the native artwork.
@@ -50,6 +50,13 @@ external file. Game rules and renderers remain cart-owned.
 All explicit wins use a pop-animated celebration card. When its display period
 ends—or the primary action shortens it—the cart returns to its title and resets
 the playable state. Failure cards remain until the player retries or returns.
+
+Each cart declares an allowed subset of the standard PICO-8 palette in its
+game-design palette file. Builders and tests reject undeclared sprite-bank
+colours. The carts contain original short SFX and one compact music loop where
+their cartridge budgets permit. On every title, holding B for three seconds is
+cancellable, fires once, shows completion until release, and requires fresh
+input afterward.
 
 ## Build and review
 

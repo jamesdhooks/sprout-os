@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import re
 import shutil
 import subprocess
 import tempfile
@@ -28,7 +29,7 @@ def find_window(title: str, timeout: float = 10.0) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("cart", type=Path)
-    parser.add_argument("state", choices=("title", "gameplay", "win", "fail"))
+    parser.add_argument("state", help="cart-defined qa_capture state")
     parser.add_argument("output", type=Path)
     parser.add_argument(
         "--pico8",
@@ -36,17 +37,16 @@ def main() -> None:
         default=Path(r"C:\Program Files (x86)\PICO-8\pico8.exe"),
     )
     args = parser.parse_args()
+    if not re.fullmatch(r"[a-z0-9-]+", args.state):
+        raise ValueError("capture state must contain lowercase letters, numbers, or hyphens")
     source = args.cart.read_text(encoding="utf-8")
     marker = 'qa_capture="normal"'
     if source.count(marker) != 1:
         raise ValueError(f"{args.cart}: missing unique QA capture marker")
     with tempfile.TemporaryDirectory(prefix="sprout-pico-") as temporary:
         cart = Path(temporary) / f"{args.cart.stem}-{args.state}.p8"
-        cart.write_text(
-            source.replace(marker, f'qa_capture="{args.state}"'),
-            encoding="utf-8",
-            newline="\n",
-        )
+        with cart.open("w", encoding="utf-8", newline="\n") as stream:
+            stream.write(source.replace(marker, f'qa_capture="{args.state}"'))
         subprocess.run(
             ["taskkill", "/IM", "pico8.exe", "/F"],
             stdout=subprocess.DEVNULL,
@@ -70,7 +70,10 @@ def main() -> None:
             title = f"{cart.name.upper()} (PICO-8)"
             handle = find_window(title)
             # PICO-8 creates the window before compiling and running the cart.
-            time.sleep(3.0)
+            # Large carts can create the window well before compilation and
+            # title-payload decoding finish. Five seconds avoids capturing the
+            # transient PICO-8 boot console on the licensed desktop runtime.
+            time.sleep(5.0)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             ImageGrab.grab(window=handle).save(args.output)
         finally:

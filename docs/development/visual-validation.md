@@ -10,15 +10,29 @@ Run from PowerShell:
 
 The command builds Sprout, captures the matrix, and writes `index.html` plus machine-readable `coverage.json`. Use `-SkipBuild` only after an unchanged successful build.
 
+Capture the corresponding licensed desktop PICO-8 matrix with:
+
+```powershell
+.\tools\capture-pico8-v1.ps1 -OutputDirectory ..\sprout-work\pico8-validation
+```
+
+`tools/build_arcade_contact_sheets.py` builds native-size and enlarged local
+review sheets from either capture tree. Contact sheets and captures remain
+untracked evidence rather than product assets.
+
 ## Deterministic game states
 
 The runtime accepts `--capture-state <name>` only together with `--capture`. It invokes a package's capture-only `capture_scenario(name)` hook after normal initialization and before the first frame. The hook is never called during ordinary play and must establish a valid state using the same data rendered by the game.
 
-| Game | Title | Gameplay | Win | Fail |
+| Game | Representative gameplay | Success | Failure | Special state |
 | --- | --- | --- | --- | --- |
-| Snake | Captured | Captured | Not applicable: endless game | Captured: collision |
-| Mouse & Cheese Maze | Captured | Captured | Captured: cheese reached | Not applicable: no loss condition |
-| Blocks & Buttons | Captured | Captured | Captured: every crate placed | Captured: provable deadlock |
+| Starlight Snake | Round and Endless | Round complete | Collision | Mode selection and speed stage |
+| Mouse & Cheese Maze | Early, middle, and late density | Cheese reached | Not applicable | Hint path |
+| Blocks & Buttons | Early, middle, and late rooms | Room and campaign completion | Dead square | One-step undo |
+
+Every native and PICO edition also captures title reset idle, holding,
+cancelled, and complete states. A reset capture is not accepted unless the
+underlying fresh-input and one-shot persistence tests pass.
 
 Blocks & Buttons treats an off-button crate trapped against perpendicular walls as a provable deadlock. The calm retry view freezes movement and the primary action restarts the room.
 

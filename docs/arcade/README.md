@@ -8,7 +8,7 @@ The current implementation includes three discoverable local packages. Sprout
 Snake proves the original lifecycle kernel; Mouse Maze and Blocks & Buttons add
 playable first rooms, reproducible pixel-art atlases, fixed-tick animation,
 compact tilemaps, and general same-atlas sprite batching. These remain
-prototypes rather than their required 1,000-level campaigns. Windows is the
+works in progress rather than release-approved games. Windows is the
 only verified game target. Linux, browser, Raspberry Pi, Miyoo, Onion, suspend
 behavior, and device performance remain future validation tracks.
 

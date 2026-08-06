@@ -415,7 +415,7 @@ def main() -> None:
     run.add_argument("--scale", type=int, choices=range(2, 9), default=4)
     shot = commands.add_parser("capture", help="capture a deterministic QA state")
     shot.add_argument("game")
-    shot.add_argument("--state", choices=("title", "gameplay", "win", "fail"), default="gameplay")
+    shot.add_argument("--state", default="gameplay", help="cart-defined qa_capture state")
     shot.add_argument("--output", type=Path)
     shot.add_argument("--pico8", type=Path)
     copy = commands.add_parser("deploy", help="copy one cart and metadata to an Onion card")
