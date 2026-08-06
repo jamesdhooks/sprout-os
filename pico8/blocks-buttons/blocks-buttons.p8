@@ -320,7 +320,7 @@ function _draw()
  else draw_card() end
 end
 
-if qa_capture=="gameplay" then reset_room() facing=1 px=6 py=1
+if qa_capture=="gameplay" then reset_room() facing=1 px=5 py=1
 elseif qa_capture=="win" then
  reset_room() crates={{6,1},{6,5}} card_age=18 arc_begin_card("win",32767)
 elseif qa_capture=="fail" then
