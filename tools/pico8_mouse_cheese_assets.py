@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import tempfile
+import shutil
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 
 PALETTE=((0,0,0),(29,43,83),(126,37,83),(0,135,81),(171,82,54),(95,87,79),(194,195,199),(255,241,232),(255,0,77),(255,163,0),(255,236,39),(0,228,54),(41,173,255),(131,118,156),(255,119,168),(255,204,170))
+MOUSE_ALLOWED=set("01346789abcef")
+MOUSE_REMAP={"2":"e","5":"4","d":"6"}
 TITLE_BEGIN="-- BEGIN GENERATED TITLE"
 TITLE_END="-- END GENERATED TITLE"
 
@@ -20,6 +24,7 @@ def stamp(image,pixels,x,y):
    pixel=image.getpixel((xx,yy))
    if len(pixel)==4 and pixel[3]==0: continue
    value=color(pixel[:3])
+   value=MOUSE_REMAP.get(value,value)
    # Palette 0 is the transparent key. Preserve reference-black facial and
    # outline pixels as PICO navy rather than accidentally cutting them out.
    pixels[y+yy][x+xx]="1" if value=="0" else value
@@ -83,6 +88,62 @@ def cheese_profile(size):
    if value!="0": image.putpixel((x,y),(*PALETTE[int(value,16)],255))
  return image
 
+MOUSE_9={
+ 0:["000110000","001ee1000","011771100","017777710","017177710","017777710","001771000","000e0e000","0000e0000"],
+ 1:["0000e0000","000e0e000","001771000","017777710","017177710","017777710","011771100","001ee1000","000110000"],
+ 2:["000110000","001ee1000","011777100","017717710","e17777710","017777100","001771000","00e0e0000","0000eee00"],
+ 3:["000011000","0001ee100","001777110","017717710","01777771e","001777710","000177100","0000e0e00","00eee0000"],
+}
+
+def indexed_sprite(rows):
+ image=Image.new("RGBA",(len(rows[0]),len(rows)),(0,0,0,0))
+ for y,row in enumerate(rows):
+  for x,value in enumerate(row):
+   if value!="0": image.putpixel((x,y),(*PALETTE[int(value,16)],255))
+ return image
+
+def authored_mouse(size,direction,stride=0):
+ if size==9:
+  image=indexed_sprite(MOUSE_9[direction])
+  # The alternate run frame moves only the two feet, never the face/body.
+  if stride:
+   pixels=image.load()
+   for x in range(9):
+    if pixels[x,7][:3]==PALETTE[14]: pixels[x,7]=(0,0,0,0)
+   if direction in (0,1):
+    image.putpixel((2,7),(*PALETTE[14],255)); image.putpixel((6,7),(*PALETTE[14],255))
+  return image
+ image=Image.new("RGBA",(size,size),(0,0,0,0)); draw=ImageDraw.Draw(image)
+ outline=(*PALETTE[1],255); white=(*PALETTE[7],255); shade=(*PALETTE[6],255); pink=(*PALETTE[14],255)
+ if direction in (0,1):
+  # South/north: a compact pear body with separated ears and tail.
+  draw.ellipse((2,2,size-3,size-2),fill=outline)
+  draw.ellipse((3,3,size-4,size-3),fill=white)
+  ear_y=1 if direction==0 else size-4
+  draw.ellipse((1,ear_y,4,ear_y+3),fill=outline); draw.ellipse((size-5,ear_y,size-2,ear_y+3),fill=outline)
+  draw.point((2,ear_y+1),fill=pink); draw.point((size-3,ear_y+1),fill=pink)
+  face_y=4 if direction==0 else size-5
+  draw.point((4,face_y),fill=outline); draw.point((size-5,face_y),fill=outline)
+  tail_y=size-1 if direction==0 else 0
+  draw.line((size//2, size-3 if direction==0 else 2, size//2+2,tail_y),fill=pink)
+  foot_y=size-2 if direction==0 else 1
+  draw.point((3+stride,foot_y),fill=pink); draw.point((size-4-stride,foot_y),fill=pink)
+ else:
+  # West/east are one deliberate side silhouette; east is not inferred from title art.
+  left=direction==2
+  draw.ellipse((2,3,size-3,size-3),fill=outline); draw.ellipse((3,4,size-4,size-4),fill=white)
+  nose_x=1 if left else size-2
+  draw.point((nose_x,size//2),fill=pink)
+  ear_x=4 if left else size-5
+  draw.ellipse((ear_x-1,2,ear_x+2,5),fill=outline); draw.point((ear_x,3),fill=pink)
+  eye_x=3 if left else size-4; draw.point((eye_x,5),fill=outline)
+  tail_start=size-3 if left else 2; tail_end=size-1 if left else 0
+  draw.line((tail_start,size-4,tail_end,size-2),fill=pink)
+  draw.point((4+stride,size-2),fill=pink); draw.point((size-5-stride,size-2),fill=pink)
+ # one stable shadow pixel gives the body volume without changing its silhouette
+ draw.point((size//2,size-3),fill=shade)
+ return image
+
 def title_payload(image):
  values="".join(color(image.getpixel((x,y))) for y in range(128) for x in range(128))
  out=[]; at=0
@@ -127,27 +188,19 @@ def chroma_frames(reference):
 def build(sprites,title,preview,reference=None):
  payload=json.loads(sprites.read_text(encoding="utf-8")); pixels=[["0"]*128 for _ in range(128)]
  source=Image.open(title).convert("RGB").resize((128,128),Image.Resampling.LANCZOS)
- if reference:
-  # Reference order: down, left, right, up, cheese. Runtime facing order is
-  # down, up, left, right.
-  art=chroma_frames(reference)
-  mice=[art[0],art[3],art[1],art[2]]; cheese=art[4]
- else:
-  mouse=source.crop((22,72,50,100)); mice=[mouse,mouse,mouse,mouse]; cheese=source.crop((74,52,102,80))
+ cheese=source.crop((74,52,102,80))
  # Exact-size sprite families; all transparent pixels remain palette 0.
- alternate_y={12:80,9:96,7:108,5:116}
- cheese_sizes={12:9,9:8,7:7,5:5}
- for size,y in ((12,0),(9,16),(7,32),(5,40)):
-  for direction,mouse in enumerate(mice):
-   frame=mouse.copy(); frame.thumbnail((size,size),Image.Resampling.NEAREST)
-   canvas=Image.new("RGBA",(size,size),(0,0,0,0)); canvas.alpha_composite(frame,((size-frame.width)//2,(size-frame.height)//2))
-   frame=canvas
+ alternate_y={12:80,9:96}
+ cheese_sizes={12:9,9:8}
+ for size,y in ((12,0),(9,16)):
+  for direction in range(4):
+   frame=authored_mouse(size,direction,0)
    stamp(frame,pixels,direction*(size+2),y)
-   stamp(running_pose(frame,direction),pixels,direction*(size+2),alternate_y[size])
+   stamp(authored_mouse(size,direction,1),pixels,direction*(size+2),alternate_y[size])
   stamp(cheese_profile(cheese_sizes[size]),pixels,64,y)
  # The victory card uses its own nearly native-size cheese illustration rather
  # than scaling the 14px gameplay pickup into a blocky overlay.
- celebration=cheese.copy(); celebration.thumbnail((28,28),Image.Resampling.NEAREST)
+ celebration=cheese.convert("RGBA"); celebration.thumbnail((28,28),Image.Resampling.NEAREST)
  canvas=Image.new("RGBA",(28,28),(0,0,0,0)); canvas.alpha_composite(celebration,((28-celebration.width)//2,(28-celebration.height)//2))
  stamp(canvas,pixels,80,0)
  # Two-pixel-scale victory lettering is stored as atlas art so it stays crisp
@@ -175,7 +228,8 @@ def build(sprites,title,preview,reference=None):
  # Stable 8x8 tiles live below the character families; source keys remain local IDs.
  for key,rows in payload["sprites"].items():
   index=96+int(key); ox,oy=(index%16)*8,(index//16)*8
-  for yy,row in enumerate(rows): pixels[oy+yy][ox:ox+8]=list(row)
+  for yy,row in enumerate(rows):
+   pixels[oy+yy][ox:ox+8]=[MOUSE_REMAP.get(value,value) for value in row]
  if preview:
   rendered=Image.new("RGB",(128,128)); rendered.putdata([PALETTE[int(v,16)] for row in pixels for v in row]); rendered.save(preview)
  return "\n".join("".join(row) for row in pixels),title_payload(source)
@@ -190,6 +244,15 @@ def inject(cart,gfx,title):
  cart.write_text(text[:start]+generated+text[end:],encoding="utf-8",newline="\n")
 
 def main():
- p=argparse.ArgumentParser(); p.add_argument("--sprites",type=Path,required=True); p.add_argument("--title-source",type=Path,required=True); p.add_argument("--sprite-reference",type=Path); p.add_argument("--cart",type=Path,required=True); p.add_argument("--preview",type=Path); a=p.parse_args()
- gfx,title=build(a.sprites,a.title_source,a.preview,a.sprite_reference); inject(a.cart,gfx,title)
+ p=argparse.ArgumentParser(); p.add_argument("--sprites",type=Path,required=True); p.add_argument("--title-source",type=Path,required=True); p.add_argument("--sprite-reference",type=Path); p.add_argument("--cart",type=Path,required=True); p.add_argument("--preview",type=Path); p.add_argument("--check",action="store_true"); a=p.parse_args()
+ if a.check:
+  with tempfile.TemporaryDirectory() as directory:
+   temporary=Path(directory)/a.cart.name; shutil.copy2(a.cart,temporary)
+   temporary_preview=Path(directory)/"preview.png" if a.preview else None
+   gfx,title=build(a.sprites,a.title_source,temporary_preview,a.sprite_reference); inject(temporary,gfx,title)
+   stale=temporary.read_bytes()!=a.cart.read_bytes()
+   if a.preview: stale=stale or not a.preview.exists() or temporary_preview.read_bytes()!=a.preview.read_bytes()
+   if stale: raise SystemExit("Mouse & Cheese PICO assets are stale")
+ else:
+  gfx,title=build(a.sprites,a.title_source,a.preview,a.sprite_reference); inject(a.cart,gfx,title)
 if __name__=="__main__": main()

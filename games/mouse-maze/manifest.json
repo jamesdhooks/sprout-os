@@ -21,6 +21,12 @@
     "dimensions": [1280, 720],
     "fit": "cover"
   },
+  "sounds": [
+    {"id": "step", "file": "assets/sfx/step.wav"},
+    {"id": "hint", "file": "assets/sfx/hint.wav"},
+    {"id": "cheese", "file": "assets/sfx/cheese.wav"},
+    {"id": "reset", "file": "assets/sfx/reset.wav"}
+  ],
   "audience": "family",
   "capabilities": ["events", "local-storage"]
 }
