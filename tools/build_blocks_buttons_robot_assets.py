@@ -89,6 +89,15 @@ def pico_gfx() -> str:
     for name in FRAME_NAMES:
         if frames.get(name, {}).get("rect", [None] * 4)[2:] != [16, 16]:
             raise ValueError(f"{name} must remain a bottom-anchored 16x16 robot frame")
+        colours = set("".join(frames[name]["pixels"]))
+        if not {"8", "6", "c"}.issubset(colours):
+            raise ValueError(f"{name} must retain its red light, silver arms, and blue body")
+    for name in ("button-up", "button-down"):
+        colours = set("".join(frames[name]["pixels"]))
+        if not {"8", "6"}.issubset(colours):
+            raise ValueError(f"{name} must retain its red cap and silver housing")
+    if "f" not in "".join(frames["crate"]["pixels"]):
+        raise ValueError("crate must retain its engraved star")
     return compile_gfx(PICO_SOURCE)
 
 

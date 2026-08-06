@@ -13,6 +13,11 @@ raised objects from the back row toward the front row. Consequently foreground
 walls, crates, and the robot occlude objects behind them consistently, including
 during interpolated vertical movement.
 
+The gameplay atlas follows the title's object language: warm wooden blocks use
+a centred star engraving, buttons use red caps inside silver housings, and each
+blue robot frame retains silver articulated arms and a red head light. The
+asset validator treats those palette motifs as part of the cart contract.
+
 `title-source.png` is an enlarged native-pixel cover master constrained to the
 PICO-8 palette, not a smooth illustration intended for downsampling.
 `title-screen-pico.png` is its reviewed 128x128 PICO-palette conversion. The
