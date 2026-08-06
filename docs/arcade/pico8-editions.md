@@ -1,6 +1,6 @@
 # PICO-8 Editions
 
-Status: **Windows PICO-8 validated; native-wrapper process launch verified on Onion; fake-08 validation pending**
+Status: **Windows PICO-8 validated; fake-08 and licensed-wrapper process launch verified on Onion; physical acceptance pending**
 
 Sprout keeps PICO-8 editions beside their native counterparts. They share game
 rules and visual language, not runtime code or high-resolution assets. Each
@@ -88,13 +88,17 @@ from normal library discovery.
 
 ## Device evidence
 
-On 2026-08-05, an Onion `v4.3.1-1` Miyoo Mini Plus accepted the reviewed Onion
-PICO-8 native-wrapper package and locally supplied licensed Raspberry Pi
-`pico8_dyn`/`pico8.dat` files. Mouse & Cheese Maze, Blocks & Buttons, and
-Starlight Snake were transferred beneath `Roms/PICO/Sprout`; Blocks & Buttons
-and Starlight Snake each started a persistent `pico8_dyn` process through the
-wrapper.
+On 2026-08-06, an Onion `v4.3.1-1` Miyoo Mini Plus received all three public
+carts plus isolated `arcade-v1-dev` profile copies. Remote SHA-256 values for
+the public carts matched the repository bytes. The existing Onion fake-08 core
+was enabled through its on-card Package Manager payload; all three carts left a
+live RetroArch process with `fake08_libretro.so` loaded. All three also left a
+live `pico8_dyn` process through the separately installed licensed wrapper,
+which reported an opened Miyoo audio device at 22,050 Hz.
 
-The wrapper repeatedly logged `Invalid audio device ID` during both launches.
-Visual output, physical input, audio behavior, clean exit, GameSwitcher return,
-and fake-08 remain explicit operator/device checks rather than inferred passes.
+These are packaging and process-level SSH checks. They do not prove visible
+frame correctness, physical controls, perceived pacing or audio quality,
+persistence interactions, clean user-driven exit, GameSwitcher return, or
+cross-wrapper save compatibility. Those remain explicit hands-on device
+acceptance checks. Native Sprout Runtime still has no device deploy target and
+remains under the separate launcher hardware-validation halt.
