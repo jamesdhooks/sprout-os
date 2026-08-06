@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile illustrated square title art into a PICO-8 screen payload."""
+"""Compile an enlarged 128x128 pixel-art master into a PICO-8 screen payload."""
 
 from __future__ import annotations
 
@@ -28,12 +28,17 @@ def compile_pixels(source: Path) -> tuple[list[int], Image.Image]:
     image = Image.open(source).convert("RGB")
     side = min(image.size)
     left, top = (image.width - side) // 2, (image.height - side) // 2
+    # Title masters represent a native 128x128 pixel canvas enlarged for
+    # review. Nearest-neighbour sampling preserves those authored pixel blocks;
+    # a smoothing filter would turn the title back into a reduced illustration.
     image = image.crop((left, top, left + side, top + side)).resize(
-        (128, 128), Image.Resampling.LANCZOS
+        (128, 128), Image.Resampling.NEAREST
     )
     values = [nearest(image.getpixel((x, y))) for y in range(128) for x in range(128)]
     preview = Image.new("RGB", (128, 128))
     preview.putdata([PALETTE[value] for value in values])
+    if not set(preview.getdata()).issubset(set(PALETTE)):
+        raise ValueError("compiled title contains a colour outside the PICO-8 palette")
     return values, preview
 
 

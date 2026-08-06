@@ -12,7 +12,8 @@ playable garden plus one 8-pixel boundary cell fills the complete 128x128
 display without a score strip or fractional sprite scaling.
 
 The title is deliberately cover art rather than a reconstruction of gameplay.
-`title-source.png` retains the full-resolution illustration and
+`title-source.png` retains an enlarged native-pixel master constrained to the
+PICO-8 palette and
 `title-screen-pico.png` is the reviewed 128x128 PICO-palette conversion. Its
 compressed screen payload does not consume the gameplay sprite bank.
 

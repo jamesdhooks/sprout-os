@@ -13,7 +13,8 @@ raised objects from the back row toward the front row. Consequently foreground
 walls, crates, and the robot occlude objects behind them consistently, including
 during interpolated vertical movement.
 
-`title-source.png` is the full-resolution illustrated cover source.
+`title-source.png` is an enlarged native-pixel cover master constrained to the
+PICO-8 palette, not a smooth illustration intended for downsampling.
 `title-screen-pico.png` is its reviewed 128x128 PICO-palette conversion. The
 compressed title payload is decoded directly into screen memory, leaving the
 gameplay sprite bank independent and fully editable.

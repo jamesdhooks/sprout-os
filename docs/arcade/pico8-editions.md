@@ -34,11 +34,13 @@ Blocks & Buttons keeps 16px collision cells while its raised walls and crates
 use bottom-anchored 16x20 art. A row-ordered painter provides shallow top-down
 depth without rotating the collision board or changing its controls.
 
-Each cart keeps a full-resolution illustrated `title-source.png` separate from
-its literal gameplay sprites. `tools/pico8_title_assets.py` converts that cover
-to the PICO palette, writes a review PNG, and injects a compressed screen
-payload. The runtime decodes it only on title entry, so box-art complexity does
-not consume gameplay atlas space.
+Each cart keeps an enlarged native-pixel `title-source.png` separate from its
+literal gameplay sprites. The source follows the exact 16-colour PICO palette
+and represents a 128x128 logical canvas rather than a smooth illustration.
+`tools/pico8_title_assets.py` samples it with nearest-neighbour scaling, writes
+a review PNG, and injects a compressed screen payload. The runtime decodes it
+only on title entry, so box-art complexity does not consume gameplay atlas
+space.
 
 Blocks & Buttons and Starlight Snake share the small lifecycle source in
 `pico8/shared/arcade_core.lua`. `tools/pico8_arcade_build.py` injects that
