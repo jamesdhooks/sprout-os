@@ -27,6 +27,15 @@ use independent hand-authored palette-index grids. Blocks & Buttons defines
 Starlight Snake defines its heads, straight sections, corners, tails, fruit,
 and garden details at 8x8 in `pico8/snake/sprites.json`. Builders validate and
 inject these banks without shrinking or palette-fitting the native artwork.
+Blocks & Buttons uses an exact 8x8-by-16px board. Starlight Snake uses a 14x14
+playable garden inside a one-cell 8px boundary. Both compositions account for
+all 128x128 screen pixels and reserve no permanent HUD region.
+
+Each cart keeps a full-resolution illustrated `title-source.png` separate from
+its literal gameplay sprites. `tools/pico8_title_assets.py` converts that cover
+to the PICO palette, writes a review PNG, and injects a compressed screen
+payload. The runtime decodes it only on title entry, so box-art complexity does
+not consume gameplay atlas space.
 
 Blocks & Buttons and Starlight Snake share the small lifecycle source in
 `pico8/shared/arcade_core.lua`. `tools/pico8_arcade_build.py` injects that

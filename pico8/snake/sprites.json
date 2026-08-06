@@ -4,22 +4,22 @@
   "notes": "Hand-authored 8x8 PICO-8 snake tiles. Connector spans are four pixels wide and reach exact cell edges.",
   "frames": {
     "head-north": {"rect": [0, 0, 8, 8], "pixels": [
-      "00111100", "01bbbb10", "1b7bb7b1", "1bbbbbb1", "1bbbbbb1", "1b3bb3b1", "01bbbb10", "01bbbb10"
+      "00333300", "03bbbb30", "3bb7b7b3", "3bbbbbb3", "3bbabbb3", "3bbbbbb3", "03bbbb30", "03bbbb30"
     ]},
     "head-east": {"rect": [8, 0, 8, 8], "pixels": [
-      "00011100", "001bbb10", "11bbbb71", "1bbbbbb1", "1bbbbbb1", "11bbbb31", "001bbb10", "00011100"
+      "00333300", "33bbbb30", "bbbbb773", "bbbbbb73", "bbbbba33", "bbbbbbb3", "33bbbb30", "00333300"
     ]},
     "head-south": {"rect": [16, 0, 8, 8], "pixels": [
-      "01bbbb10", "01bbbb10", "1b3bb3b1", "1bbbbbb1", "1bbbbbb1", "1b7bb7b1", "01bbbb10", "00111100"
+      "03bbbb30", "03bbbb30", "3bbbbbb3", "3bbabbb3", "3bbbbbb3", "3bb7b7b3", "03bbbb30", "00333300"
     ]},
     "head-west": {"rect": [24, 0, 8, 8], "pixels": [
-      "00111000", "01bbb100", "17bbbb11", "1bbbbbb1", "1bbbbbb1", "13bbbb11", "01bbb100", "00111000"
+      "00333300", "03bbbb33", "377bbbbb", "37bbbbbb", "33abbbbb", "3bbbbbbb", "03bbbb33", "00333300"
     ]},
     "body-vertical": {"rect": [32, 0, 8, 8], "pixels": [
-      "01bbbb10", "01bbbb10", "01bb3b10", "01bbbb10", "01b3bb10", "01bbbb10", "01bbbb10", "01bbbb10"
+      "03bbbb30", "03bbbb30", "03babb30", "03bbbb30", "03bbab30", "03bbbb30", "03bbbb30", "03bbbb30"
     ]},
     "body-horizontal": {"rect": [40, 0, 8, 8], "pixels": [
-      "00000000", "11111111", "bbbbbbbb", "bbbbbbbb", "33333333", "bbbbbbbb", "11111111", "00000000"
+      "00000000", "33333333", "bbbbbbbb", "bbbbbbbb", "bbaabbbb", "bbbbbbbb", "33333333", "00000000"
     ]},
     "corner-ne": {"rect": [48, 0, 8, 8], "pixels": [
       "01bbbb10", "01bbbb10", "01bbbb11", "01bbbbbb", "01bb3333", "01bbbbbb", "00111111", "00000000"
@@ -52,16 +52,28 @@
       "00031000", "00033000", "00011000", "001aa100", "01aaaa10", "1aaaaaa1", "01aaaa10", "00111100"
     ]},
     "garden-ground": {"rect": [0, 8, 8, 8], "pixels": [
-      "22222222", "22222222", "22222222", "22222222", "22222222", "22222222", "22222222", "22222222"
+      "11111111", "11111111", "11111111", "11111111", "11111111", "11111111", "11111111", "11111111"
     ]},
     "garden-ground-soft": {"rect": [8, 8, 8, 8], "pixels": [
-      "22222222", "22222222", "22dd2222", "22dd2222", "22222222", "22222222", "22222222", "22222222"
+      "11111111", "11111111", "11221111", "12222111", "12222111", "11221111", "11111111", "11111111"
     ]},
     "garden-flower": {"rect": [16, 8, 8, 8], "pixels": [
       "00000000", "000e0e00", "0008e800", "00eeaee0", "0008e800", "000e0e00", "00003000", "00003000"
     ]},
     "garden-leaf": {"rect": [24, 8, 8, 8], "pixels": [
       "00000000", "00000000", "00330000", "033b3000", "03bb3000", "00330000", "00003000", "00000000"
+    ]},
+    "garden-wall-a": {"rect": [32, 8, 8, 8], "pixels": [
+      "13333331", "33b33333", "3bbb33b3", "33b33bbb", "333333b3", "3b333333", "bbb33b33", "1b333331"
+    ]},
+    "garden-wall-b": {"rect": [40, 8, 8, 8], "pixels": [
+      "13333331", "333b3333", "b33bbb33", "bb33b333", "3b33333b", "33333bbb", "33b333b3", "13333331"
+    ]},
+    "garden-wall-c": {"rect": [48, 8, 8, 8], "pixels": [
+      "13333331", "3b333b33", "bbb33333", "3b33b3b3", "333bbbb3", "3b333b33", "33333333", "13333331"
+    ]},
+    "garden-wall-flower": {"rect": [56, 8, 8, 8], "pixels": [
+      "13333331", "33b33333", "3bbb3e33", "33b3e8e3", "33333e33", "3b333333", "bbb33b33", "1b333331"
     ]}
   }
 }
