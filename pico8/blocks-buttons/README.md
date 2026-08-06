@@ -1,7 +1,7 @@
 # Blocks & Buttons PICO-8 Edition
 
 The canonical PICO artwork is `sprites.json`. Every frame is a literal palette
-index grid: fifteen 16x16 robot frames plus hand-authored floor, wall, button,
+index grid: fifteen 16x20 robot frames plus hand-authored floor, wall, button,
 crate, and solved-crate tiles. East-facing robot frames mirror west at runtime.
 The 8x8 board renders at an exact 16 pixels per cell and occupies the complete
 128x128 display; no HUD strip reduces the playfield.
@@ -36,3 +36,8 @@ python tools/pico8_arcade_build.py validate pico8/blocks-buttons/blocks-buttons.
 
 The native 256x256 robot masters remain a separate art family and are not
 downsampled into this cart.
+
+The cart consumes the tracked 30-room campaign in
+`game-design/blocks-buttons/campaign.json`. A undoes one active-play step;
+dead-square failures use `Crate stuck`; progress resumes the room, robot,
+crates, moves, and pushes.

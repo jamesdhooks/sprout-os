@@ -4,7 +4,8 @@
     128,
     128
   ],
-  "notes": "Hand-authored native-resolution PICO-8 pixels. Chunky high-angle arcade robot, raised star blocks, convex buttons, and slate machinery tiles. Every object is bottom anchored and east mirrors west at runtime.",
+  "notes": "Hand-authored native-resolution PICO-8 pixels. The compiler expands each reviewed robot pose into a true 16x20 bottom-anchored frame; raised star blocks and walls use the same footprint, and east mirrors west at runtime.",
+  "compiledRobotSize": [16, 20],
   "frames": {
     "hero-south-01": {
       "rect": [
@@ -592,4 +593,3 @@
     }
   }
 }
-
