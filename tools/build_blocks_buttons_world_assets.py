@@ -1,152 +1,122 @@
 #!/usr/bin/env python3
-"""Build the reviewed Blocks & Buttons high-angle world atlas."""
+"""Build screen-aligned top-down Blocks & Buttons workshop assets."""
 
 from __future__ import annotations
 
 import argparse
 import io
 import json
-import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageDraw
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "games/blocks-buttons/assets-src/world"
 ATLAS = ROOT / "games/blocks-buttons/assets/rich-world.png"
 MANIFEST = ROOT / "games/blocks-buttons/assets-src/rich-world-atlas.json"
-FRAME_NAMES = (
-    "floor-wood", "wall-workshop", "crate-idle",
-    "crate-solved", "button-up", "button-down",
-)
-NATIVE_PALETTE = tuple(
-    tuple(int(value[index:index + 2], 16) for index in (1, 3, 5))
-    for value in ("#102F5B", "#173B70", "#16579B", "#2584CE", "#39AFCC", "#66768C",
-                  "#A9BCC8", "#E4EEF0", "#8F2C36", "#D93932", "#EF654B", "#704327",
-                  "#B86B38", "#E4A35B", "#FFC53B", "#F6F0DF")
-)
+FRAME_NAMES = ("floor-wood", "wall-workshop", "crate-idle", "crate-solved", "button-up", "button-down")
+P = {
+    "navy": "#102F5B", "deep": "#173B70", "blue": "#16579B",
+    "bright": "#2584CE", "cyan": "#39AFCC", "steel": "#66768C",
+    "silver": "#A9BCC8", "white": "#E4EEF0", "dark_red": "#8F2C36",
+    "red": "#D93932", "coral": "#EF654B", "dark_wood": "#704327",
+    "wood": "#B86B38", "light_wood": "#E4A35B", "gold": "#FFC53B",
+    "cream": "#F6F0DF",
+}
 
 
-def exact_palette(image: Image.Image) -> Image.Image:
-    palette = Image.new("P", (1, 1))
-    values = [component for color in NATIVE_PALETTE for component in color]
-    palette.putpalette(values + [0] * (768 - len(values)))
-    quantized = image.convert("RGB").quantize(
-        palette=palette, dither=Image.Dither.NONE).convert("RGBA")
-    quantized.putalpha(image.getchannel("A"))
-    return quantized
+def new() -> tuple[Image.Image, ImageDraw.ImageDraw]:
+    image = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+    return image, ImageDraw.Draw(image)
 
 
-def source(name: str) -> Image.Image:
-    path = SOURCE / f"{name}.png"
-    if not path.is_file():
-        raise ValueError(f"missing reviewed world frame: {path}")
-    image = Image.open(path).convert("RGBA")
-    if image.size != (256, 256):
-        raise ValueError(f"{path.name} must be 256x256, got {image.size}")
-    return exact_palette(image)
-
-
-def solved_crate() -> Image.Image:
-    image = crate_with_star()
-    color = ImageEnhance.Color(image.convert("RGB")).enhance(1.15).convert("RGBA")
-    color.putalpha(image.getchannel("A"))
-    overlay = Image.new("RGBA", image.size, (255, 190, 55, 0))
-    overlay.putalpha(image.getchannel("A").point(lambda alpha: 38 if alpha else 0))
-    return Image.alpha_composite(color, overlay)
-
-
-def star_points(cx: int, cy: int, outer: int, inner: int) -> list[tuple[int, int]]:
-    points = []
-    for index in range(10):
-        radius = outer if index % 2 == 0 else inner
-        angle = -math.pi / 2 + index * math.pi / 5
-        points.append((round(cx + math.cos(angle) * radius),
-                       round(cy + math.sin(angle) * radius)))
-    return points
-
-
-def crate_with_star() -> Image.Image:
-    image = source("crate-idle")
-    draw = ImageDraw.Draw(image)
-    draw.polygon(star_points(128, 112, 42, 19), fill="#704327")
-    draw.polygon(star_points(128, 108, 32, 14), fill="#FFC53B")
+def floor() -> Image.Image:
+    image, draw = new()
+    # Neutral steel floor keeps the blue robot visually dominant. The bottom
+    # and right seams form the room grid without adding a panel inside a panel.
+    draw.rectangle((0, 0, 255, 255), fill=P["steel"])
+    draw.line((0, 0, 255, 0), fill=P["silver"], width=5)
+    draw.line((0, 0, 0, 255), fill=P["silver"], width=5)
+    draw.line((0, 253, 255, 253), fill=P["navy"], width=3)
+    draw.line((253, 0, 253, 255), fill=P["navy"], width=3)
     return image
 
 
-def pressed_button() -> Image.Image:
-    image = source("button-up")
-    bbox = image.getchannel("A").getbbox()
-    if bbox is None:
-        raise ValueError("button-up is blank")
-    subject = image.crop(bbox)
-    subject = subject.resize((subject.width, max(1, round(subject.height * 0.82))), Image.Resampling.NEAREST)
-    result = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    result.alpha_composite(subject, ((256 - subject.width) // 2, 256 - subject.height))
-    return result
+def wall() -> Image.Image:
+    image, draw = new()
+    # One solid cap with edge lighting, never concentric inset squares.
+    draw.rounded_rectangle((4, 4, 251, 251), radius=13, fill=P["steel"], outline=P["navy"], width=7)
+    draw.line((14, 14, 238, 14), fill=P["white"], width=7)
+    draw.line((14, 14, 14, 238), fill=P["silver"], width=7)
+    draw.line((17, 241, 241, 241), fill=P["deep"], width=5)
+    draw.line((241, 17, 241, 241), fill=P["deep"], width=5)
+    return image
 
 
-def outputs() -> tuple[bytes, bytes]:
-    images = {name: exact_palette(image) for name, image in {
-        "floor-wood": source("floor-wood"),
-        "wall-workshop": source("wall-workshop"),
-        "crate-idle": crate_with_star(),
-        "crate-solved": solved_crate(),
-        "button-up": source("button-up"),
-        "button-down": pressed_button(),
-    }.items()}
-    atlas = Image.new("RGBA", (1024, 512), (0, 0, 0, 0))
-    frames: dict[str, object] = {}
+def crate(solved: bool = False) -> Image.Image:
+    image, draw = new()
+    outer = P["gold"] if solved else P["dark_wood"]
+    face = P["light_wood"] if solved else P["wood"]
+    inset = P["gold"] if solved else P["light_wood"]
+    draw.rectangle((12, 12, 243, 243), fill=P["navy"])
+    draw.rectangle((20, 20, 235, 235), fill=outer)
+    draw.rectangle((32, 32, 223, 223), fill=face)
+    draw.rectangle((48, 48, 207, 207), fill=inset)
+    draw.line((52, 52, 203, 203), fill=P["dark_wood"], width=20)
+    draw.line((203, 52, 52, 203), fill=P["dark_wood"], width=20)
+    draw.rectangle((16, 16, 239, 25), fill=P["cream"] if solved else P["light_wood"])
+    return image
+
+
+def button(pressed: bool = False) -> Image.Image:
+    image, draw = new()
+    # Exactly one silver housing around one red cap.
+    draw.ellipse((34, 34, 221, 221), fill=P["navy"])
+    draw.ellipse((44, 44, 211, 211), fill=P["silver"])
+    if pressed:
+        draw.ellipse((61, 61, 194, 194), fill=P["dark_red"])
+        draw.ellipse((68, 68, 187, 187), fill=P["red"])
+    else:
+        draw.ellipse((56, 56, 199, 199), fill=P["dark_red"])
+        draw.ellipse((64, 64, 191, 191), fill=P["coral"])
+        draw.arc((77, 75, 178, 174), 205, 325, fill=P["cream"], width=7)
+    return image
+
+
+def outputs() -> tuple[bytes, bytes, dict[str, bytes]]:
+    images = {"floor-wood": floor(), "wall-workshop": wall(), "crate-idle": crate(),
+              "crate-solved": crate(True), "button-up": button(), "button-down": button(True)}
+    atlas = Image.new("RGBA", (1024, 512), (0, 0, 0, 0)); frames = {}; sources = {}
     for index, name in enumerate(FRAME_NAMES):
         x, y = (index % 4) * 256, (index // 4) * 256
         atlas.alpha_composite(images[name], (x, y))
-        frames[name] = {
-            "frame": {"x": x, "y": y, "width": 256, "height": 256},
-            "rotated": False,
-            "trimmed": False,
-            "spriteSourceSize": {"x": 0, "y": 0, "width": 256, "height": 256},
-            "sourceSize": {"width": 256, "height": 256},
-            "pivot": {"x": 0.5, "y": 1.0},
-        }
-    manifest = {
-        "schema": "sprite-atlas.v1",
-        "id": "blocks-buttons-world",
-        "image": "blocks-buttons-world-atlas.png",
-        "size": {"width": 1024, "height": 512},
-        "frames": frames,
-        "animations": {},
-    }
-    encoded = io.BytesIO()
-    atlas.save(encoded, format="PNG", optimize=False, compress_level=9)
-    return encoded.getvalue(), (json.dumps(manifest, indent=2) + "\n").encode()
+        frames[name] = {"frame": {"x": x, "y": y, "width": 256, "height": 256},
+                        "rotated": False, "trimmed": False,
+                        "spriteSourceSize": {"x": 0, "y": 0, "width": 256, "height": 256},
+                        "sourceSize": {"width": 256, "height": 256},
+                        "pivot": {"x": 0.5, "y": 1.0}}
+        stream = io.BytesIO(); images[name].save(stream, format="PNG", compress_level=9); sources[name] = stream.getvalue()
+    manifest = {"schema": "sprite-atlas.v1", "id": "blocks-buttons-world",
+                "image": "blocks-buttons-world-atlas.png", "size": {"width": 1024, "height": 512},
+                "frames": frames, "animations": {}}
+    stream = io.BytesIO(); atlas.save(stream, format="PNG", compress_level=9)
+    return stream.getvalue(), (json.dumps(manifest, indent=2) + "\n").encode(), sources
 
 
-def write_or_check(path: Path, data: bytes, check: bool, image: bool = False) -> None:
+def write_or_check(path: Path, data: bytes, check: bool) -> None:
     if check:
-        matches = path.is_file()
-        if matches and image:
-            actual = Image.open(path).convert("RGBA")
-            expected = Image.open(io.BytesIO(data)).convert("RGBA")
-            matches = actual.size == expected.size and actual.tobytes() == expected.tobytes()
-        elif matches:
-            matches = path.read_bytes() == data
-        if not matches:
-            raise SystemExit(f"generated asset is stale: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+        if not path.is_file() or path.read_bytes() != data: raise SystemExit(f"generated asset is stale: {path}")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True); path.write_bytes(data)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true")
-    args = parser.parse_args()
-    atlas, manifest = outputs()
-    write_or_check(ATLAS, atlas, args.check, image=True)
-    write_or_check(MANIFEST, manifest, args.check)
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--check", action="store_true")
+    args = parser.parse_args(); atlas, manifest, sources = outputs()
+    write_or_check(ATLAS, atlas, args.check); write_or_check(MANIFEST, manifest, args.check)
+    for name, data in sources.items(): write_or_check(SOURCE / f"{name}.png", data, args.check)
     return 0
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+if __name__ == "__main__": raise SystemExit(main())

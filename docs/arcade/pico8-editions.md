@@ -14,25 +14,24 @@ cart is a standalone `.p8` file suitable for Onion's PICO/fake-08 emulator.
 | Blocks & Buttons | Complete 30 solver-verified rooms | Precomputed dead square | Room and resumable room state |
 | Starlight Snake | Round: 12 fruit; Endless: score chase | Wall or body collision | Mode bests and completed rounds |
 
-Blocks & Buttons uses a top-down toy-workshop renderer aligned to its square
-collision grid. Walls, crates, and buttons add shallow vertical faces for depth
-without rotating the board into an isometric projection. Its robot uses
+Blocks & Buttons uses a strict orthographic top-down toy-workshop renderer
+aligned to its square collision grid. Walls, crates, buttons, and the robot
+remain inside their occupied cells without perspective overlap. Its robot uses
 reviewed north, south, and west walk/push families; east mirrors west at runtime.
-The west/east family is a strict screen-cardinal side view under the same high
-camera, not a diagonal three-quarter pose. Every character, crate, and button
-uses the bottom of its logical cell as the ground-contact baseline.
-The native editions retain their 256x256 masters, while the standalone carts
-use independent hand-authored palette-index grids. Blocks & Buttons defines a
-16x20 robot and raised workshop props in `pico8/blocks-buttons/sprites.json`.
+The west/east family is screen-cardinal rather than a diagonal three-quarter
+pose. Every character, crate, and button uses a stable cell-relative anchor.
+The native editions retain high-resolution masters, while the standalone carts
+use independent hand-refined palette-index grids. Blocks & Buttons defines a
+16x16 robot and workshop props in `pico8/blocks-buttons/sprites.json`.
 Starlight Snake defines its heads, straight sections, corners, tails, fruit,
 and garden details at 8x8 in `pico8/snake/sprites.json`. Builders validate and
 inject these banks without shrinking or palette-fitting the native artwork.
 Blocks & Buttons uses an exact 8x8-by-16px board. Starlight Snake uses a 14x14
 playable garden inside a one-cell 8px boundary. Both compositions account for
 all 128x128 screen pixels and reserve no permanent HUD region.
-Blocks & Buttons keeps 16px collision cells while its raised walls and crates
-use bottom-anchored 16x20 art. A row-ordered painter provides shallow top-down
-depth without rotating the collision board or changing its controls.
+Blocks & Buttons keeps 16px collision and artwork cells. Square walls and
+crates, circular buttons, and the robot therefore remain legible without
+rotating the collision board or changing its controls.
 
 Each cart keeps an enlarged native-pixel `title-source.png` separate from its
 literal gameplay sprites. The source follows the exact 16-colour PICO palette

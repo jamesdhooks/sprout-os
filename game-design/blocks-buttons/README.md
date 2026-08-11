@@ -1,6 +1,6 @@
 # Blocks & Buttons
 
-Blocks & Buttons is a calm workshop puzzle for short family play sessions. Move the robot through an 8x8 room and push every star block onto a red button.
+Blocks & Buttons is a calm workshop puzzle for short family play sessions. Move the robot through an 8x8 room and push every crate onto a red button.
 
 ## Shared rules
 
@@ -23,7 +23,7 @@ The tracked campaign is generated offline from solved states and proven with a f
 
 ## Visual language
 
-Screen-aligned high-angle toy workshop. The grid is not rotated. Blue robot, silver arms, red beacon, golden star blocks, convex red buttons, and slate machinery walls all touch the bottom-center of their occupied cell. Native uses high-resolution pixel-art masters; PICO-8 uses independent 16x20 raised sprites.
+Screen-aligned, high-angle top-down toy workshop. The grid is never rotated, but the robot may rise above its collision footprint while remaining bottom-centre anchored. Its south view shows a pale face panel with two eyes, its north view shows the rear shell, and its side view is a true screen-cardinal profile. The identity is a compact blue body, articulated silver arms and clamps, tiny feet, and a red/cyan crown beacon. Crates are square wooden X-braced tops, buttons are one red cap inside exactly one silver ring, and walls are one solid blue-steel surface with corner bolts rather than nested panels. Native uses high-resolution pixel-art masters; PICO-8 uses an independent, hand-refined 16x16 interpretation of the same character.
 
 Palette: [palette.json](palette.json).
 

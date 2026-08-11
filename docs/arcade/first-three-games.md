@@ -35,7 +35,7 @@ The shared game-design record is [Mouse & Cheese](../../game-design/mouse-cheese
 
 ## Blocks & Buttons
 
-Move the workshop robot through an 8x8 room and push every star block onto a
+Move the workshop robot through an 8x8 room and push every crate onto a
 red button. A moves one step of history backward during active play. A blocked
 crate on a precomputed dead square produces the calm `Crate stuck` retry state;
 this is not limited to visually obvious corners.
@@ -54,9 +54,9 @@ and safe deadlock temptations. A workshop celebration advances automatically;
 the final card records campaign completion and returns to the title flow.
 
 Native presentation uses a 480x480, 60-pixel-cell arena with 80-pixel workshop
-scenery columns, bottom-anchored raised props, and row sorting. The PICO cart
-uses 16-pixel collision cells with 16x20 robot, wall, and crate art; east is a
-runtime mirror of west.
+scenery columns and strict orthographic top-down props. The PICO cart uses
+16-pixel collision and artwork cells for its robot, walls, crates, and buttons;
+east is a runtime mirror of west.
 
 The shared game-design record and generation thresholds are in
 [Blocks & Buttons](../../game-design/blocks-buttons/README.md).

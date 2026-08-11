@@ -31,6 +31,23 @@ Specify:
 
 Do not describe sheet coordinates in the asset concept prompt. Generate or select the identity first, then ask the animation/directional tool for consistent views.
 
+## Perspective contract
+
+Set the endpoint's explicit `view` field on every generation. Prompt wording is
+supplementary and never substitutes for the schema field.
+
+- Strict overhead props use `create_1_direction_object(view="top-down")`.
+- Directional actors use `create_character(view="high top-down")`; when strict
+  overhead identity matters, first approve a `top-down` object reference and
+  pass that image through `create_character(mode="v3", reference_image_...)`.
+- `low top-down` means an RPG-like elevated three-quarter camera and must not be
+  accepted for an orthographic overhead game.
+- Reject a purported overhead result if it exposes a face, front torso,
+  dangling legs, vertical side plane, cast shadow, or diagonal ground axis.
+
+The final visual review overrules metadata. A result labelled `high top-down`
+that reads side-on is rejected rather than integrated.
+
 ## Small PICO sprites
 
 PixelLab's raw-image tools have minimum canvas/area limits. Generate at a clean integer multiple of the final sprite, use low detail and flat/basic shading, archive the original, and derive the tiny sprite locally. Forced palette does not guarantee readable geometry; validate at 1x and redraw pixels where needed.

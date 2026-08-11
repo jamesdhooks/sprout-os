@@ -9,20 +9,22 @@ The rich artwork uses the engine-neutral `sprite-atlas.v1` interchange format.
 `atlas-import.json` combines those atlases with the fallback primitives and
 `tools/import-sprite-atlases.py --check` verifies the runtime manifest.
 
-The reviewed robot source consists of fifteen transparent 256x256 masters in
-`robot/`: four walk frames and one push frame for north, south, and west.
+`tools/build_blocks_buttons_robot_assets.py` consumes 24 reviewed transparent
+high-angle masters in `robot/`: four foot-motion frames and four push frames
+for north, south, and west. The source family follows the character contract in
+`game-design/blocks-buttons/README.md`; the builder supplies deterministic
+fallback art only when a source is absent.
 East deliberately mirrors west at runtime, avoiding a redundant horizontal
-source family. `tools/build_blocks_buttons_robot_assets.py` validates those
-masters and packs the 1024x1024 native atlas. The cart does not downsample
-these masters: its 16x20 robot plus floor, wall, button, and crate frames are
-hand-authored as hexadecimal pixel grids in
+source family. `tools/build_blocks_buttons_robot_assets.py` normalizes those
+masters to stable 128x160 cells and packs the native atlas. The cart does not
+downsample these masters: its 16x16 robot plus floor, wall, button, and crate
+frames are hand-refined as hexadecimal pixel grids in
 `pico8/blocks-buttons/sprites.json`. The same builder validates and injects
 that independent PICO bank. Its `--check` mode verifies exact atlas pixels,
 byte-stable metadata, and cartridge payloads.
 
-The four reviewed world masters in `world/` use the same fixed high-angle,
-unrotated projection. Floor is a flat walking plane; walls, crates, and buttons
-show a shallow south-facing edge. `tools/build_blocks_buttons_world_assets.py`
-derives solved/pressed states and packs the native world atlas. Character and
-object pivots are bottom-center, and the runtime places that pivot on the exact
-bottom edge of the occupied collision cell.
+The world masters in `world/` use a screen-aligned top-down projection.
+Floor is a flat walking plane; walls and crates are square; buttons are circular
+and visually distinct in raised and pressed states. `tools/build_blocks_buttons_world_assets.py`
+packs the native world atlas and its reviewed derivatives. Every object remains
+inside its collision cell, and the robot uses a stable bottom-center pivot.

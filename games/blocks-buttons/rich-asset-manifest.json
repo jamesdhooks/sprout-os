@@ -20,7 +20,7 @@
       "image": "assets/rich-character.png",
       "size": [
         512,
-        640
+        960
       ],
       "sampling": "nearest",
       "mips": [
@@ -28,7 +28,7 @@
           "image": "assets/rich-character@0.25x.png",
           "size": [
             128,
-            160
+            240
           ],
           "scale": 0.25
         },
@@ -36,7 +36,7 @@
           "image": "assets/rich-character@0.5x.png",
           "size": [
             256,
-            320
+            480
           ],
           "scale": 0.5
         }
@@ -338,10 +338,52 @@
       ]
     },
     {
-      "id": "rich.hero-south-push",
+      "id": "rich.hero-south-push-01",
       "atlas": "rich-character",
       "rect": [
         0,
+        160,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-south-push-02",
+      "atlas": "rich-character",
+      "rect": [
+        128,
+        160,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-south-push-03",
+      "atlas": "rich-character",
+      "rect": [
+        256,
+        160,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-south-push-04",
+      "atlas": "rich-character",
+      "rect": [
+        384,
         160,
         128,
         160
@@ -355,8 +397,8 @@
       "id": "rich.hero-north-01",
       "atlas": "rich-character",
       "rect": [
-        128,
-        160,
+        0,
+        320,
         128,
         160
       ],
@@ -369,8 +411,8 @@
       "id": "rich.hero-north-02",
       "atlas": "rich-character",
       "rect": [
-        256,
-        160,
+        128,
+        320,
         128,
         160
       ],
@@ -383,8 +425,8 @@
       "id": "rich.hero-north-03",
       "atlas": "rich-character",
       "rect": [
-        384,
-        160,
+        256,
+        320,
         128,
         160
       ],
@@ -397,7 +439,7 @@
       "id": "rich.hero-north-04",
       "atlas": "rich-character",
       "rect": [
-        0,
+        384,
         320,
         128,
         160
@@ -408,11 +450,53 @@
       ]
     },
     {
-      "id": "rich.hero-north-push",
+      "id": "rich.hero-north-push-01",
+      "atlas": "rich-character",
+      "rect": [
+        0,
+        480,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-north-push-02",
       "atlas": "rich-character",
       "rect": [
         128,
-        320,
+        480,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-north-push-03",
+      "atlas": "rich-character",
+      "rect": [
+        256,
+        480,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-north-push-04",
+      "atlas": "rich-character",
+      "rect": [
+        384,
+        480,
         128,
         160
       ],
@@ -425,8 +509,8 @@
       "id": "rich.hero-west-01",
       "atlas": "rich-character",
       "rect": [
-        256,
-        320,
+        0,
+        640,
         128,
         160
       ],
@@ -439,8 +523,8 @@
       "id": "rich.hero-west-02",
       "atlas": "rich-character",
       "rect": [
-        384,
-        320,
+        128,
+        640,
         128,
         160
       ],
@@ -453,8 +537,8 @@
       "id": "rich.hero-west-03",
       "atlas": "rich-character",
       "rect": [
-        0,
-        480,
+        256,
+        640,
         128,
         160
       ],
@@ -467,8 +551,8 @@
       "id": "rich.hero-west-04",
       "atlas": "rich-character",
       "rect": [
-        128,
-        480,
+        384,
+        640,
         128,
         160
       ],
@@ -478,11 +562,53 @@
       ]
     },
     {
-      "id": "rich.hero-west-push",
+      "id": "rich.hero-west-push-01",
+      "atlas": "rich-character",
+      "rect": [
+        0,
+        800,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-west-push-02",
+      "atlas": "rich-character",
+      "rect": [
+        128,
+        800,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-west-push-03",
       "atlas": "rich-character",
       "rect": [
         256,
-        480,
+        800,
+        128,
+        160
+      ],
+      "pivot": [
+        64,
+        160
+      ]
+    },
+    {
+      "id": "rich.hero-west-push-04",
+      "atlas": "rich-character",
+      "rect": [
+        384,
+        800,
         128,
         160
       ],
@@ -660,7 +786,19 @@
       "loop": true,
       "frames": [
         {
-          "sprite": "rich.hero-south-push",
+          "sprite": "rich.hero-south-push-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-push-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-push-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-south-push-04",
           "ticks": 8
         }
       ]
@@ -692,7 +830,19 @@
       "loop": true,
       "frames": [
         {
-          "sprite": "rich.hero-north-push",
+          "sprite": "rich.hero-north-push-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-push-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-push-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-north-push-04",
           "ticks": 8
         }
       ]
@@ -724,7 +874,19 @@
       "loop": true,
       "frames": [
         {
-          "sprite": "rich.hero-west-push",
+          "sprite": "rich.hero-west-push-01",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-push-02",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-push-03",
+          "ticks": 8
+        },
+        {
+          "sprite": "rich.hero-west-push-04",
           "ticks": 8
         }
       ]

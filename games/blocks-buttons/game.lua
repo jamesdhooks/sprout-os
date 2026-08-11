@@ -41,7 +41,7 @@ local arena_x = math.floor((screen_width - cell * columns) / 2)
 local arena_y = 0
 local half_cell = math.floor(cell / 2)
 local object_scale = cell / 256
-local robot_scale = 65 / 160
+local robot_scale = 60 / 160
 local move_duration = 8
 local card_duration = 78
 local direction_names = {up = "north", right = "west", down = "south", left = "west"}
@@ -288,13 +288,20 @@ function render()
     for _,entry in ipairs(render_crates) do if entry.y>=row and entry.y<row+1 then
       local crate=crates[entry.index]
       sprites[#sprites+1]={sprite=button_at(crate.x,crate.y) and "rich.crate-solved" or "rich.crate-idle",
-        x=arena_x+entry.x*cell+half_cell,y=arena_y+(entry.y+1)*cell,scale=object_scale}
+        x=math.floor(arena_x+entry.x*cell+half_cell+0.5),
+        y=math.floor(arena_y+(entry.y+1)*cell+0.5),scale=object_scale}
     end end
     if ry>=row and ry<row+1 then
       local facing=direction_names[direction]
       local id="rich.hero-"..facing.."-02"
-      if moving then id=moving.pushing and "rich.hero-"..facing.."-push" or string.format("rich.hero-%s-%02d",facing,math.min(4,math.floor(progress*4)+1)) end
-      sprites[#sprites+1]={sprite=id,x=arena_x+rx*cell+half_cell,y=arena_y+(ry+1)*cell,scale=robot_scale,flipX=direction=="right"}
+      if moving then
+        local frame=math.min(4,math.floor(progress*4)+1)
+        id=moving.pushing and string.format("rich.hero-%s-push-%02d",facing,frame)
+          or string.format("rich.hero-%s-%02d",facing,frame)
+      end
+      sprites[#sprites+1]={sprite=id,
+        x=math.floor(arena_x+rx*cell+half_cell+0.5),
+        y=math.floor(arena_y+(ry+1)*cell+0.5),scale=robot_scale,flipX=direction=="right"}
     end
   end
   sprout.sprite_batch(sprites)
@@ -305,6 +312,10 @@ end
 
 function capture_scenario(name)
   if name == "gameplay" then load_room(10,false)
+  elseif name == "push" then
+    load_room(10,false); direction="down"; player_x,player_y=5,3
+    crates[2].x,crates[2].y=5,4
+    moving={tick=4,from_x=5,from_y=2,crate=2,crate_from_x=5,crate_from_y=3,pushing=true}
   elseif name == "win" then load_room(1,false); crates=copy_points(room.b); complete=true; card_ticks=18
   elseif name == "fail" then load_room(12,false); deadlocked=true; card_ticks=18
   elseif name == "undo" then load_room(4,false); undo_state={player_x=player_x,player_y=player_y,crates=copy_points(room.c),moves=0,pushes=0}

@@ -545,7 +545,7 @@ int main() {
     check(blocks_package.title_screen.enabled,
           "Blocks & Buttons title presentation was not loaded");
     check(blocks_package.assets.atlases.size() == 3 &&
-              blocks_package.assets.sprites.size() == 36 &&
+              blocks_package.assets.sprites.size() == 45 &&
               blocks_package.assets.animations.size() == 10 &&
               blocks_package.sounds.size() == 7 &&
               blocks_package.assets.atlases[1].mips.size() == 2 &&

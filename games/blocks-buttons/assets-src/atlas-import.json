@@ -14,8 +14,8 @@
       "image": "assets/rich-character.png",
       "sampling": "nearest",
       "mips": [
-        {"image": "assets/rich-character@0.25x.png", "size": [128, 160], "scale": 0.25},
-        {"image": "assets/rich-character@0.5x.png", "size": [256, 320], "scale": 0.5}
+        {"image": "assets/rich-character@0.25x.png", "size": [128, 240], "scale": 0.25},
+        {"image": "assets/rich-character@0.5x.png", "size": [256, 480], "scale": 0.5}
       ],
       "prefix": "rich.",
       "animationPrefix": "rich."
