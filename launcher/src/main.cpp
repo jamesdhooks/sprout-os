@@ -1,4 +1,5 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/direct_framebuffer_surface.hpp"
 #include "sprout/launcher/daily_time_policy.hpp"
 #include "sprout/launcher/household_seed.hpp"
 #include "sprout/launcher/local_configuration.hpp"
@@ -11,6 +12,9 @@
 #include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/profile_repository.hpp"
 #include "sprout/launcher/recovery_presentation.hpp"
+#include "sprout/launcher/sdl_input.hpp"
+#include "sprout/launcher/onion_launch_adapter.hpp"
+#include "sprout/launcher/onion_runtime_handoff.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
 #include "sprout/launcher/parent_access_controller.hpp"
 #include "sprout/launcher/parent_pin_presentation.hpp"
@@ -20,6 +24,7 @@
 #include "sprout/launcher/setup_wizard.hpp"
 #include "sprout/launcher/string_compat.hpp"
 #include "sprout/launcher/startup_health.hpp"
+#include "sprout/launcher/window_policy.hpp"
 
 #include <SDL.h>
 
@@ -29,6 +34,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -36,8 +42,14 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <vector>
 #include <variant>
+#include <vector>
+
+SDL_Surface* g_direct_framebuffer_surface = nullptr;
+
+SDL_Surface* sprout::launcher::direct_framebuffer_surface() noexcept {
+  return g_direct_framebuffer_surface;
+}
 
 namespace {
 
@@ -65,60 +77,6 @@ class TemporaryDirectory {
   std::filesystem::path path_;
 };
 
-std::optional<Action> keyboard_action(SDL_Keycode key) {
-  switch (key) {
-    case SDLK_UP:
-    case SDLK_w:
-      return Action::Up;
-    case SDLK_DOWN:
-    case SDLK_s:
-      return Action::Down;
-    case SDLK_LEFT:
-    case SDLK_a:
-      return Action::Left;
-    case SDLK_RIGHT:
-    case SDLK_d:
-      return Action::Right;
-    case SDLK_RETURN:
-    case SDLK_SPACE:
-    case SDLK_z:
-      return Action::Confirm;
-    case SDLK_ESCAPE:
-    case SDLK_BACKSPACE:
-    case SDLK_x:
-    case SDLK_b:
-      return Action::Back;
-    case SDLK_e:
-      return Action::ZoomIn;
-    case SDLK_q:
-      return Action::ZoomOut;
-    default:
-      return std::nullopt;
-  }
-}
-
-std::optional<Action> controller_action(std::uint8_t button) {
-  switch (button) {
-    case SDL_CONTROLLER_BUTTON_DPAD_UP:
-      return Action::Up;
-    case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
-      return Action::Down;
-    case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
-      return Action::Left;
-    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
-      return Action::Right;
-    case SDL_CONTROLLER_BUTTON_A:
-      return Action::Confirm;
-    case SDL_CONTROLLER_BUTTON_B:
-      return Action::Back;
-    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
-      return Action::ZoomIn;
-    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
-      return Action::ZoomOut;
-    default:
-      return std::nullopt;
-  }
-}
 
 sprout::launcher::AccessMoment current_access_time() {
   const std::time_t now = std::time(nullptr);
@@ -156,12 +114,97 @@ sprout::launcher::TimePolicySample current_time_policy_sample() {
 }
 
 SDL_Renderer* create_renderer(SDL_Window* window) {
+  const char* framebuffer_path = std::getenv("SPROUT_DIRECT_FRAMEBUFFER");
+  if (framebuffer_path != nullptr && framebuffer_path[0] != '\0') {
+    g_direct_framebuffer_surface = SDL_CreateRGBSurfaceWithFormat(
+        0, 640, 480, 32, SDL_PIXELFORMAT_RGB888);
+    if (g_direct_framebuffer_surface == nullptr) {
+      std::cerr << "SPROUT_FRAMEBUFFER surface-create-failed error="
+                << SDL_GetError() << '\n';
+      return nullptr;
+    }
+    SDL_Renderer* renderer = SDL_CreateSoftwareRenderer(g_direct_framebuffer_surface);
+    if (renderer == nullptr) {
+      std::cerr << "SPROUT_FRAMEBUFFER software-renderer-create-failed error="
+                << SDL_GetError() << '\n';
+    } else {
+      std::cerr << "SPROUT_FRAMEBUFFER software-renderer-ready path="
+                << framebuffer_path << '\n';
+    }
+    return renderer;
+  }
+
   SDL_Renderer* renderer =
       SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   if (renderer == nullptr) {
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
   }
   return renderer;
+}
+
+void render_window_surface_probe(SDL_Window* window) {
+  SDL_Surface* surface = SDL_GetWindowSurface(window);
+  if (surface == nullptr) {
+    std::cerr << "SPROUT_SURFACE get-failed error=" << SDL_GetError() << '\n';
+    return;
+  }
+
+  std::cerr << "SPROUT_SURFACE begin size=" << surface->w << 'x' << surface->h
+            << " pitch=" << surface->pitch << " format="
+            << SDL_GetPixelFormatName(surface->format->format) << '\n';
+  const std::array<SDL_Color, 4> colors{{
+      SDL_Color{255, 0, 255, 255}, SDL_Color{255, 255, 255, 255},
+      SDL_Color{0, 255, 255, 255}, SDL_Color{255, 255, 0, 255}}};
+  const std::array<SDL_Rect, 4> panels{{
+      SDL_Rect{0, 0, 320, 240}, SDL_Rect{320, 0, 320, 240},
+      SDL_Rect{0, 240, 320, 240}, SDL_Rect{320, 240, 320, 240}}};
+  for (std::size_t index = 0; index < panels.size(); ++index) {
+    const auto& color = colors[index];
+    const Uint32 pixel =
+        SDL_MapRGB(surface->format, color.r, color.g, color.b);
+    if (SDL_FillRect(surface, &panels[index], pixel) != 0) {
+      std::cerr << "SPROUT_SURFACE fill-failed panel=" << index
+                << " error=" << SDL_GetError() << '\n';
+      return;
+    }
+  }
+  const int update_status = SDL_UpdateWindowSurface(window);
+  std::cerr << "SPROUT_SURFACE update-status=" << update_status;
+  if (update_status != 0) {
+    std::cerr << " error=" << SDL_GetError();
+  }
+  std::cerr << " hold-ms=6000\n";
+  SDL_Delay(6000);
+}
+
+void render_device_scanout_probe(SDL_Renderer* renderer) {
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+  SDL_SetRenderDrawColor(renderer, 255, 0, 255, 255);
+  SDL_RenderClear(renderer);
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  const SDL_Rect white_panel{160, 120, 320, 240};
+  SDL_RenderFillRect(renderer, &white_panel);
+  SDL_RenderPresent(renderer);
+  std::cerr << "SPROUT_SCANOUT primitive-frame-1 magenta-white-presented"
+            << std::endl;
+  SDL_Delay(1500);
+
+  const std::array<SDL_Color, 4> colors{{
+      {255, 0, 0, 255},
+      {0, 255, 0, 255},
+      {0, 0, 255, 255},
+      {255, 255, 0, 255},
+  }};
+  for (std::size_t index = 0; index < colors.size(); ++index) {
+    const auto& color = colors[index];
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    const SDL_Rect bar{static_cast<int>(index) * 160, 0, 160, 480};
+    SDL_RenderFillRect(renderer, &bar);
+  }
+  SDL_RenderPresent(renderer);
+  std::cerr << "SPROUT_SCANOUT primitive-frame-2 color-bars-presented"
+            << std::endl;
+  SDL_Delay(2500);
 }
 
 std::vector<sprout::launcher::Profile> load_launcher_profiles(
@@ -438,10 +481,40 @@ int save_screenshot(SDL_Renderer* renderer, const char* path) {
   return EXIT_SUCCESS;
 }
 
+bool commit_parent_exit_marker() {
+  const char* configured = std::getenv("SPROUT_EXIT_MARKER");
+  if (configured == nullptr || std::string_view(configured).empty()) {
+    return true;
+  }
+  const std::filesystem::path marker(configured);
+  const auto staged = marker.string() + ".tmp";
+  std::error_code error;
+  {
+    std::ofstream output(staged, std::ios::binary | std::ios::trunc);
+    output << "sprout-parent-exit-v1\n";
+    output.flush();
+    if (!output) {
+      std::filesystem::remove(staged, error);
+      std::cerr << "Parent exit marker could not be staged\n";
+      return false;
+    }
+  }
+  std::filesystem::remove(marker, error);
+  error.clear();
+  std::filesystem::rename(staged, marker, error);
+  if (error) {
+    std::filesystem::remove(staged, error);
+    std::cerr << "Parent exit marker could not be committed\n";
+    return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
   bool smoke_test = false;
+  bool device_scanout_probe = false;
   bool arcade_smoke_test = false;
   std::optional<std::string> arcade_smoke_item;
   std::optional<std::string> auto_launch_arcade_item;
@@ -457,6 +530,8 @@ int main(int argc, char* argv[]) {
     const std::string_view argument(argv[index]);
     if (argument == "--smoke-test") {
       smoke_test = true;
+    } else if (argument == "--device-scanout-probe") {
+      device_scanout_probe = true;
     } else if (argument == "--arcade-smoke-test") {
       arcade_smoke_test = true;
     } else if (argument == "--arcade-smoke-item" && index + 1 < argc) {
@@ -555,8 +630,19 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  const std::uint32_t window_flags =
+  const char* current_video_driver = SDL_GetCurrentVideoDriver();
+  const std::string_view video_driver =
+      current_video_driver == nullptr ? std::string_view{} : current_video_driver;
+  std::uint32_t window_flags =
       smoke_test || screenshot ? SDL_WINDOW_HIDDEN : SDL_WINDOW_SHOWN;
+  if (!smoke_test && !screenshot &&
+      sprout::launcher::requires_fullscreen_window(video_driver)) {
+    window_flags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
+  }
+  std::cerr << "SDL video driver: "
+            << (video_driver.empty() ? "<none>" : video_driver)
+            << " requested-window-flags=0x" << std::hex << window_flags
+            << std::dec << '\n';
   SDL_Window* window = SDL_CreateWindow(
       "Sprout Launcher Preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480,
       window_flags);
@@ -566,6 +652,11 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  if (const char* surface_probe = std::getenv("SPROUT_DEVICE_SURFACE_PROBE");
+      surface_probe != nullptr && std::string_view(surface_probe) == "1") {
+    render_window_surface_probe(window);
+  }
+
   SDL_Renderer* renderer = create_renderer(window);
   if (renderer == nullptr) {
     std::cerr << "Renderer creation failed: " << SDL_GetError() << '\n';
@@ -573,7 +664,32 @@ int main(int argc, char* argv[]) {
     SDL_Quit();
     return EXIT_FAILURE;
   }
+  SDL_RendererInfo renderer_info{};
+  int output_width = 0;
+  int output_height = 0;
+  const int renderer_info_status = SDL_GetRendererInfo(renderer, &renderer_info);
+  const int output_size_status =
+      SDL_GetRendererOutputSize(renderer, &output_width, &output_height);
+  std::cerr << "SDL window actual-flags=0x" << std::hex
+            << SDL_GetWindowFlags(window) << std::dec
+            << " renderer="
+            << (renderer_info_status == 0 && renderer_info.name != nullptr
+                    ? renderer_info.name
+                    : "<unknown>")
+            << " renderer-flags=0x" << std::hex
+            << (renderer_info_status == 0 ? renderer_info.flags : 0U) << std::dec
+            << " output=";
+  if (output_size_status == 0) {
+    std::cerr << output_width << 'x' << output_height;
+  } else {
+    std::cerr << "<unknown>";
+  }
+  std::cerr << '\n';
   SDL_RenderSetLogicalSize(renderer, 640, 480);
+  if (device_scanout_probe &&
+      sprout::launcher::requires_fullscreen_window(video_driver)) {
+    render_device_scanout_probe(renderer);
+  }
   const auto executable_root =
       std::filesystem::absolute(argv[0]).parent_path();
   const auto startup_splash =
@@ -773,6 +889,8 @@ int main(int argc, char* argv[]) {
         screenshot_screen == "library-favorites" ||
         screenshot_screen == "library-all" ||
         screenshot_screen == "library-arcade" ||
+        screenshot_screen == "library-child" ||
+        screenshot_screen == "library-parent" ||
         screenshot_screen == "library-empty" ||
         screenshot_screen == "library-unavailable") {
       auto section = sprout::launcher::LibrarySection::Recent;
@@ -795,7 +913,15 @@ int main(int argc, char* argv[]) {
         (void)library.handle(Action::Up);
         (void)library.handle(Action::Confirm);
       }
-      sprout::launcher::render_library(renderer, library);
+      auto profile_context = sprout::launcher::make_demo_household();
+      const sprout::launcher::Profile* active_profile = nullptr;
+      if (screenshot_screen == "library-child") {
+        active_profile = &profile_context[0];
+      } else if (screenshot_screen == "library-parent") {
+        active_profile = &profile_context[1];
+      }
+      sprout::launcher::render_library(renderer, library, active_profile, {},
+                                       built_in_avatar_root);
       const int result = save_screenshot(renderer, screenshot_path);
       SDL_DestroyRenderer(renderer);
       SDL_DestroyWindow(window);
@@ -921,14 +1047,44 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    LauncherState state(sprout::launcher::make_demo_household());
+    auto screenshot_profiles = sprout::launcher::make_demo_household();
+    if (screenshot_screen == "profile-select-four") {
+      screenshot_profiles = {
+          {"child-alex", "Alex", sprout::launcher::ProfileRole::Child,
+           0x70B77E, "builtin:friendly-dragon", "builtin:garden-morning"},
+          {"child-sam", "Sam", sprout::launcher::ProfileRole::Child,
+           0xE6A15A, "builtin:astronaut-cat", "builtin:sunny-cove"},
+          {"parent-one", "Parent", sprout::launcher::ProfileRole::Parent,
+           0x8E7DBE, "builtin:explorer-fox", "builtin:treehouse-library"},
+          {"parent-two", "Grown-up", sprout::launcher::ProfileRole::Parent,
+           0x4A90A4, "builtin:otter", "builtin:firefly-evening"},
+      };
+    } else if (screenshot_screen == "profile-select-six") {
+      screenshot_profiles = {
+          {"child-alex", "Alex", sprout::launcher::ProfileRole::Child,
+           0x70B77E, "builtin:friendly-dragon", "builtin:garden-morning"},
+          {"child-sam", "Sam", sprout::launcher::ProfileRole::Child,
+           0xE6A15A, "builtin:astronaut-cat", "builtin:sunny-cove"},
+          {"child-riley", "Riley", sprout::launcher::ProfileRole::Child,
+           0x6B93C7, "builtin:red-panda", "builtin:firefly-evening"},
+          {"child-jamie", "Jamie", sprout::launcher::ProfileRole::Child,
+           0xD47A9D, "builtin:unicorn", "builtin:garden-morning"},
+          {"parent-one", "Parent", sprout::launcher::ProfileRole::Parent,
+           0x8E7DBE, "builtin:explorer-fox", "builtin:treehouse-library"},
+          {"parent-two", "Grown-up", sprout::launcher::ProfileRole::Parent,
+           0x4A90A4, "builtin:otter", "builtin:firefly-evening"},
+      };
+    }
+    LauncherState state(std::move(screenshot_profiles));
     if (screenshot_screen == "child" || screenshot_screen == "child-home") {
       (void)state.handle(Action::Confirm);
     } else if (screenshot_screen == "parent" ||
                screenshot_screen == "parent-home") {
       (void)state.handle(Action::Right);
       (void)state.handle(Action::Confirm);
-    } else if (screenshot_screen != "profile-select") {
+    } else if (screenshot_screen != "profile-select" &&
+               screenshot_screen != "profile-select-four" &&
+               screenshot_screen != "profile-select-six") {
       std::cerr << "Unsupported screenshot screen: " << screenshot_screen << '\n';
       SDL_DestroyRenderer(renderer);
       SDL_DestroyWindow(window);
@@ -945,9 +1101,13 @@ int main(int argc, char* argv[]) {
     return result;
   }
 
-  if (sprout::launcher::render_startup_splash(renderer, startup_splash)) {
-    SDL_Delay(900);
-  }
+  const bool startup_art_loaded =
+      sprout::launcher::render_startup_splash(renderer, startup_splash);
+  std::cerr << "SPROUT_STARTUP first-frame-presented art="
+            << (startup_art_loaded ? "loaded" : "fallback") << std::endl;
+  // Give the opening artwork enough time to read as an intentional boot
+  // screen rather than a flash between Onion and profile selection.
+  SDL_Delay(startup_art_loaded ? 2500 : 250);
 
   SDL_GameController* controller = nullptr;
   for (int index = 0; index < SDL_NumJoysticks(); ++index) {
@@ -977,6 +1137,9 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::LibraryPresentation> library;
   sprout::launcher::SystemLaunchProcess launch_process;
   std::unique_ptr<sprout::launcher::NativeLaunchAdapter> native_launch;
+  std::unique_ptr<sprout::launcher::OnionRuntimeHandoffProcess>
+      onion_handoff_process;
+  std::unique_ptr<sprout::launcher::OnionLaunchAdapter> onion_launch;
   std::vector<sprout::launcher::LibraryEntry> library_entries;
   std::optional<sprout::launcher::HouseholdSeed> household_seed;
   std::optional<std::string> parent_credential_ref;
@@ -1040,12 +1203,23 @@ int main(int argc, char* argv[]) {
   };
 
   try {
+    std::cerr << "SPROUT_STARTUP data-initialization-begin" << std::endl;
     if (household_seed_path.has_value()) {
       household_seed = sprout::launcher::load_household_seed(*household_seed_path);
     }
     library_entries = sd_card_root.has_value()
                           ? discovered_library(*sd_card_root)
                           : sprout::launcher::make_demo_library();
+    if (sd_card_root.has_value()) {
+      if (const char* runtime_root = std::getenv("SPROUT_ONION_RUNTIME_ROOT");
+          runtime_root != nullptr && std::string_view(runtime_root).size() > 0) {
+        onion_handoff_process =
+            std::make_unique<sprout::launcher::OnionRuntimeHandoffProcess>(
+                std::filesystem::path(runtime_root));
+        onion_launch = std::make_unique<sprout::launcher::OnionLaunchAdapter>(
+            *sd_card_root, *onion_handoff_process);
+      }
+    }
     if (arcade_root.has_value()) {
       auto native_entries = discovered_native_library(*arcade_root);
       library_entries.insert(library_entries.end(),
@@ -1077,6 +1251,7 @@ int main(int argc, char* argv[]) {
           std::make_unique<sprout::launcher::ParentAccessController>(
               *state, parent_access.get(), parent_credential_ref);
     }
+    std::cerr << "SPROUT_STARTUP data-initialization-complete" << std::endl;
   } catch (const std::exception& error) {
     std::cerr << "Launcher data could not be opened: " << error.what() << '\n';
     if (controller != nullptr) {
@@ -1089,8 +1264,27 @@ int main(int argc, char* argv[]) {
   }
   bool running = true;
   bool dirty = true;
+  int exit_status = EXIT_SUCCESS;
+  bool interactive_frame_logged = false;
   const auto handle_session_action = [&](Action action) {
     try {
+      if (action == Action::SystemMenu) {
+        if (access_controller == nullptr) {
+          return true;
+        }
+        library.reset();
+        archive.reset();
+        profile_avatars.reset();
+        image_crop.reset();
+        const auto exit_event =
+            access_controller->request_exit(current_access_time());
+        if (!exit_event.has_value() ||
+            exit_event->type !=
+                sprout::launcher::ParentAccessEventType::ExitRequested) {
+          return true;
+        }
+        return !commit_parent_exit_marker();
+      }
       if (recovery != nullptr) {
         const auto recovery_event = recovery->handle(action);
         if (recovery_event ==
@@ -1214,6 +1408,10 @@ int main(int argc, char* argv[]) {
           library.reset();
           return true;
         }
+        if (action == Action::Menu) {
+          library.reset();
+          return true;
+        }
         const auto library_event = library->handle(action);
         if (!library_event.has_value()) {
           return true;
@@ -1221,6 +1419,7 @@ int main(int argc, char* argv[]) {
         if (library_event->type ==
             sprout::launcher::LibraryPresentationEventType::BackRequested) {
           library.reset();
+          (void)access_controller->handle(Action::Back, current_access_time());
         } else if (library_event->type ==
                        sprout::launcher::LibraryPresentationEventType::LaunchRequested &&
                    library_event->launch_target.has_value()) {
@@ -1275,11 +1474,34 @@ int main(int argc, char* argv[]) {
                                           : "GAME COULD NOT START: " +
                                                 launch_result.detail);
           } else {
-            const auto& target =
+            auto target =
                 std::get<sprout::launcher::EmulatedLaunchTarget>(
                     *library_event->launch_target);
-            std::cout << "preview launch request: " << target.item_id << " ("
-                      << target.rom_path.string() << ")\n";
+            if (onion_launch == nullptr || state->active_profile() == nullptr) {
+              library->report_launch_result("ONION RUNTIME HANDOFF IS UNAVAILABLE");
+              return true;
+            }
+            const auto* active_profile = state->active_profile();
+            if (active_profile->role == sprout::launcher::ProfileRole::Child &&
+                daily_time_policy != nullptr) {
+              const auto status = daily_time_policy->status(
+                  active_profile->id, current_time_policy_sample());
+              if (status.expired) {
+                library->report_launch_result("DAILY PLAY TIME IS USED UP");
+                return true;
+              }
+            }
+            const auto launch_result = onion_launch->launch(target);
+            std::cout << "Onion handoff result: " << launch_result.item_id
+                      << " outcome=" << static_cast<int>(launch_result.outcome)
+                      << " detail=" << launch_result.detail << '\n';
+            if (!launch_result.completed()) {
+              library->report_launch_result("GAME COULD NOT START: " +
+                                            launch_result.detail);
+              return true;
+            }
+            exit_status = sprout::launcher::kOnionHandoffExitCode;
+            return false;
           }
         }
         return true;
@@ -1308,14 +1530,36 @@ int main(int argc, char* argv[]) {
         return true;
       }
 
-      const auto session_event =
+      const bool was_profile_select =
+          state->screen() == sprout::launcher::Screen::ProfileSelect;
+      auto session_event =
           access_controller->handle(action, current_access_time());
+      // Profile activation is deliberately a direct route into the game
+      // library. Parent PIN completion activates internally and emits no
+      // public event, so observe the resulting launcher state and invoke the
+      // existing Continue target in both child and parent paths.
+      if (!session_event.has_value() && was_profile_select &&
+          state->screen() != sprout::launcher::Screen::ProfileSelect &&
+          !access_controller->has_pin_prompt()) {
+        const auto* active_profile = state->active_profile();
+        if (active_profile != nullptr &&
+            active_profile->role == sprout::launcher::ProfileRole::Child) {
+          session_event = sprout::launcher::ParentAccessEvent{
+              .type = sprout::launcher::ParentAccessEventType::ActionInvoked,
+              .profile_id = active_profile->id,
+              .target = "Continue",
+          };
+        } else {
+          session_event =
+              access_controller->handle(Action::Confirm, current_access_time());
+        }
+      }
       if (!session_event.has_value()) {
         return true;
       }
       if (session_event->type ==
           sprout::launcher::ParentAccessEventType::ExitRequested) {
-        return false;
+        return !commit_parent_exit_marker();
       }
       const auto section = sprout::launcher::library_section_for_menu_target(
           session_event->target);
@@ -1332,19 +1576,11 @@ int main(int argc, char* argv[]) {
                     ->status(active_profile->id, current_time_policy_sample())
                     .expired;
           }
+          if (household_seed.has_value()) {
+            sprout::launcher::apply_seeded_profile_library_overlay(
+                *household_seed, active_profile->id, child, entries);
+          }
           for (auto& entry : entries) {
-            if (household_seed.has_value() && child) {
-              const bool curated = sprout::launcher::seed_includes_title(
-                  *household_seed, active_profile->id, entry.platform_label,
-                  entry.title);
-              const bool favorite = sprout::launcher::seed_favorites_title(
-                  *household_seed, active_profile->id, entry.platform_label,
-                  entry.title);
-              // A favorite is always retained even when it was added outside
-              // the original starter curation.
-              entry.favorite = favorite;
-              entry.child_visible = curated || favorite;
-            }
             std::visit(
                 [&](auto& target) {
                   target.launch_allowed = entry.launch_allowed;
@@ -1369,13 +1605,6 @@ int main(int argc, char* argv[]) {
               entry.unavailable_reason = "DAILY PLAY TIME IS USED UP";
             }
           }
-          if (child && household_seed.has_value()) {
-            entries.erase(
-                std::remove_if(entries.begin(), entries.end(), [](const auto& entry) {
-                  return !entry.child_visible;
-                }),
-                entries.end());
-          }
         }
         library = std::make_unique<sprout::launcher::LibraryPresentation>(
             std::move(entries), *section);
@@ -1387,6 +1616,17 @@ int main(int argc, char* argv[]) {
             std::make_unique<sprout::launcher::ProfileArchivePresentation>(
                 *profiles, *profile_archives, *data_root / "exports",
                 *data_root / "imports");
+        return true;
+      }
+      if ((session_event->target == "Profile Picture" ||
+           session_event->target == "Background") &&
+          profiles != nullptr && state->active_profile() != nullptr) {
+        profile_avatars =
+            std::make_unique<sprout::launcher::ProfileAvatarPresentation>(
+                *profiles, image_source.has_value(), state->active_profile()->id,
+                session_event->target == "Background"
+                    ? sprout::launcher::ProfileAvatarStage::Background
+                    : sprout::launcher::ProfileAvatarStage::Avatar);
         return true;
       }
       if (session_event->target == "Profile Settings" && profiles != nullptr) {
@@ -1441,19 +1681,22 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  const bool contained_device = std::getenv("SPROUT_CONTAINED") != nullptr;
   while (running) {
     SDL_Event event{};
     if (SDL_WaitEventTimeout(&event, 16) != 0) {
       if (event.type == SDL_QUIT) {
-        running = false;
+        if (!contained_device) {
+          running = false;
+        }
       } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
-        const auto action = keyboard_action(event.key.keysym.sym);
+        const auto action = sprout::launcher::keyboard_action(event.key.keysym.sym);
         if (action.has_value()) {
           running = handle_session_action(*action);
           dirty = true;
         }
       } else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
-        const auto action = controller_action(event.cbutton.button);
+        const auto action = sprout::launcher::controller_action(event.cbutton.button);
         if (action.has_value()) {
           running = handle_session_action(*action);
           dirty = true;
@@ -1485,7 +1728,11 @@ int main(int argc, char* argv[]) {
       } else if (setup != nullptr) {
         sprout::launcher::render_setup(renderer, *setup);
       } else if (library != nullptr) {
-        sprout::launcher::render_library(renderer, *library);
+        sprout::launcher::render_library(
+            renderer, *library, state->active_profile(),
+            data_root.has_value() ? *data_root / "data" / "profile-images"
+                                  : std::filesystem::path{},
+            built_in_avatar_root);
       } else if (archive != nullptr) {
         sprout::launcher::render_profile_archive(renderer, *archive);
       } else {
@@ -1506,6 +1753,10 @@ int main(int argc, char* argv[]) {
         }
       }
       dirty = false;
+      if (!interactive_frame_logged) {
+        std::cerr << "SPROUT_STARTUP interactive-frame-presented" << std::endl;
+        interactive_frame_logged = true;
+      }
     }
   }
 
@@ -1515,5 +1766,5 @@ int main(int argc, char* argv[]) {
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
-  return EXIT_SUCCESS;
+  return exit_status;
 }

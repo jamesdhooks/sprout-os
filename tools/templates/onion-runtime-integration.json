@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "onionVersion": "v4.3.1-1",
+  "target": "/mnt/SDCARD/.tmp_update/runtime.sh",
+  "baseSha256": "a8d77dcd316bc2a323b1e015aaf4b7682d2fed677af9cdadbc00e48881425d6e",
+  "previousContainedSha256": [
+    "de44ce5c9c55671049510ea43cc9e0358d82f5071b5a9f3be0a478341b9b2b6e"
+  ],
+  "containedSha256": "945acc68b4e335ef1a15de4dad4bfb672c57d51dcd6a30828febb90ca4096fd5",
+  "maintenanceFlag": "/mnt/SDCARD/sprout-dev/maintenance/allow-stock-onion",
+  "bootSessionParentExitMarker": "/tmp/sprout-stock-onion-session"
+}

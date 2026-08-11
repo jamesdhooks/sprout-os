@@ -15,6 +15,8 @@
 
 namespace sprout::launcher {
 
+struct HouseholdSeed;
+
 enum class LibrarySection {
   Recent,
   Favorites,
@@ -52,6 +54,9 @@ struct LibraryPresentationEvent {
 
 [[nodiscard]] std::optional<LibrarySection> library_section_for_menu_target(
     std::string_view target);
+void apply_seeded_profile_library_overlay(
+    const HouseholdSeed& seed, std::string_view profile_id,
+    bool child_profile, std::vector<LibraryEntry>& entries);
 [[nodiscard]] std::vector<LibraryEntry> make_demo_library();
 
 class LibraryPresentation {

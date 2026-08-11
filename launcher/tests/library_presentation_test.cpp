@@ -1,3 +1,4 @@
+#include "sprout/launcher/household_seed.hpp"
 #include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/string_compat.hpp"
 
@@ -182,6 +183,49 @@ void vertical_navigation_changes_rails_without_losing_focus() {
           "up should return to the previous rail");
 }
 
+void dad_seeded_favorites_apply_to_parent_catalogue() {
+  sprout::launcher::HouseholdSeed seed;
+  seed.profiles.push_back(sprout::launcher::SeededProfile{
+      .profile = sprout::launcher::NewProfile{
+          .id = "dad",
+          .display_name = "Dad",
+          .role = sprout::launcher::ProfileRole::Parent,
+          .avatar_ref = "builtin:dad",
+          .save_namespace = "dad",
+      },
+      .curated_items = {},
+      .favorite_items = {{.platform = "GB", .title = "Alpha"}},
+  });
+  auto dad_entries = entries();
+  for (auto& item : dad_entries) {
+    item.favorite = false;
+    item.recent_rank.reset();
+  }
+
+  sprout::launcher::apply_seeded_profile_library_overlay(
+      seed, "dad", false, dad_entries);
+
+  require(dad_entries.size() == 3,
+          "Dad overlay must retain the complete parent catalogue");
+  require(dad_entries[0].favorite,
+          "Dad overlay must apply the parent's seeded favorites");
+  require(!dad_entries[1].favorite && !dad_entries[2].favorite,
+          "Dad overlay must not favorite unrelated catalogue entries");
+}
+
+void dad_direct_login_does_not_open_an_empty_recent_rail() {
+  auto dad_entries = entries();
+  for (auto& item : dad_entries) {
+    item.recent_rank.reset();
+  }
+
+  LibraryPresentation library(std::move(dad_entries), LibrarySection::Recent);
+  require(library.section() == LibrarySection::Favorites,
+          "Dad login should fall through an empty Recent rail to Favorites");
+  require(!library.entries().empty(),
+          "Dad login should show seeded favorites instead of Nothing here yet");
+}
+
 void empty_section_is_safe() {
   LibraryPresentation empty({}, LibrarySection::Favorites);
   require(empty.entries().empty() && empty.focus_index() == 0,
@@ -201,6 +245,8 @@ int main() {
     filters_and_recent_order_are_deterministic();
     navigation_launch_and_unavailable_are_explicit();
     vertical_navigation_changes_rails_without_losing_focus();
+    dad_seeded_favorites_apply_to_parent_catalogue();
+    dad_direct_login_does_not_open_an_empty_recent_rail();
     empty_section_is_safe();
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';

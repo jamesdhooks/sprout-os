@@ -41,9 +41,12 @@ void child_profile_opens_child_home() {
   expect(event->type == EventType::ProfileActivated, "selection should activate a profile");
   expect(event->profile_id == "child-alex", "child fixture ID should be preserved");
   expect(state.screen() == Screen::ChildHome, "child should open child home");
-  expect(state.menu_items().size() == 6, "child home should expose its focused preview menu");
-  expect(state.menu_items()[3] == "Sprout Arcade",
-         "child home should expose the local Arcade collection");
+  expect(state.menu_items().size() == 2,
+         "child Start menu should expose two visual appearance cards");
+  expect(state.menu_items()[0] == "Profile Picture",
+         "left child card should edit the active profile picture");
+  expect(state.menu_items()[1] == "Background",
+         "right child card should edit the active background");
 }
 
 void parent_profile_opens_parent_home() {
@@ -68,13 +71,14 @@ void home_navigation_and_lifecycle_are_explicit() {
   LauncherState state(sprout::launcher::make_demo_household());
   (void)state.handle(Action::Confirm);
   (void)state.handle(Action::Up);
-  expect(state.focus_index() == 5, "up should wrap on child home");
+  expect(state.focus_index() == 1, "up should wrap on the child card menu");
 
   (void)state.handle(Action::Down);
   const auto invoked = state.handle(Action::Confirm);
   expect(invoked.has_value(), "menu confirmation should emit an event");
   expect(invoked->type == EventType::MenuItemInvoked, "menu event should identify invocation");
-  expect(invoked->target == "Continue", "menu event should carry a domain target");
+  expect(invoked->target == "Profile Picture",
+         "child card event should carry its appearance target");
 
   const auto returned = state.handle(Action::Back);
   expect(returned.has_value(), "back should emit a return event");
@@ -83,11 +87,24 @@ void home_navigation_and_lifecycle_are_explicit() {
   expect(state.active_profile() == nullptr, "return should clear the active profile");
 }
 
-void back_from_profiles_requests_exit() {
+void menu_action_is_reserved_for_the_library_shell() {
+  LauncherState state(sprout::launcher::make_demo_household());
+  (void)state.handle(Action::Confirm);
+  const auto focus = state.focus_index();
+  const auto event = state.handle(Action::Menu);
+  expect(!event.has_value(), "menu action should be handled by the library shell");
+  expect(state.screen() == Screen::ChildHome,
+         "menu action should not leave the active profile menu");
+  expect(state.focus_index() == focus,
+         "menu action should not move the role menu focus");
+}
+
+void back_from_profiles_is_contained() {
   LauncherState state(sprout::launcher::make_demo_household());
   const auto event = state.handle(Action::Back);
-  expect(event.has_value(), "back at root should emit an event");
-  expect(event->type == EventType::ExitRequested, "back at root should request application exit");
+  expect(!event.has_value(), "back at root must not emit an exit event");
+  expect(state.screen() == Screen::ProfileSelect,
+         "back at root must keep the profile selector visible");
 }
 
 }  // namespace
@@ -99,7 +116,8 @@ int main() {
     child_profile_opens_child_home();
     parent_profile_opens_parent_home();
     home_navigation_and_lifecycle_are_explicit();
-    back_from_profiles_requests_exit();
+    menu_action_is_reserved_for_the_library_shell();
+    back_from_profiles_is_contained();
   } catch (const std::exception& error) {
     std::cerr << "launcher state test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

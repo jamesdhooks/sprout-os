@@ -32,8 +32,11 @@ void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop);
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin);
-void render_library(SDL_Renderer* renderer,
-                    const LibraryPresentation& library);
+void render_library(
+    SDL_Renderer* renderer, const LibraryPresentation& library,
+    const Profile* active_profile = nullptr,
+    const std::filesystem::path& managed_image_root = {},
+    const std::filesystem::path& built_in_avatar_root = {});
 void render_profile_archive(SDL_Renderer* renderer,
                             const ProfileArchivePresentation& archive);
 

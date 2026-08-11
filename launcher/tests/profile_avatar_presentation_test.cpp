@@ -103,6 +103,23 @@ void assigns_a_background_from_the_built_in_library() {
          "background assignment should persist the selected reference");
 }
 
+void opens_a_locked_child_directly_in_the_requested_picker() {
+  TemporaryDirectory directory;
+  ProfileRepository profiles(directory.path() / "profiles.sqlite3");
+  add_profiles(profiles);
+  ProfileAvatarPresentation presentation(
+      profiles, false, "child-primary", ProfileAvatarStage::Background);
+  expect(presentation.stage() == ProfileAvatarStage::Background,
+         "child background card should bypass profile and category menus");
+  expect(presentation.selected_profile() != nullptr &&
+             presentation.selected_profile()->id == "child-primary",
+         "direct picker must remain locked to the active child");
+  const auto back = presentation.handle(Action::Back);
+  expect(back.has_value() &&
+             back->type == ProfileAvatarEventType::BackRequested,
+         "back from a child picker should return to the visual card menu");
+}
+
 void exposes_custom_import_as_a_final_paged_choice() {
   TemporaryDirectory directory;
   ProfileRepository profiles(directory.path() / "profiles.sqlite3");
@@ -129,6 +146,7 @@ int main() {
     assigns_a_catalogue_avatar_to_a_selected_profile();
     exposes_custom_import_as_a_final_paged_choice();
     assigns_a_background_from_the_built_in_library();
+    opens_a_locked_child_directly_in_the_requested_picker();
   } catch (const std::exception& error) {
     std::cerr << "profile avatar presentation test failed: " << error.what()
               << '\n';

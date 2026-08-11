@@ -34,7 +34,8 @@ class ProfileAvatarPresentation {
  public:
   explicit ProfileAvatarPresentation(
       ProfileRepository& profiles, bool custom_image_available,
-      std::optional<std::string> initial_profile_id = std::nullopt);
+      std::optional<std::string> initial_profile_id = std::nullopt,
+      ProfileAvatarStage initial_stage = ProfileAvatarStage::Avatar);
 
   [[nodiscard]] ProfileAvatarStage stage() const noexcept;
   [[nodiscard]] ReadOnlyView<ProfileRecord> profiles() const noexcept;

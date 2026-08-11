@@ -35,6 +35,8 @@ class ParentAccessController {
   [[nodiscard]] bool has_pin_prompt() const noexcept;
   [[nodiscard]] const ParentPinPresentation& pin_prompt() const;
   [[nodiscard]] bool ensure_active_profile_access(const AccessMoment& now);
+  [[nodiscard]] std::optional<ParentAccessEvent> request_exit(
+      const AccessMoment& now);
   [[nodiscard]] std::optional<ParentAccessEvent> handle(Action action,
                                                         const AccessMoment& now);
 
@@ -42,6 +44,7 @@ class ParentAccessController {
   enum class PinPurpose {
     UnlockParent,
     Reauthenticate,
+    AuthorizeExit,
   };
 
   void open_pin(PinPurpose purpose);

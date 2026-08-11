@@ -1,4 +1,5 @@
 #include "sprout/launcher/onion_launch_adapter.hpp"
+#include "sprout/launcher/onion_runtime_handoff.hpp"
 
 #include <chrono>
 #include <filesystem>
@@ -15,6 +16,7 @@ using sprout::launcher::LaunchOutcome;
 using sprout::launcher::LaunchProcess;
 using sprout::launcher::OnionLaunchAdapter;
 using sprout::launcher::OnionLaunchProcess;
+using sprout::launcher::OnionRuntimeHandoffProcess;
 using sprout::launcher::OnionSystem;
 using sprout::launcher::ProcessResult;
 
@@ -227,6 +229,36 @@ void test_launcher_and_process_outcomes() {
           "missing exit status should be abnormal");
 }
 
+void test_runtime_handoff_is_atomic_and_shell_safe() {
+  TemporaryCard card;
+  const auto runtime_root = card.root() / ".tmp_update";
+  std::filesystem::create_directories(runtime_root);
+  const auto rom = card.rom("GB/Family's Game.gb");
+  OnionRuntimeHandoffProcess handoff(runtime_root);
+  OnionLaunchAdapter adapter(card.root(), handoff);
+
+  const auto result = adapter.launch(allowed(OnionSystem::GameBoy, rom));
+  require(result.completed(), "validated game should stage an Onion handoff");
+  require(std::filesystem::is_regular_file(runtime_root / "cmd_to_run.sh"),
+          "handoff should atomically activate Onion's command file");
+  require(std::filesystem::is_regular_file(runtime_root / ".sprout-handoff"),
+          "handoff marker should be committed after the command");
+
+  std::ifstream input(runtime_root / "cmd_to_run.sh", std::ios::binary);
+  const std::string command{std::istreambuf_iterator<char>(input), {}};
+  require(command.starts_with("#!/bin/sh\n"),
+          "staged Onion command should be an executable shell script");
+  require(command.find("Family'\\''s Game.gb") != std::string::npos,
+          "single quotes in ROM names must remain one shell argument");
+  require(command.find("LD_PRELOAD=/mnt/SDCARD/miyoo/lib/libpadsp.so") !=
+              std::string::npos,
+          "staged command should preserve Onion's audio preload contract");
+
+  const auto second = adapter.launch(allowed(OnionSystem::GameBoy, rom));
+  require(second.outcome == LaunchOutcome::ProcessStartFailed,
+          "a pending handoff must fail closed rather than overwrite itself");
+}
+
 #ifndef _WIN32
 void test_posix_process_runner() {
   TemporaryCard card;
@@ -273,6 +305,7 @@ int main() {
     test_extended_onion_contracts();
     test_rejections_do_not_start_process();
     test_launcher_and_process_outcomes();
+    test_runtime_handoff_is_atomic_and_shell_safe();
 #ifndef _WIN32
     test_posix_process_runner();
 #endif

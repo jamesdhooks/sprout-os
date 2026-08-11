@@ -6,6 +6,30 @@
 
 namespace sprout::launcher {
 
+PaddedPortraitAlpha pad_portrait_alpha(
+    ReadOnlyView<std::uint8_t> source_alpha, int width, int height,
+    float radius) {
+  if (width <= 0 || height <= 0 ||
+      source_alpha.size() != static_cast<std::size_t>(width * height)) {
+    throw std::invalid_argument("Portrait alpha dimensions are invalid");
+  }
+  if (!std::isfinite(radius) || radius <= 0.0F || radius > 32.0F) {
+    throw std::invalid_argument("Portrait outline radius must be in (0, 32]");
+  }
+
+  const int inset = static_cast<int>(std::ceil(radius + 0.5F));
+  const int padded_width = width + inset * 2;
+  const int padded_height = height + inset * 2;
+  std::vector<std::uint8_t> padded(
+      static_cast<std::size_t>(padded_width * padded_height), 0);
+  for (int y = 0; y < height; ++y) {
+    std::copy_n(source_alpha.data() + static_cast<std::size_t>(y * width), width,
+                padded.data() +
+                    static_cast<std::size_t>((y + inset) * padded_width + inset));
+  }
+  return {std::move(padded), padded_width, padded_height, inset};
+}
+
 std::vector<std::uint8_t> smooth_portrait_outline(
     ReadOnlyView<std::uint8_t> source_alpha, int width, int height,
     float radius) {

@@ -3,8 +3,11 @@ add_library(
   src/built_in_background.cpp
   src/built_in_avatar.cpp
   src/demo_household.cpp
+  src/framebuffer_page_writer.cpp
   src/launcher_state.cpp
   src/portrait_outline.cpp
+  src/profile_select_layout.cpp
+  src/window_policy.cpp
 )
 
 add_library(
@@ -72,6 +75,7 @@ add_library(
   src/library_presentation.cpp
   src/local_library.cpp
   src/onion_launch_adapter.cpp
+  src/onion_runtime_handoff.cpp
   src/pico8_catalogue.cpp
 )
 
@@ -162,7 +166,11 @@ target_link_libraries(
 )
 target_include_directories(sprout_onion_adapter PUBLIC include)
 target_compile_features(sprout_onion_adapter PUBLIC cxx_std_20)
-target_link_libraries(sprout_onion_adapter PUBLIC sprout_launch_process PRIVATE yyjson)
+target_link_libraries(
+  sprout_onion_adapter
+  PUBLIC sprout_launch_process
+  PRIVATE sprout_household_seed yyjson
+)
 target_include_directories(sprout_launch_process PUBLIC include)
 target_compile_features(sprout_launch_process PUBLIC cxx_std_20)
 
@@ -237,6 +245,14 @@ else()
 endif()
 
 if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
+  add_library(sprout_sdl_input src/sdl_input.cpp)
+  target_include_directories(sprout_sdl_input PUBLIC include)
+  target_compile_features(sprout_sdl_input PUBLIC cxx_std_20)
+  target_link_libraries(
+    sprout_sdl_input
+    PUBLIC sprout_launcher_core ${SPROUT_SDL_TARGET}
+  )
+
   add_library(
     sprout_profile_images
     src/profile_image_crop_presentation.cpp
@@ -266,6 +282,7 @@ if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
     sprout-launcher
     PRIVATE
       sprout_launcher_core
+      sprout_sdl_input
       sprout_profile_store
       sprout_household_seed
       sprout_profile_images
@@ -346,6 +363,25 @@ if(BUILD_TESTING)
   target_compile_features(sprout-portrait-outline-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-portrait-outline-test PRIVATE sprout_launcher_core)
   add_test(NAME portrait-outline COMMAND sprout-portrait-outline-test)
+
+  add_executable(sprout-profile-select-layout-test
+                 tests/profile_select_layout_test.cpp)
+  target_compile_features(sprout-profile-select-layout-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-profile-select-layout-test PRIVATE sprout_launcher_core)
+  add_test(NAME profile-select-layout COMMAND sprout-profile-select-layout-test)
+
+  add_executable(sprout-framebuffer-page-writer-test
+                 tests/framebuffer_page_writer_test.cpp)
+  target_compile_features(sprout-framebuffer-page-writer-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-framebuffer-page-writer-test
+                        PRIVATE sprout_launcher_core)
+  add_test(NAME framebuffer-page-writer
+           COMMAND sprout-framebuffer-page-writer-test)
+
+  add_executable(sprout-window-policy-test tests/window_policy_test.cpp)
+  target_compile_features(sprout-window-policy-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-window-policy-test PRIVATE sprout_launcher_core)
+  add_test(NAME window-policy COMMAND sprout-window-policy-test)
 
   add_executable(sprout-profile-store-test tests/profile_repository_test.cpp)
   target_compile_features(sprout-profile-store-test PRIVATE cxx_std_20)
@@ -484,6 +520,16 @@ if(BUILD_TESTING)
   target_link_libraries(sprout-library-presentation-test
                         PRIVATE sprout_onion_adapter sprout_launcher_core)
   add_test(NAME library-presentation COMMAND sprout-library-presentation-test)
+
+  if(TARGET sprout_sdl_input)
+    add_executable(sprout-sdl-input-test tests/sdl_input_test.cpp)
+    target_compile_features(sprout-sdl-input-test PRIVATE cxx_std_20)
+    target_link_libraries(
+      sprout-sdl-input-test
+      PRIVATE sprout_sdl_input SDL2::SDL2main
+    )
+    add_test(NAME sdl-input COMMAND sprout-sdl-input-test)
+  endif()
 
   if(SPROUT_BUILD_RUNTIME)
     add_executable(sprout-native-library-test tests/native_library_test.cpp)

@@ -37,6 +37,8 @@ enum class Action {
   Right,
   Confirm,
   Back,
+  Menu,
+  SystemMenu,
   ZoomIn,
   ZoomOut,
 };

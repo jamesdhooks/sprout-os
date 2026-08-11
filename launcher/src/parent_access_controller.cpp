@@ -46,6 +46,25 @@ bool ParentAccessController::ensure_active_profile_access(
   return false;
 }
 
+std::optional<ParentAccessEvent> ParentAccessController::request_exit(
+    const AccessMoment& now) {
+  const auto* active = state_.active_profile();
+  if (active != nullptr && active->role == ProfileRole::Parent &&
+      access_store_ != nullptr && credential_ref_.has_value() &&
+      access_store_->is_unlocked(now.utc_seconds, now.local_date)) {
+    return ParentAccessEvent{
+        .type = ParentAccessEventType::ExitRequested,
+        .profile_id = active->id,
+        .target = {},
+    };
+  }
+  if (access_store_ == nullptr || !credential_ref_.has_value()) {
+    return std::nullopt;
+  }
+  open_pin(PinPurpose::AuthorizeExit);
+  return std::nullopt;
+}
+
 std::optional<ParentAccessEvent> ParentAccessController::handle(
     Action action, const AccessMoment& now) {
   if (pin_ != nullptr) {
@@ -134,7 +153,8 @@ std::optional<ParentAccessEvent> ParentAccessController::handle_pin(
     return std::nullopt;
   }
 
-  if (!access_store_->is_unlocked(now.utc_seconds, now.local_date)) {
+  if (*pin_purpose_ == PinPurpose::Reauthenticate &&
+      !access_store_->is_unlocked(now.utc_seconds, now.local_date)) {
     close_pin();
     (void)state_.handle(Action::Back);
     return std::nullopt;
@@ -142,6 +162,14 @@ std::optional<ParentAccessEvent> ParentAccessController::handle_pin(
   if (!access_store_->verify_pin(*credential_ref_, std::move(pin))) {
     pin_->authentication_failed();
     return std::nullopt;
+  }
+  if (*pin_purpose_ == PinPurpose::AuthorizeExit) {
+    close_pin();
+    return ParentAccessEvent{
+        .type = ParentAccessEventType::ExitRequested,
+        .profile_id = {},
+        .target = {},
+    };
   }
   ParentAccessEvent result{
       .type = ParentAccessEventType::ActionInvoked,

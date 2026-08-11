@@ -163,6 +163,44 @@ void subview_access_revalidates_parent_grant() {
          "expired parent subview should fail closed before its next action");
 }
 
+void system_exit_requires_parent_authorization() {
+  Fixture fixture;
+
+  const auto gated = fixture.controller.request_exit(kToday);
+  expect(!gated.has_value() && fixture.controller.has_pin_prompt(),
+         "system exit at profile selection should open the parent PIN prompt");
+  const auto wrong = submit_pin(fixture.controller, "1357", kToday);
+  expect(!wrong.has_value() && fixture.controller.has_pin_prompt(),
+         "an incorrect exit PIN must remain gated");
+  const auto authorized = submit_pin(fixture.controller, "2468", kToday);
+  expect(authorized.has_value() &&
+             authorized->type == ParentAccessEventType::ExitRequested,
+         "a correct parent PIN should authorize exactly one system exit");
+}
+
+void child_exit_is_gated_but_active_parent_may_exit() {
+  Fixture child;
+  (void)child.controller.handle(Action::Confirm, kToday);
+  expect(child.state.screen() == Screen::ChildHome,
+         "child fixture should activate the child profile");
+  const auto child_exit = child.controller.request_exit(kToday);
+  expect(!child_exit.has_value() && child.controller.has_pin_prompt(),
+         "an active child profile must require the parent PIN to exit");
+
+  Fixture parent;
+  parent.access.grant_until_end_of_day("secret:parent-primary", "2468",
+                                       kToday.utc_seconds, kToday.local_date);
+  (void)parent.controller.handle(Action::Right, kToday);
+  (void)parent.controller.handle(Action::Confirm, kToday);
+  expect(parent.state.screen() == Screen::ParentHome,
+         "parent fixture should activate an authenticated parent profile");
+  const auto parent_exit = parent.controller.request_exit(kToday);
+  expect(parent_exit.has_value() &&
+             parent_exit->type == ParentAccessEventType::ExitRequested &&
+             !parent.controller.has_pin_prompt(),
+         "an actively authenticated parent profile may exit directly");
+}
+
 }  // namespace
 
 int main() {
@@ -171,6 +209,8 @@ int main() {
     sensitive_actions_reauthenticate_and_manual_lock_revokes();
     grant_expiry_returns_to_profile_selection();
     subview_access_revalidates_parent_grant();
+    system_exit_requires_parent_authorization();
+    child_exit_is_gated_but_active_parent_may_exit();
   } catch (const std::exception& error) {
     std::cerr << "parent access controller test failed: " << error.what() << '\n';
     return EXIT_FAILURE;

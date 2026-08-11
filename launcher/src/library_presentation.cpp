@@ -1,5 +1,7 @@
 #include "sprout/launcher/library_presentation.hpp"
 
+#include "sprout/launcher/household_seed.hpp"
+
 #include <algorithm>
 #include <utility>
 
@@ -20,6 +22,30 @@ std::optional<LibrarySection> library_section_for_menu_target(
     return LibrarySection::Arcade;
   }
   return std::nullopt;
+}
+
+void apply_seeded_profile_library_overlay(
+    const HouseholdSeed& seed, std::string_view profile_id,
+    bool child_profile, std::vector<LibraryEntry>& entries) {
+  const std::string seeded_profile_id(profile_id);
+  for (auto& entry : entries) {
+    const bool favorite = seed_favorites_title(
+        seed, seeded_profile_id, entry.platform_label, entry.title);
+    entry.favorite = favorite;
+    if (child_profile) {
+      const bool curated = seed_includes_title(
+          seed, seeded_profile_id, entry.platform_label, entry.title);
+      // A favorite is always retained even when it was added outside the
+      // original starter curation.
+      entry.child_visible = curated || favorite;
+    }
+  }
+  if (child_profile) {
+    entries.erase(
+        std::remove_if(entries.begin(), entries.end(),
+                       [](const auto& entry) { return !entry.child_visible; }),
+        entries.end());
+  }
 }
 
 LibraryPresentation::LibraryPresentation(std::vector<LibraryEntry> entries,
@@ -43,6 +69,18 @@ LibraryPresentation::LibraryPresentation(std::vector<LibraryEntry> entries,
                      [](const LibraryEntry& left, const LibraryEntry& right) {
                        return *left.recent_rank < *right.recent_rank;
                      });
+  } else if (section_ == LibrarySection::Recent) {
+    constexpr std::array<LibrarySection, 3> fallback_order{
+        LibrarySection::Favorites, LibrarySection::All,
+        LibrarySection::Arcade};
+    const auto fallback = std::find_if(
+        fallback_order.begin(), fallback_order.end(),
+        [this](LibrarySection candidate) {
+          return !sections_[section_offset(candidate)].empty();
+        });
+    if (fallback != fallback_order.end()) {
+      section_ = *fallback;
+    }
   }
 }
 

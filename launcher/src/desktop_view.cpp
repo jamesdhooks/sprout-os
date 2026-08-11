@@ -1,7 +1,10 @@
 #include "desktop_view.hpp"
+#include "sprout/launcher/direct_framebuffer_surface.hpp"
 #include "sprout/launcher/built_in_avatar.hpp"
+#include "sprout/launcher/framebuffer_page_writer.hpp"
 #include "sprout/launcher/portrait_outline.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
+#include "sprout/launcher/profile_select_layout.hpp"
 #include "sprout/launcher/string_compat.hpp"
 #include "sprout/ui/font_metrics.hpp"
 
@@ -12,10 +15,12 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <cmath>
 #include <exception>
 #include <filesystem>
 #include <functional>
+#include <iostream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -35,6 +40,64 @@ using sprout::ui::kUiFontSourceSize;
 
 constexpr int kWidth = 640;
 constexpr int kHeight = 480;
+
+void present_frame(SDL_Renderer* renderer) {
+  const char* framebuffer_path = std::getenv("SPROUT_DIRECT_FRAMEBUFFER");
+  if (framebuffer_path == nullptr || framebuffer_path[0] == '\0') {
+    SDL_RenderPresent(renderer);
+    return;
+  }
+
+  SDL_Surface* surface = direct_framebuffer_surface();
+  if (surface == nullptr || surface->pixels == nullptr || surface->w <= 0 ||
+      surface->h <= 0 || surface->pitch < surface->w * 4) {
+    std::cerr << "SPROUT_FRAMEBUFFER direct-surface-unavailable" << std::endl;
+    return;
+  }
+
+  constexpr std::size_t kBytesPerPixel = 4;
+  const int width = surface->w;
+  const int height = surface->h;
+  std::vector<std::uint8_t> frame(static_cast<std::size_t>(width) *
+                                  static_cast<std::size_t>(height) *
+                                  kBytesPerPixel);
+  if (SDL_LockSurface(surface) != 0) {
+    std::cerr << "SPROUT_FRAMEBUFFER surface-lock-failed error=" << SDL_GetError()
+              << std::endl;
+    return;
+  }
+  const auto* pixels = static_cast<const std::uint8_t*>(surface->pixels);
+  for (int destination_y = 0; destination_y < height; ++destination_y) {
+    const int source_y = height - 1 - destination_y;
+    for (int destination_x = 0; destination_x < width; ++destination_x) {
+      const int source_x = width - 1 - destination_x;
+      const auto* source = pixels + source_y * surface->pitch +
+                           source_x * static_cast<int>(kBytesPerPixel);
+      auto* destination = frame.data() +
+                          (static_cast<std::size_t>(destination_y) * width +
+                           static_cast<std::size_t>(destination_x)) *
+                              kBytesPerPixel;
+      std::copy_n(source, kBytesPerPixel, destination);
+    }
+  }
+  SDL_UnlockSurface(surface);
+
+  // SDL's mmiyoo software-renderer readback is black on device. The surface
+  // above is the authoritative rendered frame; mirror it to both fb0 pages.
+  SDL_RenderPresent(renderer);
+  if (!write_framebuffer_pages(framebuffer_path, frame.data(), frame.size(), 2)) {
+    std::cerr << "SPROUT_FRAMEBUFFER write-failed path=" << framebuffer_path
+              << std::endl;
+    return;
+  }
+
+  static bool first_copy_logged = false;
+  if (!first_copy_logged) {
+    std::cerr << "SPROUT_FRAMEBUFFER surface-copy-complete size=" << width << 'x'
+              << height << " format=RGB888 pages=2" << std::endl;
+    first_copy_logged = true;
+  }
+}
 
 struct Color {
   std::uint8_t red;
@@ -186,7 +249,11 @@ SDL_Texture* cached_texture(SDL_Renderer* renderer,
   });
   if (found != cache.end()) return found->texture;
   SDL_Texture* texture = IMG_LoadTexture(renderer, encoded.c_str());
-  if (texture == nullptr) return nullptr;
+  if (texture == nullptr) {
+    std::cerr << "SPROUT_TEXTURE load-failed path=" << encoded
+              << " error=" << IMG_GetError() << '\n';
+    return nullptr;
+  }
 #if SDL_VERSION_ATLEAST(2, 0, 12)
   SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
 #endif
@@ -287,14 +354,6 @@ void draw_heading_panel(SDL_Renderer* renderer, const SDL_Rect& bounds,
   }
 }
 
-Color color_from_rgb(std::uint32_t rgb) {
-  return {
-      static_cast<std::uint8_t>((rgb >> 16U) & 0xFFU),
-      static_cast<std::uint8_t>((rgb >> 8U) & 0xFFU),
-      static_cast<std::uint8_t>(rgb & 0xFFU),
-  };
-}
-
 std::string path_as_utf8(const std::filesystem::path& path) {
   const auto encoded = path.generic_u8string();
   return {reinterpret_cast<const char*>(encoded.data()), encoded.size()};
@@ -368,6 +427,22 @@ bool render_treated_portrait(SDL_Renderer* renderer,
     }
   }
 
+  const auto padded =
+      pad_portrait_alpha(alpha, source->w, source->h, border_radius);
+  SDL_Surface* padded_source = SDL_CreateRGBSurfaceWithFormat(
+      0, padded.width, padded.height, 32, SDL_PIXELFORMAT_RGBA32);
+  if (padded_source == nullptr) {
+    SDL_FreeSurface(source);
+    return false;
+  }
+  SDL_FillRect(padded_source, nullptr,
+               SDL_MapRGBA(padded_source->format, 0, 0, 0, 0));
+  SDL_Rect source_destination{padded.inset, padded.inset, source->w, source->h};
+  SDL_BlitSurface(source, nullptr, padded_source, &source_destination);
+  SDL_FreeSurface(source);
+  source = padded_source;
+  alpha = padded.alpha;
+
   const auto mask =
       smooth_portrait_outline(alpha, source->w, source->h, border_radius);
   SDL_Surface* border_surface = SDL_CreateRGBSurfaceWithFormat(
@@ -389,12 +464,19 @@ bool render_treated_portrait(SDL_Renderer* renderer,
     }
   }
 
+  const int source_width = source->w;
+  const int source_height = source->h;
   SDL_Texture* border_texture =
       SDL_CreateTextureFromSurface(renderer, border_surface);
   SDL_Texture* source_texture = SDL_CreateTextureFromSurface(renderer, source);
   SDL_FreeSurface(border_surface);
   SDL_FreeSurface(source);
   if (border_texture == nullptr || source_texture == nullptr) {
+    std::cerr << "SPROUT_TEXTURE portrait-create-failed path=" << encoded_path
+              << " dimensions=" << source_width << 'x' << source_height
+              << " border=" << (border_texture == nullptr ? "failed" : "ok")
+              << " source=" << (source_texture == nullptr ? "failed" : "ok")
+              << " error=" << SDL_GetError() << '\n';
     if (border_texture != nullptr) SDL_DestroyTexture(border_texture);
     if (source_texture != nullptr) SDL_DestroyTexture(source_texture);
     return false;
@@ -413,14 +495,9 @@ bool render_treated_portrait(SDL_Renderer* renderer,
 void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
                            const std::filesystem::path& managed_image_root,
                            const std::filesystem::path& built_in_avatar_root) {
-  fill_rect(renderer, {126, 18, 388, 88}, {255, 250, 231, 230});
-  draw_centered_text(renderer, "Who's playing?", kWidth / 2, 30, 5, kText);
-  draw_centered_text(renderer, "Choose your profile", kWidth / 2, 76, 1,
-                     kMuted);
-
-  const int count = static_cast<int>(state.profiles().size());
-  const int spacing = count <= 2 ? 190 : (count == 3 ? 160 : 132);
-  const int start_center = kWidth / 2 - (count - 1) * spacing / 2;
+  const auto slots = profile_select_layout(
+      static_cast<int>(state.profiles().size()),
+      static_cast<int>(state.focus_index()));
   const bool static_ui = SDL_getenv("SPROUT_STATIC_UI") != nullptr;
   const double phase = static_ui
                            ? 0.0
@@ -430,15 +507,15 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
   for (std::size_t index = 0; index < state.profiles().size(); ++index) {
     const auto& profile = state.profiles()[index];
     const bool focused = index == state.focus_index();
-    const int center_x = start_center + static_cast<int>(index) * spacing;
-    const int size = focused ? 172 : 136;
-    const int bob = focused ? static_cast<int>(std::round(std::sin(phase) * 6.0)) : 0;
+    const auto& slot = slots[index];
+    const int center_x = slot.center_x;
+    const int center_y = slot.center_y;
+    const int size = slot.avatar_size;
+    const int bob =
+        focused ? static_cast<int>(std::round(std::sin(phase) * 4.0)) : 0;
     const double angle = focused ? std::sin(phase) * 2.25 : 0.0;
-    const SDL_Rect shadow{center_x - size / 3, 294 + bob, size * 2 / 3, 18};
-    fill_rect(renderer, shadow,
-              {45, 75, 57,
-               static_cast<std::uint8_t>(focused ? 66 : 38)});
-    const SDL_Rect avatar{center_x - size / 2, 132 + bob, size, size};
+    const SDL_Rect avatar{center_x - size / 2,
+                          center_y - size / 2 + bob, size, size};
     bool rendered_portrait = false;
     if (!managed_image_root.empty() &&
         starts_with(profile.avatar_ref, "local:")) {
@@ -465,34 +542,83 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
     }
     if (!rendered_portrait) {
       const std::string initial(1, profile.display_name.front());
-      draw_centered_text(renderer, initial, center_x, 178 + bob, 8, kText);
+      draw_centered_text(renderer, initial, center_x, center_y - 32 + bob, 8,
+                         kText);
     }
 
-    const SDL_Rect name_panel{center_x - (focused ? 78 : 66),
-                              focused ? 316 : 314,
-                              focused ? 156 : 132, focused ? 48 : 40};
+    const SDL_Rect name_panel{center_x - (focused ? 70 : 62),
+                              center_y + size / 2 + 12,
+                              focused ? 140 : 124, focused ? 38 : 34};
     fill_rect(renderer, name_panel, {255, 250, 231, 230});
     draw_centered_text(renderer, profile.display_name, center_x,
-                       focused ? 328 : 322, focused ? 4 : 3, kText);
+                       name_panel.y + (focused ? 7 : 6),
+                       focused ? 3 : 2, kText);
   }
-
-  fill_rect(renderer, {222, 399, 196, 44}, kPanel);
-  outline_rect(renderer, {222, 399, 196, 44}, 2, kHoney);
-  draw_centered_text(renderer, "A  Choose", kWidth / 2, 410, 2, kText);
 }
 
-void render_home(SDL_Renderer* renderer, const LauncherState& state) {
+void render_home(SDL_Renderer* renderer, const LauncherState& state,
+                 const std::filesystem::path& managed_image_root,
+                 const std::filesystem::path& built_in_avatar_root,
+                 const std::filesystem::path& current_background) {
   const auto* profile = state.active_profile();
   if (profile == nullptr) {
     return;
   }
 
-  fill_rect(renderer, {32, 24, 360, 78}, kPanel);
-  draw_text(renderer, "Hello, " + profile->display_name + "!", 54, 38, 4,
-            kText);
-  draw_text(renderer, state.screen() == Screen::ChildHome ? "Ready to play?"
-                                                           : "Parent controls",
-            56, 76, 2, kMuted);
+  if (state.screen() == Screen::ChildHome) {
+    constexpr SDL_Rect avatar_card{48, 92, 248, 286};
+    constexpr SDL_Rect background_card{344, 92, 248, 286};
+    constexpr SDL_Rect avatar_rect{72, 112, 200, 240};
+    constexpr SDL_Rect background_rect{368, 112, 200, 240};
+    fill_rect(renderer, avatar_card, kPanel);
+    fill_rect(renderer, background_card, kPanel);
+    outline_rect(renderer,
+                 state.focus_index() == 0 ? avatar_card : background_card,
+                 6, kHoney);
+
+    bool rendered_portrait = false;
+    if (!managed_image_root.empty() &&
+        starts_with(profile->avatar_ref, "local:")) {
+      try {
+        rendered_portrait = render_treated_portrait(
+            renderer,
+            ProfileImageImporter::resolve_portrait_at(managed_image_root,
+                                                       profile->avatar_ref),
+            avatar_rect, Color{255, 250, 231}, 5.0F);
+      } catch (const std::exception&) {
+      }
+    } else if (!built_in_avatar_root.empty()) {
+      if (const auto* built_in = find_built_in_avatar(profile->avatar_ref);
+          built_in != nullptr) {
+        try {
+          rendered_portrait = render_treated_portrait(
+              renderer,
+              built_in_avatar_thumbnail_path(built_in_avatar_root,
+                                             built_in->id),
+              avatar_rect, Color{255, 250, 231}, 5.0F);
+        } catch (const std::exception&) {
+        }
+      }
+    }
+    if (!rendered_portrait) {
+      const std::string initial(1, profile->display_name.front());
+      draw_centered_text(renderer, initial, avatar_rect.x + avatar_rect.w / 2,
+                         avatar_rect.y + 70, 8, kText);
+    }
+
+    if (SDL_Texture* background = cached_texture(renderer, current_background);
+        background != nullptr) {
+      SDL_RenderCopy(renderer, background, nullptr, &background_rect);
+    } else {
+      fill_rect(renderer, background_rect, {114, 164, 126, 220});
+    }
+    return;
+  }
+
+  fill_rect(renderer, {54, 16, 532, 72}, kPanel);
+  draw_centered_text(renderer, "Hello, " + profile->display_name + "!",
+                     kWidth / 2, 27, 4, kText);
+  draw_centered_text(renderer, "PARENT MENU", kWidth / 2, 68, 1, kMuted);
 
   const auto items = state.menu_items();
   const int row_start = items.size() > 8 ? 98 : (items.size() > 7 ? 104 : (items.size() > 6 ? 108 : 118));
@@ -500,10 +626,10 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
   const int row_height = items.size() > 8 ? 27 : (items.size() > 7 ? 31 : (items.size() > 6 ? 35 : 39));
   for (std::size_t index = 0; index < items.size(); ++index) {
     const bool focused = index == state.focus_index();
-    const SDL_Rect row{focused ? 278 : 286,
+    const SDL_Rect row{focused ? 148 : 156,
                        row_start + static_cast<int>(index) * row_gap,
-                       focused ? 330 : 316, row_height};
-    fill_rect(renderer, row, index == state.focus_index() ? kPanelFocused : kPanel);
+                       focused ? 344 : 328, row_height};
+    fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
     if (focused) {
       outline_rect(renderer, row, 3, kHoney);
     }
@@ -511,8 +637,9 @@ void render_home(SDL_Renderer* renderer, const LauncherState& state) {
               row.y + (row_height - font_height(2)) / 2 - 2, 2, kText);
   }
 
-  fill_rect(renderer, {278, 438, 330, 30}, {255, 250, 231, 210});
-  draw_centered_text(renderer, "A Choose   B Profiles", 443, 444, 1, kMuted);
+  fill_rect(renderer, {150, 438, 340, 30}, {255, 250, 231, 210});
+  draw_centered_text(renderer, "A CHOOSE   B PROFILES", kWidth / 2, 444, 1,
+                     kMuted);
 }
 
 int setup_step_number(SetupStep step) {
@@ -523,15 +650,34 @@ int setup_step_number(SetupStep step) {
 
 bool render_startup_splash(SDL_Renderer* renderer,
                            const std::filesystem::path& image_path) {
-  render_storybook_background(renderer, image_path);
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  SDL_RenderClear(renderer);
   SDL_Texture* texture = cached_texture(renderer, image_path);
   if (texture == nullptr) {
+    // mmiyoo rejects textures larger than its hardware limit. Never leave the
+    // framebuffer black just because optional startup artwork could not load.
+    fill_rect(renderer, {158, 174, 324, 112}, {255, 250, 229, 238});
+    draw_centered_text(renderer, "SproutOS", kWidth / 2, 194, 6, kText);
+    draw_centered_text(renderer, "GROWING YOUR LIBRARY", kWidth / 2, 254, 1,
+                       kMuted);
+    present_frame(renderer);
     return false;
   }
-  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-  fill_rect(renderer, {158, 34, 324, 74}, {255, 250, 229, 218});
-  draw_centered_text(renderer, "SproutOS", kWidth / 2, 47, 6, kText);
-  SDL_RenderPresent(renderer);
+  int image_width = 0;
+  int image_height = 0;
+  if (SDL_QueryTexture(texture, nullptr, nullptr, &image_width, &image_height) != 0 ||
+      image_width <= 0 || image_height <= 0) {
+    present_frame(renderer);
+    return false;
+  }
+  const double scale = std::min(static_cast<double>(kWidth) / image_width,
+                                static_cast<double>(kHeight) / image_height);
+  const int width = std::max(1, static_cast<int>(image_width * scale));
+  const int height = std::max(1, static_cast<int>(image_height * scale));
+  const SDL_Rect destination{(kWidth - width) / 2, (kHeight - height) / 2,
+                             width, height};
+  SDL_RenderCopy(renderer, texture, nullptr, &destination);
+  present_frame(renderer);
   return true;
 }
 
@@ -553,9 +699,15 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
       }
     }
   }
-  render_storybook_background(renderer, resolved_background);
+  const bool profile_selector = state.screen() == Screen::ProfileSelect;
+  if (profile_selector) {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+  } else {
+    render_storybook_background(renderer, resolved_background);
+  }
 
-  if (!accent_atlas.empty()) {
+  if (!profile_selector && !accent_atlas.empty()) {
     SDL_Texture* accents =
         IMG_LoadTexture(renderer, path_as_utf8(accent_atlas).c_str());
     if (accents != nullptr) {
@@ -579,106 +731,156 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
     render_profile_select(renderer, state, managed_image_root,
                           built_in_avatar_root);
   } else {
-    render_home(renderer, state);
+    render_home(renderer, state, managed_image_root, built_in_avatar_root,
+                resolved_background);
   }
 
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
-void render_library(SDL_Renderer* renderer,
-                    const LibraryPresentation& library) {
+void render_library(
+    SDL_Renderer* renderer, const LibraryPresentation& library,
+    const Profile* active_profile,
+    const std::filesystem::path& managed_image_root,
+    const std::filesystem::path& built_in_avatar_root) {
   render_storybook_background(renderer);
 
-  fill_rect(renderer, {14, 10, 612, 38}, {255, 250, 231, 238});
-  draw_text(renderer, "GAME LIBRARY", 28, 17, 3, kText);
-  draw_text(renderer, "UP DOWN  ROW    LEFT RIGHT  GAME", 344, 23, 1, kMuted);
-
+  fill_rect(renderer, {14, 8, 612, 42}, {255, 250, 231, 238});
+  if (active_profile == nullptr) {
+    draw_text(renderer, "GAME LIBRARY", 28, 18, 3, kText);
+  } else {
+    const SDL_Rect portrait{24, 12, 34, 34};
+    bool rendered_portrait = false;
+    if (!managed_image_root.empty() &&
+        starts_with(active_profile->avatar_ref, "local:")) {
+      try {
+        rendered_portrait = render_treated_portrait(
+            renderer,
+            ProfileImageImporter::resolve_portrait_at(
+                managed_image_root, active_profile->avatar_ref),
+            portrait, kHoney, 4.0F);
+      } catch (const std::exception&) {
+      }
+    } else if (!built_in_avatar_root.empty()) {
+      if (const auto* avatar = find_built_in_avatar(active_profile->avatar_ref);
+          avatar != nullptr) {
+        try {
+          rendered_portrait = render_treated_portrait(
+              renderer,
+              built_in_avatar_thumbnail_path(built_in_avatar_root, avatar->id),
+              portrait, kHoney, 4.0F);
+        } catch (const std::exception&) {
+        }
+      }
+    }
+    if (!rendered_portrait) {
+      fill_rect(renderer, portrait, kPanelFocused);
+      draw_centered_text(
+          renderer,
+          std::string(1, active_profile->display_name.empty()
+                             ? '?'
+                             : active_profile->display_name.front()),
+          portrait.x + portrait.w / 2, portrait.y + 7, 3, kText);
+    }
+    draw_text(renderer, active_profile->display_name, 68, 18, 3, kText);
+  }
   constexpr std::array<LibrarySection, 4> sections{
       LibrarySection::Recent, LibrarySection::Favorites,
       LibrarySection::All, LibrarySection::Arcade};
-  constexpr std::array<std::string_view, 4> labels{
-      "CONTINUE", "FAVORITES", "ALL GAMES", "ARCADE"};
-  for (std::size_t section_index = 0; section_index < sections.size();
-       ++section_index) {
-    const auto section = sections[section_index];
-    const bool active = section == library.section();
-    const int row_y = 56 + static_cast<int>(section_index) * 94;
-    const SDL_Rect label_panel{16, row_y + 8, 116, 68};
-    fill_rect(renderer, label_panel,
-              active ? Color{255, 226, 155, 246}
-                     : Color{255, 250, 231, 224});
-    if (active) outline_rect(renderer, label_panel, 3, kFocus);
-    draw_centered_text(renderer, labels[section_index], 74, row_y + 22,
-                       labels[section_index].size() > 9 ? 1 : 2,
-                       active ? kText : kMuted);
+  constexpr std::array<std::string_view, 4> section_labels{
+      "CONTINUE", "FAVORITES", "ALL GAMES", "SPROUT ARCADE"};
+  const auto section_iterator =
+      std::find(sections.begin(), sections.end(), library.section());
+  const std::size_t active_section = static_cast<std::size_t>(
+      std::distance(sections.begin(), section_iterator));
+  const std::size_t previous_section =
+      (active_section + sections.size() - 1U) % sections.size();
+  const std::size_t next_section = (active_section + 1U) % sections.size();
 
-    const auto entries = library.entries(section);
-    if (entries.empty()) {
-      const SDL_Rect empty{144, row_y + 8, 470, 68};
-      fill_rect(renderer, empty, {255, 250, 231, 212});
-      draw_centered_text(renderer, "Nothing here yet", empty.x + empty.w / 2,
-                         empty.y + 24, 2, kMuted);
-      continue;
-    }
-    constexpr std::size_t visible_count = 3;
-    const std::size_t focus = library.focus_index(section);
-    const std::size_t first = focus < visible_count
-                                  ? 0
-                                  : focus - visible_count + 1;
-    const std::size_t last = std::min(entries.size(), first + visible_count);
-    for (std::size_t index = first; index < last; ++index) {
-      const bool focused = active && index == focus;
-      const int local = static_cast<int>(index - first);
-      SDL_Rect card{144 + local * 158, row_y + 5, 148, 78};
-      if (focused) {
-        card.x -= 3;
-        card.y -= 4;
-        card.w += 6;
-        card.h += 8;
-      }
-      fill_rect(renderer, card, {255, 250, 231, 244});
-      const auto& entry = entries[index];
+  // Neighboring rail headers intentionally peek into the viewport. Their
+  // position, not instructional copy, makes vertical carousel navigation
+  // discoverable on the 640x480 display.
+  fill_rect(renderer, {18, 54, 604, 28}, {255, 250, 231, 190});
+  draw_centered_text(renderer, section_labels[previous_section], kWidth / 2,
+                     62, 1, kMuted);
+  fill_rect(renderer, {76, 84, 488, 28}, {255, 250, 231, 238});
+  draw_centered_text(renderer, section_labels[active_section], kWidth / 2,
+                     90, 2, kText);
+
+  const auto active_entries = library.entries(library.section());
+  if (active_entries.empty()) {
+    const SDL_Rect empty{118, 154, 404, 112};
+    fill_rect(renderer, empty, {255, 250, 231, 232});
+    draw_centered_text(renderer, "Nothing here yet", kWidth / 2, 192, 3,
+                       kMuted);
+  } else {
+    const std::size_t focus = library.focus_index(library.section());
+    const std::size_t count = active_entries.size();
+    constexpr std::array<int, 3> offsets{-1, 1, 0};
+    for (const int offset : offsets) {
+      const auto signed_index = static_cast<long long>(focus) + offset;
+      const std::size_t index = static_cast<std::size_t>(
+          (signed_index + static_cast<long long>(count)) %
+          static_cast<long long>(count));
+      const bool focused = offset == 0;
+      const SDL_Rect card = focused
+                                ? SDL_Rect{120, 118, 400, 215}
+                                : SDL_Rect{offset < 0 ? -90 : 470, 156, 260, 140};
+      fill_rect(renderer, {card.x + 7, card.y + 9, card.w, card.h},
+                {23, 49, 39, 150});
+      fill_rect(renderer, card, {255, 250, 231, 246});
+
+      const auto& entry = active_entries[index];
       std::filesystem::path artwork = entry.artwork_path;
       if (!artwork.empty() && artwork.is_relative()) {
         artwork = executable_asset(artwork.generic_string());
       }
       SDL_Texture* texture = artwork.empty() ? nullptr
                                              : cached_texture(renderer, artwork);
-      const SDL_Rect image{card.x + 3, card.y + 3, card.w - 6, card.h - 24};
+      const SDL_Rect image_area{card.x + 5, card.y + 5, card.w - 10,
+                                card.h - 10};
       if (texture != nullptr) {
-        SDL_RenderCopy(renderer, texture, nullptr, &image);
+        int texture_width = 0;
+        int texture_height = 0;
+        if (SDL_QueryTexture(texture, nullptr, nullptr, &texture_width,
+                             &texture_height) == 0 &&
+            texture_width > 0 && texture_height > 0) {
+          const double scale = std::min(
+              static_cast<double>(image_area.w) / texture_width,
+              static_cast<double>(image_area.h) / texture_height);
+          const int width = std::max(1, static_cast<int>(texture_width * scale));
+          const int height =
+              std::max(1, static_cast<int>(texture_height * scale));
+          const SDL_Rect destination{
+              image_area.x + (image_area.w - width) / 2,
+              image_area.y + (image_area.h - height) / 2, width, height};
+          SDL_RenderCopy(renderer, texture, nullptr, &destination);
+        }
       } else {
         const std::uint32_t seed = static_cast<std::uint32_t>(
             std::hash<std::string>{}(entry.id));
-        fill_rect(renderer, image,
+        fill_rect(renderer, image_area,
                   {static_cast<std::uint8_t>(70 + seed % 90),
                    static_cast<std::uint8_t>(80 + (seed >> 8U) % 100),
                    static_cast<std::uint8_t>(100 + (seed >> 16U) % 110)});
-        const std::string initial(1, entry.title.empty() ? '?' : entry.title[0]);
-        draw_centered_text(renderer, initial, image.x + image.w / 2,
-                           image.y + 8, 5, {255, 250, 231});
       }
-      fill_rect(renderer, {card.x + 3, card.y + card.h - 22, card.w - 6, 19},
-                {255, 250, 231, 246});
-      const std::string title = entry.title.size() > 17
-                                    ? entry.title.substr(0, 17)
-                                    : entry.title;
-      draw_centered_text(renderer, title, card.x + card.w / 2,
-                         card.y + card.h - 20, 1,
-                         entry.launch_allowed && entry.unavailable_reason.empty()
-                             ? kText
-                             : kMuted);
-      if (focused) outline_rect(renderer, card, 4, kFocus);
+      outline_rect(renderer, card, focused ? 5 : 2,
+                   focused ? kFocus : Color{255, 250, 231, 210});
     }
   }
 
+  fill_rect(renderer, {18, 356, 604, 106}, {255, 250, 231, 205});
+  draw_centered_text(renderer, section_labels[next_section], kWidth / 2, 370,
+                     2, kText);
+  outline_rect(renderer, {18, 356, 604, 106}, 2,
+               Color{255, 250, 231, 220});
+
   if (!library.notice().empty()) {
-    fill_rect(renderer, {118, 398, 404, 34}, {255, 226, 155, 246});
+    fill_rect(renderer, {118, 418, 404, 34}, {255, 226, 155, 246});
     draw_centered_text(renderer, library.notice().substr(0, 68), kWidth / 2,
-                       407, 1, kFocus);
+                       427, 1, kFocus);
   }
-  draw_footer(renderer, "A PLAY   B BACK");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_profile_archive(SDL_Renderer* renderer,
@@ -714,7 +916,7 @@ void render_profile_archive(SDL_Renderer* renderer,
                        archive.notice_is_error() ? kFocus : kText);
   }
   draw_footer(renderer, "ARROWS MOVE   A SELECT   B BACK");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_profile_avatars(
@@ -857,7 +1059,7 @@ void render_profile_avatars(
                        kFocus);
   }
   draw_footer(renderer, "ARROWS MOVE   A SELECT   B BACK");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_profile_image_crop(SDL_Renderer* renderer,
@@ -886,7 +1088,7 @@ void render_profile_image_crop(SDL_Renderer* renderer,
                        kFocus);
   }
   draw_footer(renderer, "ARROWS MOVE   L R ZOOM   A USE   B CANCEL");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_parent_pin(SDL_Renderer* renderer,
@@ -921,7 +1123,7 @@ void render_parent_pin(SDL_Renderer* renderer,
                        kFocus);
   }
   draw_footer(renderer, "ARROWS MOVE   A SELECT   B CANCEL");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup) {
@@ -956,7 +1158,7 @@ void render_setup(SDL_Renderer* renderer, const SetupPresentation& setup) {
     draw_centered_text(renderer, error, kWidth / 2, 402, 1, kFocus);
   }
   draw_footer(renderer, "ARROWS CHOOSE   A CONTINUE   B SAVE AND EXIT");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 void render_recovery(SDL_Renderer* renderer,
@@ -985,7 +1187,7 @@ void render_recovery(SDL_Renderer* renderer,
                        recovery.notice_is_error() ? kFocus : kText);
   }
   draw_footer(renderer, "ARROWS MOVE   A SELECT   B BACK");
-  SDL_RenderPresent(renderer);
+  present_frame(renderer);
 }
 
 }  // namespace sprout::launcher

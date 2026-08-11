@@ -12,7 +12,8 @@ constexpr std::size_t kAvatarsPerPage = 8;
 
 ProfileAvatarPresentation::ProfileAvatarPresentation(
     ProfileRepository& profiles, bool custom_image_available,
-    std::optional<std::string> initial_profile_id)
+    std::optional<std::string> initial_profile_id,
+    ProfileAvatarStage initial_stage)
     : repository_(profiles),
       profiles_(profiles.list_profiles(false)),
       custom_image_available_(custom_image_available),
@@ -32,7 +33,12 @@ ProfileAvatarPresentation::ProfileAvatarPresentation(
     if (!found) {
       throw std::invalid_argument("Selected profile does not exist");
     }
-    stage_ = ProfileAvatarStage::Avatar;
+    if (initial_stage != ProfileAvatarStage::Avatar &&
+        initial_stage != ProfileAvatarStage::Background) {
+      throw std::invalid_argument(
+          "Locked profile appearance must open an avatar or background picker");
+    }
+    stage_ = initial_stage;
   }
 }
 

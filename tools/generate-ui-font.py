@@ -10,7 +10,7 @@ FONT_PATH = ROOT / "shared" / "assets" / "fonts" / "Nunito-Variable.ttf"
 OUTPUT_ROOT = ROOT / "shared" / "assets" / "fonts"
 METRICS_PATH = ROOT / "shared" / "include" / "sprout" / "ui" / "font_metrics.hpp"
 FIRST, LAST = 32, 126
-SIZE, CELL, COLUMNS, PADDING = 48, 64, 16, 4
+SIZE, CELL, COLUMNS, PADDING = 48, 64, 12, 4
 
 
 def build(weight: str, filename: str):

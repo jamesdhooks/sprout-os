@@ -1,0 +1,67 @@
+#include "sprout/launcher/sdl_input.hpp"
+
+namespace sprout::launcher {
+
+std::optional<Action> keyboard_action(SDL_Keycode key) {
+  switch (key) {
+    case SDLK_UP:
+    case SDLK_w:
+      return Action::Up;
+    case SDLK_DOWN:
+    case SDLK_s:
+      return Action::Down;
+    case SDLK_LEFT:
+    case SDLK_a:
+      return Action::Left;
+    case SDLK_RIGHT:
+    case SDLK_d:
+      return Action::Right;
+    case SDLK_RETURN:
+    case SDLK_SPACE:
+    case SDLK_z:
+      return Action::Confirm;
+    case SDLK_ESCAPE:
+      return Action::SystemMenu;
+    case SDLK_BACKSPACE:
+    case SDLK_x:
+    case SDLK_b:
+      return Action::Back;
+    case SDLK_m:
+      return Action::Menu;
+    case SDLK_e:
+      return Action::ZoomIn;
+    case SDLK_q:
+      return Action::ZoomOut;
+    default:
+      return std::nullopt;
+  }
+}
+
+std::optional<Action> controller_action(std::uint8_t button) {
+  switch (button) {
+    case SDL_CONTROLLER_BUTTON_DPAD_UP:
+      return Action::Up;
+    case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+      return Action::Down;
+    case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+      return Action::Left;
+    case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+      return Action::Right;
+    case SDL_CONTROLLER_BUTTON_A:
+      return Action::Confirm;
+    case SDL_CONTROLLER_BUTTON_B:
+      return Action::Back;
+    case SDL_CONTROLLER_BUTTON_START:
+      return Action::Confirm;
+    case SDL_CONTROLLER_BUTTON_GUIDE:
+      return Action::SystemMenu;
+    case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
+      return Action::ZoomIn;
+    case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:
+      return Action::ZoomOut;
+    default:
+      return std::nullopt;
+  }
+}
+
+}  // namespace sprout::launcher

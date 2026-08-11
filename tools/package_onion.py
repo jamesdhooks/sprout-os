@@ -62,12 +62,37 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
         repo / "tools" / "templates" / "onion-sprout-config.json",
         app / "config.json",
     )
+    copy_file(
+        repo / "tools" / "templates" / "containment-enabled",
+        app / ".containment-enabled",
+    )
+    copy_file(
+        repo / "tools" / "templates" / "onion-runtime-sprout.sh",
+        app / "integration" / "runtime.sh",
+    )
+    copy_file(
+        repo / "tools" / "templates" / "onion-runtime-integration.json",
+        app / "integration" / "runtime.json",
+    )
     copy_file(household_seed, app / "config" / "household-seed.json")
 
     launcher_assets = build / "launcher" / "assets"
     if not launcher_assets.is_dir():
         raise FileNotFoundError(f"Launcher assets are missing: {launcher_assets}")
     shutil.copytree(launcher_assets, app / "bin" / "assets")
+
+    # The Miyoo mmiyoo renderer cannot create textures larger than 800x600.
+    # Replace only full-screen launcher art with checked-in 640x480 variants;
+    # atlases keep their original coordinates and are intentionally untouched.
+    miyoo_assets = repo / "launcher" / "assets" / "miyoo"
+    for relative in (
+        Path("sprout-startup-storybook.png"),
+        Path("backgrounds/firefly-evening.png"),
+        Path("backgrounds/garden-morning.png"),
+        Path("backgrounds/sunny-cove.png"),
+        Path("backgrounds/treehouse-library.png"),
+    ):
+        copy_file(miyoo_assets / relative, app / "bin" / "assets" / relative)
 
     game = repo / "games" / "blocks-buttons"
     if not game.is_dir():

@@ -7,13 +7,9 @@
 namespace sprout::launcher {
 namespace {
 
-constexpr std::array<std::string_view, 6> kChildMenu{
-    "Continue",
-    "Favorites",
-    "See All",
-    "Sprout Arcade",
-    "Ask for More Time",
-    "Profile Select",
+constexpr std::array<std::string_view, 2> kChildMenu{
+    "Profile Picture",
+    "Background",
 };
 
 constexpr std::array<std::string_view, 10> kParentMenu{
@@ -76,11 +72,7 @@ std::optional<LauncherEvent> LauncherState::handle(Action action) {
       return std::nullopt;
     }
     if (action == Action::Back) {
-      return LauncherEvent{
-          .type = EventType::ExitRequested,
-          .profile_id = {},
-          .target = {},
-      };
+      return std::nullopt;
     }
     if (action != Action::Confirm) {
       return std::nullopt;
