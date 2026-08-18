@@ -16,12 +16,14 @@ enum class ProfileAvatarStage {
   Appearance,
   Avatar,
   Background,
+  Accent,
 };
 
 enum class ProfileAvatarEventType {
   BackRequested,
   AvatarAssigned,
   BackgroundAssigned,
+  AccentAssigned,
   ImportRequested,
 };
 
@@ -42,9 +44,11 @@ class ProfileAvatarPresentation {
   [[nodiscard]] const ProfileRecord* selected_profile() const noexcept;
   [[nodiscard]] ReadOnlyView<BuiltInAvatar> avatars() const noexcept;
   [[nodiscard]] ReadOnlyView<BuiltInBackground> backgrounds() const noexcept;
+  [[nodiscard]] std::uint32_t accent_rgb() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] std::size_t page_index() const noexcept;
   [[nodiscard]] std::size_t page_count() const noexcept;
+  [[nodiscard]] std::size_t avatar_first_column() const noexcept;
   [[nodiscard]] bool custom_image_available() const noexcept;
   [[nodiscard]] bool import_focused() const noexcept;
   [[nodiscard]] const std::string& notice() const noexcept;
@@ -55,6 +59,7 @@ class ProfileAvatarPresentation {
   void move_profile_focus(int delta);
   void move_avatar_focus(int delta);
   void move_background_focus(int delta);
+  void move_accent_focus(int delta);
 
   ProfileRepository& repository_;
   std::vector<ProfileRecord> profiles_;
@@ -63,8 +68,10 @@ class ProfileAvatarPresentation {
   ProfileAvatarStage stage_{ProfileAvatarStage::Profile};
   std::size_t profile_focus_{0};
   std::size_t avatar_focus_{0};
+  std::size_t avatar_first_column_{0};
   std::size_t appearance_focus_{0};
   std::size_t background_focus_{0};
+  std::size_t accent_focus_{0};
   std::string notice_;
 };
 

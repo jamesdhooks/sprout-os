@@ -17,17 +17,43 @@ std::optional<Action> keyboard_action(SDL_Keycode key) {
     case SDLK_d:
       return Action::Right;
     case SDLK_RETURN:
+      return Action::Menu;
+    // The Miyoo's physical SELECT key reaches SDL as Escape (keyboard input,
+    // not an SDL game-controller BACK event).
+    case SDLK_ESCAPE:
+    // Some Miyoo Mini keypad revisions expose SELECT as the right shift key.
+    // Treat both hardware translations as the same global return action.
+    case SDLK_RSHIFT:
+    case SDLK_RCTRL:
+    // Alternate Miyoo gpio-key translation used by this handheld revision.
+    case SDLK_t:
+      return Action::ProfileSelect;
     case SDLK_SPACE:
     case SDLK_z:
       return Action::Confirm;
-    case SDLK_ESCAPE:
-      return Action::SystemMenu;
+    case SDLK_LCTRL:
+      return Action::Back;
+    case SDLK_LSHIFT:
+      return Action::Filters;
+    case SDLK_LALT:
+      return Action::ClearFilters;
+    case SDLK_HOME:
+      return Action::GameSwitcher;
+    case SDLK_TAB:
+    case SDLK_PAGEDOWN:
+      return Action::ZoomOut;
     case SDLK_BACKSPACE:
+    case SDLK_PAGEUP:
+      return Action::ZoomIn;
     case SDLK_x:
     case SDLK_b:
       return Action::Back;
     case SDLK_m:
       return Action::Menu;
+    case SDLK_f:
+      return Action::Filters;
+    case SDLK_c:
+      return Action::ClearFilters;
     case SDLK_e:
       return Action::ZoomIn;
     case SDLK_q:
@@ -51,10 +77,16 @@ std::optional<Action> controller_action(std::uint8_t button) {
       return Action::Confirm;
     case SDL_CONTROLLER_BUTTON_B:
       return Action::Back;
+    case SDL_CONTROLLER_BUTTON_X:
+      return Action::Filters;
+    case SDL_CONTROLLER_BUTTON_Y:
+      return Action::ClearFilters;
     case SDL_CONTROLLER_BUTTON_START:
-      return Action::Confirm;
+      return Action::Menu;
+    case SDL_CONTROLLER_BUTTON_BACK:
+      return Action::ProfileSelect;
     case SDL_CONTROLLER_BUTTON_GUIDE:
-      return Action::SystemMenu;
+      return Action::GameSwitcher;
     case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER:
       return Action::ZoomIn;
     case SDL_CONTROLLER_BUTTON_LEFTSHOULDER:

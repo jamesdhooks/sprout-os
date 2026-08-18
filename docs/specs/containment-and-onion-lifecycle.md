@@ -17,13 +17,16 @@ action that cannot be triggered with handheld buttons alone.
 - Sprout owns profile selection, child policy, parent authentication, library
   authorization, and the decision to hand a validated game request to Onion.
 - Onion `keymon` remains global. In Apps mode it does not act on a single MENU
-  press; the Miyoo SDL backend maps Linux `KEY_ESC` to `SDLK_ESCAPE`, which
-  Sprout treats as a dedicated `SystemMenu` action.
+  press. The Miyoo SDL backend maps the center MENU button to `SDLK_HOME`;
+  Sprout atomically requests Onion's GameSwitcher and returns control to the
+  Onion runtime. SELECT (`SDLK_ESCAPE`) remains the contained administrative
+  `SystemMenu` action.
 - MainUI is closed source and is not modified.
 
 ## Launcher input and authorization
 
-1. `SystemMenu` is distinct from `Back` and `Menu`/START.
+1. `GameSwitcher`/MENU, `SystemMenu`/SELECT, `Back`/B, and the primary
+   `Menu`/START action are distinct.
 2. At profile selection or under a child profile, `SystemMenu` opens masked
    parent-PIN verification.
 3. A correct PIN authorizes exactly one exit to stock Onion for the current boot

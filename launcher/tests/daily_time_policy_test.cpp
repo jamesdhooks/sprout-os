@@ -156,7 +156,7 @@ void interrupted_session_recovery_is_bounded() {
          "recovered active marker should be cleared exactly once");
 }
 
-void day_rollover_and_clock_rollback_fail_closed() {
+void day_rollover_and_clock_rollback_fails_closed_without_ending_launcher() {
   TemporaryDirectory directory;
   const auto database = directory.path() / "time-policy.sqlite3";
   DailyTimePolicyStore policy(database);
@@ -169,16 +169,14 @@ void day_rollover_and_clock_rollback_fail_closed() {
   expect(next_day.used_milliseconds == 0 &&
              next_day.remaining_milliseconds == 60'000,
          "a forward local-date transition should select a fresh daily budget");
-  expect_failure(
-      [&] {
-        (void)policy.status("child-1", sample(2, 1'999, "2026-08-03"));
-      },
-      "wall-clock rollback should fail closed");
-  expect_failure(
-      [&] {
-        (void)policy.status("child-1", sample(3, 2'001, "2026-08-02"));
-      },
-      "local-date rollback should fail closed");
+  const auto wall_rollback =
+      policy.status("child-1", sample(2, 1'999, "2026-08-03"));
+  expect(wall_rollback.expired && wall_rollback.remaining_milliseconds == 0,
+         "wall-clock rollback should fail closed without throwing");
+  const auto date_rollback =
+      policy.status("child-1", sample(3, 2'001, "2026-08-02"));
+  expect(date_rollback.expired && date_rollback.remaining_milliseconds == 0,
+         "local-date rollback should fail closed without throwing");
 }
 
 void active_midnight_transition_requires_normal_exit() {
@@ -255,7 +253,7 @@ int main() {
     warnings_emit_once_at_crossed_thresholds();
     expiration_blocks_resume_and_requests_normal_exit();
     interrupted_session_recovery_is_bounded();
-    day_rollover_and_clock_rollback_fail_closed();
+    day_rollover_and_clock_rollback_fails_closed_without_ending_launcher();
     active_midnight_transition_requires_normal_exit();
     invalid_inputs_and_newer_schema_are_rejected();
     unused_allowance_can_be_compensated_safely();

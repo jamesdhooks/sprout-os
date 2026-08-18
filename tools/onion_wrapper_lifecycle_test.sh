@@ -207,6 +207,30 @@ run_error_signal_case() {
   DUMMY_PID_2=""
 }
 
+run_duplicate_wait_case() {
+  prepare_case duplicate-wait
+  mkdir "$LOCK_DIR"
+  sleep 30 &
+  OWNER_PID=$!
+  printf '%s\n' "$OWNER_PID" >"$LOCK_DIR/pid"
+  sh "$WRAPPER_PATH" &
+  WRAPPER_PID=$!
+  attempts=0
+  while ! grep -q 'duplicate-launch-refused' "$DATA_ROOT"/logs/launcher-*.log 2>/dev/null && [ "$attempts" -lt 100 ]; do
+    sleep 0.05
+    attempts=$((attempts + 1))
+  done
+  grep -q 'duplicate-launch-refused' "$DATA_ROOT"/logs/launcher-*.log || fail "duplicate wrapper did not report its active owner"
+  [ ! -f "$TEST_CALL_LOG" ] || fail "duplicate wrapper started a second launcher"
+  kill -TERM "$OWNER_PID"
+  wait "$OWNER_PID" 2>/dev/null || true
+  wait "$WRAPPER_PID"
+  WRAPPER_PID=""
+  rm -f "$LOCK_DIR/pid"
+  rmdir "$LOCK_DIR"
+}
+
 run_handoff_case
 run_error_signal_case
+run_duplicate_wait_case
 printf 'Onion wrapper lifecycle contract passed\n'

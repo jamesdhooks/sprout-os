@@ -262,7 +262,11 @@ class DailyTimePolicyStore::Impl {
     };
   }
 
-  void observe_clock(const std::string& profile_id,
+  // A Miyoo's wall clock can reset before Wi-Fi time sync completes. Treat a
+  // rollback as an untrusted clock and fail closed at the caller; throwing
+  // here previously terminated the whole launcher as soon as a child profile
+  // was selected.
+  bool observe_clock(const std::string& profile_id,
                      const TimePolicySample& sample) {
     Statement read(database_,
                    "SELECT last_local_date, last_utc_seconds FROM profile_clock "
@@ -273,7 +277,7 @@ class DailyTimePolicyStore::Impl {
           reinterpret_cast<const char*>(sqlite3_column_text(read.get(), 0)));
       const auto previous_utc = sqlite3_column_int64(read.get(), 1);
       if (sample.local_date < previous_date || sample.utc_seconds < previous_utc) {
-        throw std::invalid_argument("Time-policy clock rollback detected");
+        return false;
       }
     }
     Statement write(database_, R"sql(
@@ -287,6 +291,7 @@ class DailyTimePolicyStore::Impl {
     bind_text(write.get(), 2, sample.local_date);
     sqlite3_bind_int64(write.get(), 3, sample.utc_seconds);
     step_done(database_, write.get());
+    return true;
   }
 
   std::optional<ActiveSession> active_session() const {
@@ -448,7 +453,9 @@ DailyTimeStatus DailyTimePolicyStore::status(const std::string& profile_id,
   validate_identifier(profile_id, "Profile ID");
   validate_sample(sample);
   const auto daily_allowance = impl_->allowance(profile_id);
-  impl_->observe_clock(profile_id, sample);
+  if (!impl_->observe_clock(profile_id, sample)) {
+    return make_status(daily_allowance, daily_allowance);
+  }
   return make_status(daily_allowance,
                      impl_->usage(profile_id, sample.local_date).used_milliseconds);
 }
@@ -463,7 +470,16 @@ DailyTimeDecision DailyTimePolicyStore::begin_session(
   execute(impl_->database_, "BEGIN IMMEDIATE");
   try {
     const auto daily_allowance = impl_->allowance(profile_id);
-    impl_->observe_clock(profile_id, sample);
+    if (!impl_->observe_clock(profile_id, sample)) {
+      const auto blocked = make_status(daily_allowance, daily_allowance);
+      execute(impl_->database_, "COMMIT");
+      return DailyTimeDecision{
+          .status = blocked,
+          .notices = {},
+          .launch_allowed = false,
+          .save_and_exit_required = false,
+      };
+    }
     const auto current = make_status(
         daily_allowance,
         impl_->usage(profile_id, sample.local_date).used_milliseconds);
@@ -516,7 +532,18 @@ DailyTimeDecision DailyTimePolicyStore::update_active_session(
     if (!active.has_value() || active->session_id != session_id) {
       throw std::invalid_argument("Time-policy session is not active");
     }
-    impl_->observe_clock(active->profile_id, sample);
+    if (!impl_->observe_clock(active->profile_id, sample)) {
+      const auto blocked = make_status(impl_->allowance(active->profile_id),
+                                       impl_->allowance(active->profile_id));
+      (void)impl_->charge(*active, blocked.allowance_milliseconds, false, sample);
+      execute(impl_->database_, "COMMIT");
+      return DailyTimeDecision{
+          .status = blocked,
+          .notices = {},
+          .launch_allowed = false,
+          .save_and_exit_required = true,
+      };
+    }
     if (sample.monotonic_milliseconds < active->last_monotonic_milliseconds) {
       throw std::invalid_argument("Monotonic time moved backwards");
     }
@@ -553,7 +580,18 @@ DailyTimePolicyStore::recover_interrupted_session(
       execute(impl_->database_, "COMMIT");
       return std::nullopt;
     }
-    impl_->observe_clock(active->profile_id, sample);
+    if (!impl_->observe_clock(active->profile_id, sample)) {
+      const auto blocked = make_status(impl_->allowance(active->profile_id),
+                                       impl_->allowance(active->profile_id));
+      (void)impl_->charge(*active, blocked.allowance_milliseconds, false, sample);
+      execute(impl_->database_, "COMMIT");
+      return DailyTimeDecision{
+          .status = blocked,
+          .notices = {},
+          .launch_allowed = false,
+          .save_and_exit_required = true,
+      };
+    }
     std::uint64_t recovery_charge = kRecoveryCheckpointMilliseconds;
     if (sample.local_date == active->local_date &&
         sample.utc_seconds >= active->last_utc_seconds) {

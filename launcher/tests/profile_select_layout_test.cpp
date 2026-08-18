@@ -6,6 +6,11 @@
 int main() {
   using sprout::launcher::profile_select_layout;
 
+  assert(sprout::launcher::profile_select_column_count(1) == 1);
+  assert(sprout::launcher::profile_select_column_count(4) == 2);
+  assert(sprout::launcher::profile_select_column_count(6) == 3);
+  assert(sprout::launcher::profile_select_column_count(8) == 4);
+
   for (int count = 1; count <= 8; ++count) {
     for (int focused = 0; focused < count; ++focused) {
       const auto slots = profile_select_layout(count, focused);

@@ -51,6 +51,7 @@ void discovers_supported_items_deterministically() {
   TemporaryCard card;
   card.add("Roms/GB/Nested/Zelda.GB");
   card.add("Roms/GB/alpha game.zip");
+  card.add("Roms/GB/Imgs/alpha game.png");
   card.add("Roms/GB/readme.txt");
   card.add("Roms/SFC/Mario.sfc");
   card.add("Roms/SFC/Imgs/Mario.png");
@@ -67,6 +68,13 @@ void discovers_supported_items_deterministically() {
           "identity should encode the system-relative path");
   require(first.items[1].system == OnionSystem::SuperNintendo,
           "SFC files should retain their typed system");
+  require(first.items[0].artwork_path ==
+              std::filesystem::weakly_canonical(
+                  card.root() / "Roms/GB/Imgs/alpha game.png") &&
+              first.items[1].artwork_path ==
+                  std::filesystem::weakly_canonical(
+                      card.root() / "Roms/SFC/Imgs/Mario.png"),
+          "Onion Imgs artwork should follow the ROM filename on every system");
   require(first.items[2].id == "onion:GB:Nested%2FZelda.GB",
           "nested path should remain part of stable identity");
   require(first.items[0].id == second.items[0].id &&
@@ -88,8 +96,10 @@ void discovers_the_extended_onion_catalogue() {
   card.add("Roms/NEOGEO/Fighter.zip");
   card.add("Roms/ARCADE/Cabinet.zip");
   card.add("Roms/PS/Memory Disc.chd");
+  card.add("Roms/PS/_hidden/multi-disc/Memory Disc (Disc 2).chd");
   card.add("Roms/PICO/Cart.p8");
   card.add("Roms/PICO/Artwork.png");
+  card.add("Roms/PICO/Imgs/Cart.png");
   card.add("Roms/PS/cover.png");
 
   const auto result = LocalLibraryScanner(card.root()).discover();
@@ -105,9 +115,38 @@ void discovers_the_extended_onion_catalogue() {
           "NES should map Onion FC content to the household seed label");
   require(contains("onion:PS:Memory%20Disc.chd"),
           "PlayStation CHD files should be discovered");
+  require(!contains("onion:PS:_hidden%2Fmulti-disc%2FMemory%20Disc%20%28Disc%202%29.chd"),
+          "hidden multi-disc dependencies must not become duplicate games");
   require(contains("onion:PICO:Cart.p8") &&
               contains("onion:PICO:Artwork.png"),
           "PICO-8 carts should include native and PNG cartridge forms");
+  const auto cart = std::find_if(result.items.begin(), result.items.end(),
+                                 [](const auto& item) {
+                                   return item.id == "onion:PICO:Cart.p8";
+                                 });
+  require(cart != result.items.end() && !cart->artwork_path.empty() &&
+              !contains("onion:PICO:Imgs%2FCart.png"),
+          "PICO artwork folders must provide covers without becoming games");
+}
+
+void shared_catalogue_preserves_arcade_shortnames_and_friendly_titles() {
+  TemporaryCard card;
+  card.add("Roms/ARCADE/galaga.zip");
+  card.add("Roms/ARCADE/Imgs/galaga.png");
+  card.add("Sprout/catalogue/games.json");
+  {
+    std::ofstream catalogue(card.root() / "Sprout/catalogue/games.json",
+                            std::ios::binary | std::ios::trunc);
+    catalogue << R"json({"entries":[{"platform":"ARCADE","cart":"galaga.zip","id":"onion:ARCADE:galaga.zip","title":"Galaga (Namco rev. B)","cover":"Roms/ARCADE/Imgs/galaga.png"}]})json";
+  }
+
+  const auto result = LocalLibraryScanner(card.root()).discover();
+  require(result.items.size() == 1,
+          "catalogue metadata must not create extra library items");
+  require(result.items.front().title == "Galaga (Namco rev. B)" &&
+              result.items.front().id == "onion:ARCADE:galaga.zip" &&
+              !result.items.front().artwork_path.empty(),
+          "shared catalogue should map short ROM names to seed-facing metadata");
 }
 
 void missing_roots_degrade_with_warnings() {
@@ -148,6 +187,7 @@ int main() {
   try {
     discovers_supported_items_deterministically();
     discovers_the_extended_onion_catalogue();
+    shared_catalogue_preserves_arcade_shortnames_and_friendly_titles();
     missing_roots_degrade_with_warnings();
 #ifndef _WIN32
     linked_rom_cannot_escape_system_root();

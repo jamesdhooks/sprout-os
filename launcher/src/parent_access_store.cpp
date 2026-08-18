@@ -270,14 +270,15 @@ class ParentAccessStore::Impl {
         }
         schema_version = sqlite3_column_int64(version.get(), 0);
       }
-      if (schema_version > 1) {
+      if (schema_version > 2) {
         throw std::runtime_error(
             "Parent-access database is newer than this Sprout build");
       }
       execute(database_, R"sql(
         CREATE TABLE IF NOT EXISTS credentials (
           credential_ref TEXT PRIMARY KEY NOT NULL,
-          encoded_hash TEXT NOT NULL
+          encoded_hash TEXT NOT NULL,
+          button_combo INTEGER NOT NULL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS active_grant (
           singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
@@ -291,7 +292,10 @@ class ParentAccessStore::Impl {
         );
       )sql");
       if (schema_version == 0) {
-        execute(database_, "PRAGMA user_version = 1");
+        execute(database_, "PRAGMA user_version = 2");
+      } else if (schema_version == 1) {
+        execute(database_, "ALTER TABLE credentials ADD COLUMN button_combo INTEGER NOT NULL DEFAULT 0");
+        execute(database_, "PRAGMA user_version = 2");
       }
     } catch (...) {
       sqlite3_close(database_);
@@ -320,7 +324,7 @@ ParentAccessStore::~ParentAccessStore() = default;
 ParentAccessStore::ParentAccessStore(ParentAccessStore&&) noexcept = default;
 ParentAccessStore& ParentAccessStore::operator=(ParentAccessStore&&) noexcept = default;
 
-void ParentAccessStore::set_pin(const std::string& credential_ref, std::string pin) {
+void ParentAccessStore::set_pin(const std::string& credential_ref, std::string pin, bool button_combo) {
   validate_credential_ref(credential_ref);
   validate_pin(pin);
   std::array<unsigned char, kSaltBytes> salt{};
@@ -337,11 +341,12 @@ void ParentAccessStore::set_pin(const std::string& credential_ref, std::string p
     throw std::runtime_error(argon2_error_message(result));
   }
   Statement statement(impl_->database_, R"sql(
-    INSERT INTO credentials (credential_ref, encoded_hash) VALUES (?, ?)
-    ON CONFLICT(credential_ref) DO UPDATE SET encoded_hash = excluded.encoded_hash
+    INSERT INTO credentials (credential_ref, encoded_hash, button_combo) VALUES (?, ?, ?)
+    ON CONFLICT(credential_ref) DO UPDATE SET encoded_hash = excluded.encoded_hash, button_combo = excluded.button_combo
   )sql");
   bind_text(statement.get(), 1, credential_ref);
   bind_text(statement.get(), 2, encoded.data());
+  sqlite3_bind_int(statement.get(), 3, button_combo ? 1 : 0);
   execute(impl_->database_, "BEGIN IMMEDIATE");
   try {
     step_done(impl_->database_, statement.get());
@@ -351,6 +356,12 @@ void ParentAccessStore::set_pin(const std::string& credential_ref, std::string p
     execute(impl_->database_, "ROLLBACK");
     throw;
   }
+}
+
+bool ParentAccessStore::uses_button_combo(const std::string& credential_ref) const {
+  Statement statement(impl_->database_, "SELECT button_combo FROM credentials WHERE credential_ref = ?");
+  bind_text(statement.get(), 1, credential_ref);
+  return sqlite3_step(statement.get()) == SQLITE_ROW && sqlite3_column_int(statement.get(), 0) != 0;
 }
 
 bool ParentAccessStore::verify_pin(const std::string& credential_ref,

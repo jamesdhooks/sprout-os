@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import struct
 import subprocess
 from pathlib import Path
@@ -45,6 +46,10 @@ def validate(package: Path) -> None:
         app / "games" / "blocks-buttons" / "manifest.json",
         app / "games" / "blocks-buttons" / "game.lua",
         app / "games" / "blocks-buttons" / "asset-manifest.json",
+        app / "games" / "mouse-maze" / "manifest.json",
+        app / "games" / "mouse-maze" / "game.lua",
+        app / "games" / "snake" / "manifest.json",
+        app / "games" / "snake" / "game.lua",
         app / "config" / "household-seed.json",
         app / ".containment-enabled",
         app / "integration" / "runtime.sh",
@@ -97,9 +102,16 @@ def validate(package: Path) -> None:
     assert b'exec "$APP_ROOT/bin/sprout-launcher"' not in launch, (
         "wrapper must remain alive so EXIT/INT/TERM cleanup can resume Onion"
     )
+    shell = shutil.which("sh")
+    if shell is None:
+        windows_git_shell = Path("C:/Program Files/Git/bin/sh.exe")
+        if windows_git_shell.is_file():
+            shell = str(windows_git_shell)
+    if shell is None:
+        raise RuntimeError("A POSIX sh is required for the Onion wrapper lifecycle contract")
     subprocess.run(
         [
-            "sh",
+            shell,
             str(Path(__file__).with_name("onion_wrapper_lifecycle_test.sh")),
             str(app / "launch.sh"),
         ],
@@ -161,12 +173,14 @@ def validate(package: Path) -> None:
     assert app_config["label"] == "Sprout", "Onion app label must be Sprout"
 
     seed = json.loads((app / "config" / "household-seed.json").read_text(encoding="utf-8"))
-    assert {profile["id"] for profile in seed["profiles"]} == {
-        "dad",
-        "mom",
-        "son",
-        "daughter",
-    }
+    profile_ids = [profile["id"] for profile in seed["profiles"]]
+    assert all(profile_ids) and len(profile_ids) == len(set(profile_ids)), (
+        "household seed profile IDs must be non-empty and unique"
+    )
+    roles = [profile["role"] for profile in seed["profiles"]]
+    assert roles.count("parent") == 2 and roles.count("child") == 2, (
+        "deployment household seed must contain two parents and two children"
+    )
 
     manifest_path = package / "deployment-manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

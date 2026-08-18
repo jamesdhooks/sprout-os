@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 namespace sprout::launcher {
@@ -17,6 +18,9 @@ struct ProfileSelectSlot {
 
 // Computes a centered, two-row-at-most profile layout for the Miyoo's 640x480
 // viewport. Visual bounds include focus outline, rotation, and bobbing safety.
+[[nodiscard]] std::size_t profile_select_column_count(
+    std::size_t profile_count) noexcept;
+
 [[nodiscard]] std::vector<ProfileSelectSlot> profile_select_layout(
     int profile_count, int focused_index);
 

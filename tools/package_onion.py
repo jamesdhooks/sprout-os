@@ -26,6 +26,14 @@ def copy_file(source: Path, destination: Path) -> None:
     shutil.copyfile(source, destination)
 
 
+def copy_lf_text(source: Path, destination: Path) -> None:
+    if not source.is_file():
+        raise FileNotFoundError(f"Required package input is missing: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    normalized = source.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    destination.write_bytes(normalized)
+
+
 def source_commit(repo: Path) -> str:
     return subprocess.run(
         ["git", "-C", str(repo), "rev-parse", "HEAD"],
@@ -54,7 +62,7 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
         sdk / "lib" / "libSDL2_image-2.0.so.0",
         app / "lib" / "libSDL2_image-2.0.so.0",
     )
-    copy_file(
+    copy_lf_text(
         repo / "tools" / "templates" / "onion-sprout-launch.sh",
         app / "launch.sh",
     )
@@ -66,7 +74,7 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
         repo / "tools" / "templates" / "containment-enabled",
         app / ".containment-enabled",
     )
-    copy_file(
+    copy_lf_text(
         repo / "tools" / "templates" / "onion-runtime-sprout.sh",
         app / "integration" / "runtime.sh",
     )
@@ -94,10 +102,11 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
     ):
         copy_file(miyoo_assets / relative, app / "bin" / "assets" / relative)
 
-    game = repo / "games" / "blocks-buttons"
-    if not game.is_dir():
-        raise FileNotFoundError(f"Native game package is missing: {game}")
-    shutil.copytree(game, app / "games" / "blocks-buttons")
+    for game_id in ("mouse-maze", "blocks-buttons", "snake"):
+        game = repo / "games" / game_id
+        if not game.is_dir():
+            raise FileNotFoundError(f"Native game package is missing: {game}")
+        shutil.copytree(game, app / "games" / game_id)
 
     payload_files = sorted(
         (candidate for candidate in output.rglob("*") if candidate.is_file()),

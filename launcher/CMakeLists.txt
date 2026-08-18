@@ -16,6 +16,12 @@ add_library(
 )
 
 add_library(
+  sprout_game_library
+  src/game_dashboard_model.cpp
+  src/game_library_repository.cpp
+)
+
+add_library(
   sprout_household_seed
   src/household_seed.cpp
 )
@@ -72,11 +78,20 @@ add_library(
 add_library(
   sprout_onion_adapter
   src/demo_library.cpp
-  src/library_presentation.cpp
   src/local_library.cpp
   src/onion_launch_adapter.cpp
   src/onion_runtime_handoff.cpp
   src/pico8_catalogue.cpp
+)
+
+add_library(
+  sprout_game_library_integration
+  src/game_library_integration.cpp
+)
+
+add_library(
+  sprout_game_dashboard_presentation
+  src/game_dashboard_presentation.cpp
 )
 
 add_library(sprout_launch_process src/launch_process.cpp)
@@ -101,6 +116,9 @@ target_compile_features(sprout_launcher_core PUBLIC cxx_std_20)
 target_include_directories(sprout_profile_store PUBLIC include)
 target_compile_features(sprout_profile_store PUBLIC cxx_std_20)
 target_link_libraries(sprout_profile_store PRIVATE sprout_sqlite)
+target_include_directories(sprout_game_library PUBLIC include)
+target_compile_features(sprout_game_library PUBLIC cxx_std_20)
+target_link_libraries(sprout_game_library PRIVATE sprout_sqlite)
 target_include_directories(sprout_household_seed PUBLIC include)
 target_compile_features(sprout_household_seed PUBLIC cxx_std_20)
 target_link_libraries(sprout_household_seed PRIVATE sprout_profile_store yyjson)
@@ -171,6 +189,18 @@ target_link_libraries(
   PUBLIC sprout_launch_process
   PRIVATE sprout_household_seed yyjson
 )
+target_include_directories(sprout_game_library_integration PUBLIC include)
+target_compile_features(sprout_game_library_integration PUBLIC cxx_std_20)
+target_link_libraries(
+  sprout_game_library_integration
+  PUBLIC sprout_game_library sprout_onion_adapter sprout_household_seed
+)
+target_include_directories(sprout_game_dashboard_presentation PUBLIC include)
+target_compile_features(sprout_game_dashboard_presentation PUBLIC cxx_std_20)
+target_link_libraries(
+  sprout_game_dashboard_presentation
+  PUBLIC sprout_game_library sprout_launcher_core
+)
 target_include_directories(sprout_launch_process PUBLIC include)
 target_compile_features(sprout_launch_process PUBLIC cxx_std_20)
 
@@ -203,6 +233,7 @@ endif()
 if(MSVC)
   target_compile_options(sprout_launcher_core PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_store PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_game_library PRIVATE /W4 /permissive-)
   target_compile_options(sprout_household_seed PRIVATE /W4 /permissive-)
   target_compile_options(sprout_managed_profile_images PRIVATE /W4 /permissive-)
   target_compile_options(sprout_configuration PRIVATE /W4 /permissive-)
@@ -214,6 +245,8 @@ if(MSVC)
   target_compile_options(sprout_profile_archive PRIVATE /W4 /permissive-)
   target_compile_options(sprout_profile_avatars PRIVATE /W4 /permissive-)
   target_compile_options(sprout_onion_adapter PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_game_library_integration PRIVATE /W4 /permissive-)
+  target_compile_options(sprout_game_dashboard_presentation PRIVATE /W4 /permissive-)
   target_compile_options(sprout_launch_process PRIVATE /W4 /permissive-)
   if(SPROUT_BUILD_RUNTIME)
     target_compile_options(sprout_native_games PRIVATE /W4 /permissive-)
@@ -224,6 +257,7 @@ if(MSVC)
 else()
   target_compile_options(sprout_launcher_core PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_store PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_game_library PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_household_seed PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_managed_profile_images PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_configuration PRIVATE -Wall -Wextra -Wpedantic)
@@ -235,6 +269,8 @@ else()
   target_compile_options(sprout_profile_archive PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_profile_avatars PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_onion_adapter PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_game_library_integration PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(sprout_game_dashboard_presentation PRIVATE -Wall -Wextra -Wpedantic)
   target_compile_options(sprout_launch_process PRIVATE -Wall -Wextra -Wpedantic)
   if(SPROUT_BUILD_RUNTIME)
     target_compile_options(sprout_native_games PRIVATE -Wall -Wextra -Wpedantic)
@@ -284,6 +320,8 @@ if(SPROUT_BUILD_DESKTOP OR SPROUT_BUILD_ONION_UI)
       sprout_launcher_core
       sprout_sdl_input
       sprout_profile_store
+      sprout_game_library_integration
+      sprout_game_dashboard_presentation
       sprout_household_seed
       sprout_profile_images
       sprout_parent_access
@@ -392,6 +430,37 @@ if(BUILD_TESTING)
       sprout_sqlite
   )
   add_test(NAME profile-store COMMAND sprout-profile-store-test)
+
+  add_executable(sprout-game-library-test tests/game_library_repository_test.cpp)
+  target_compile_features(sprout-game-library-test PRIVATE cxx_std_20)
+  target_link_libraries(
+    sprout-game-library-test
+    PRIVATE sprout_game_library sprout_sqlite
+  )
+  add_test(NAME game-library COMMAND sprout-game-library-test)
+
+  add_executable(sprout-game-dashboard-model-test
+                 tests/game_dashboard_model_test.cpp)
+  target_compile_features(sprout-game-dashboard-model-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-game-dashboard-model-test
+                        PRIVATE sprout_game_library)
+  add_test(NAME game-dashboard-model COMMAND sprout-game-dashboard-model-test)
+
+  add_executable(sprout-game-library-integration-test
+                 tests/game_library_integration_test.cpp)
+  target_compile_features(sprout-game-library-integration-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-game-library-integration-test
+                        PRIVATE sprout_game_library_integration)
+  add_test(NAME game-library-integration
+           COMMAND sprout-game-library-integration-test)
+
+  add_executable(sprout-game-dashboard-presentation-test
+                 tests/game_dashboard_presentation_test.cpp)
+  target_compile_features(sprout-game-dashboard-presentation-test PRIVATE cxx_std_20)
+  target_link_libraries(sprout-game-dashboard-presentation-test
+                        PRIVATE sprout_game_dashboard_presentation)
+  add_test(NAME game-dashboard-presentation
+           COMMAND sprout-game-dashboard-presentation-test)
 
   add_executable(sprout-household-seed-test tests/household_seed_test.cpp)
   target_compile_features(sprout-household-seed-test PRIVATE cxx_std_20)
@@ -513,13 +582,6 @@ if(BUILD_TESTING)
   target_compile_features(sprout-local-library-test PRIVATE cxx_std_20)
   target_link_libraries(sprout-local-library-test PRIVATE sprout_onion_adapter)
   add_test(NAME local-library COMMAND sprout-local-library-test)
-
-  add_executable(sprout-library-presentation-test
-                 tests/library_presentation_test.cpp)
-  target_compile_features(sprout-library-presentation-test PRIVATE cxx_std_20)
-  target_link_libraries(sprout-library-presentation-test
-                        PRIVATE sprout_onion_adapter sprout_launcher_core)
-  add_test(NAME library-presentation COMMAND sprout-library-presentation-test)
 
   if(TARGET sprout_sdl_input)
     add_executable(sprout-sdl-input-test tests/sdl_input_test.cpp)

@@ -356,6 +356,24 @@ void ProfileRepository::set_background_ref(
   }
 }
 
+void ProfileRepository::set_preferences_json(
+    const std::string& id, const std::string& preferences_json) {
+  Statement statement(impl_->database(), R"sql(
+    UPDATE profiles
+    SET preferences_json = ?, local_revision = local_revision + 1,
+        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    WHERE id = ?
+  )sql");
+  bind_text(statement.get(), 1, preferences_json);
+  bind_text(statement.get(), 2, id);
+  if (sqlite3_step(statement.get()) != SQLITE_DONE) {
+    throw std::runtime_error(sqlite3_errmsg(impl_->database()));
+  }
+  if (sqlite3_changes(impl_->database()) == 0) {
+    throw std::invalid_argument("Profile does not exist");
+  }
+}
+
 void ProfileRepository::set_avatar_ref(const std::string& id,
                                        const std::string& avatar_ref) {
   validate_avatar_ref(avatar_ref);

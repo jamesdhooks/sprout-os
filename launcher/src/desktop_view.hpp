@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sprout/launcher/launcher_state.hpp"
-#include "sprout/launcher/library_presentation.hpp"
+#include "sprout/launcher/game_dashboard_presentation.hpp"
 #include "sprout/launcher/profile_image_crop_presentation.hpp"
 #include "sprout/launcher/profile_archive_presentation.hpp"
 #include "sprout/launcher/profile_avatar_presentation.hpp"
@@ -32,11 +32,8 @@ void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop);
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin);
-void render_library(
-    SDL_Renderer* renderer, const LibraryPresentation& library,
-    const Profile* active_profile = nullptr,
-    const std::filesystem::path& managed_image_root = {},
-    const std::filesystem::path& built_in_avatar_root = {});
+void render_game_dashboard(SDL_Renderer* renderer,
+                           const GameDashboardPresentation& dashboard);
 void render_profile_archive(SDL_Renderer* renderer,
                             const ProfileArchivePresentation& archive);
 

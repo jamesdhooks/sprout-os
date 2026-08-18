@@ -37,6 +37,7 @@ class ParentAccessController {
   [[nodiscard]] bool ensure_active_profile_access(const AccessMoment& now);
   [[nodiscard]] std::optional<ParentAccessEvent> request_exit(
       const AccessMoment& now);
+  void lock_and_return_to_profiles();
   [[nodiscard]] std::optional<ParentAccessEvent> handle(Action action,
                                                         const AccessMoment& now);
 

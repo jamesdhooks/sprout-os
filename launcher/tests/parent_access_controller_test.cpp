@@ -91,49 +91,54 @@ void parent_selection_requires_pin_and_grants_access() {
   expect(fixture.controller.has_pin_prompt() &&
              !fixture.controller.pin_prompt().error_message().empty(),
          "incorrect PIN should remain on a reset prompt");
-  (void)submit_pin(fixture.controller, "2468", kToday);
+  const auto landing = submit_pin(fixture.controller, "2468", kToday);
   expect(!fixture.controller.has_pin_prompt() &&
              fixture.state.screen() == Screen::ParentHome &&
              fixture.access.is_unlocked(kToday.utc_seconds, kToday.local_date),
          "correct PIN should enter parent mode with a persisted grant");
+  expect(landing.has_value() &&
+             landing->type == ParentAccessEventType::ActionInvoked &&
+             landing->target == "Family Dashboard",
+         "authenticated parent selection should land on the family dashboard");
 }
 
-void sensitive_actions_reauthenticate_and_manual_lock_revokes() {
+void unlocked_profiles_emit_direct_landing_targets() {
+  Fixture fixture;
+  fixture.access.grant_until_end_of_day("secret:parent-primary", "2468",
+                                        kToday.utc_seconds, kToday.local_date);
+
+  const auto child = fixture.controller.handle(Action::Confirm, kToday);
+  expect(child.has_value() && child->target == "Game Dashboard",
+         "child selection should open the unified game dashboard");
+  (void)fixture.controller.handle(Action::Back, kToday);
+  fixture.access.grant_until_end_of_day("secret:parent-primary", "2468",
+                                        kToday.utc_seconds, kToday.local_date);
+  (void)fixture.controller.handle(Action::Right, kToday);
+  const auto parent = fixture.controller.handle(Action::Confirm, kToday);
+  expect(parent.has_value() && parent->target == "Family Dashboard",
+         "unlocked parent selection should open the dashboard, not Continue");
+}
+
+void parent_dashboard_has_one_start_menu_without_legacy_sections() {
   Fixture fixture;
   fixture.access.grant_until_end_of_day("secret:parent-primary", "2468",
                                         kToday.utc_seconds, kToday.local_date);
   (void)fixture.controller.handle(Action::Right, kToday);
-  (void)fixture.controller.handle(Action::Confirm, kToday);
+  const auto landing = fixture.controller.handle(Action::Confirm, kToday);
   expect(fixture.state.screen() == Screen::ParentHome,
          "valid grant should enter parent mode without another prompt");
-
-  for (int index = 0; index < 4; ++index) {
-    (void)fixture.controller.handle(Action::Down, kToday);
-  }
-  (void)fixture.controller.handle(Action::Confirm, kToday);
-  expect(fixture.controller.has_pin_prompt(),
-         "family dashboard should require fresh authentication");
-  const auto invoked = submit_pin(fixture.controller, "2468", kToday);
-  expect(invoked.has_value() &&
-             invoked->type == ParentAccessEventType::ActionInvoked &&
-             invoked->target == "Family Dashboard",
-         "fresh PIN should authorize only the pending sensitive action");
-
-  (void)fixture.controller.handle(Action::Down, kToday);
-  (void)fixture.controller.handle(Action::Down, kToday);
-  (void)fixture.controller.handle(Action::Down, kToday);
-  (void)fixture.controller.handle(Action::Confirm, kToday);
-  expect(fixture.controller.has_pin_prompt(),
-         "profile backup should require fresh authentication");
-  const auto backup = submit_pin(fixture.controller, "2468", kToday);
-  expect(backup.has_value() && backup->target == "Backup & Restore",
-         "fresh PIN should authorize the pending backup operation");
-
-  (void)fixture.controller.handle(Action::Down, kToday);
-  (void)fixture.controller.handle(Action::Confirm, kToday);
+  expect(landing.has_value() && landing->target == "Family Dashboard",
+         "parent mode should expose the dashboard as its one landing surface");
+  expect(fixture.state.menu_items().size() == 5 &&
+             fixture.state.menu_items()[0] == "Game Guide",
+         "START menu must replace Continue, Favorites, and All Games");
+  const auto guide = fixture.controller.handle(Action::Confirm, kToday);
+  expect(guide.has_value() && guide->target == "Game Guide",
+         "the parent menu should return to the unified guide");
+  fixture.controller.lock_and_return_to_profiles();
   expect(fixture.state.screen() == Screen::ProfileSelect &&
              !fixture.access.is_unlocked(kToday.utc_seconds, kToday.local_date),
-         "manual lock should revoke immediately and leave parent mode");
+         "leaving the unified parent dashboard should lock parent access");
 }
 
 void grant_expiry_returns_to_profile_selection() {
@@ -206,7 +211,8 @@ void child_exit_is_gated_but_active_parent_may_exit() {
 int main() {
   try {
     parent_selection_requires_pin_and_grants_access();
-    sensitive_actions_reauthenticate_and_manual_lock_revokes();
+    unlocked_profiles_emit_direct_landing_targets();
+    parent_dashboard_has_one_start_menu_without_legacy_sections();
     grant_expiry_returns_to_profile_selection();
     subview_access_revalidates_parent_grant();
     system_exit_requires_parent_authorization();

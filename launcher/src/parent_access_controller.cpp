@@ -12,6 +12,15 @@ bool sensitive_target(const std::string& target) {
          target == "Backup & Restore";
 }
 
+ParentAccessEvent profile_landing_event(const Profile& profile) {
+  return ParentAccessEvent{
+      .type = ParentAccessEventType::ActionInvoked,
+      .profile_id = profile.id,
+      .target = profile.role == ProfileRole::Parent ? "Family Dashboard"
+                                                    : "Game Dashboard",
+  };
+}
+
 }  // namespace
 
 ParentAccessController::ParentAccessController(
@@ -65,6 +74,13 @@ std::optional<ParentAccessEvent> ParentAccessController::request_exit(
   return std::nullopt;
 }
 
+void ParentAccessController::lock_and_return_to_profiles() {
+  if (access_store_ != nullptr) access_store_->lock();
+  if (state_.screen() != Screen::ProfileSelect) {
+    (void)state_.handle(Action::Back);
+  }
+}
+
 std::optional<ParentAccessEvent> ParentAccessController::handle(
     Action action, const AccessMoment& now) {
   if (pin_ != nullptr) {
@@ -95,6 +111,13 @@ std::optional<ParentAccessEvent> ParentAccessController::handle(
         .target = {},
     };
   }
+  if (launcher_event->type == EventType::ProfileActivated) {
+    return profile_landing_event(*state_.active_profile());
+  }
+  if (launcher_event->type == EventType::ReturnedToProfiles) {
+    if (access_store_ != nullptr) access_store_->lock();
+    return std::nullopt;
+  }
   if (launcher_event->type != EventType::MenuItemInvoked) {
     return std::nullopt;
   }
@@ -118,7 +141,9 @@ std::optional<ParentAccessEvent> ParentAccessController::handle(
 }
 
 void ParentAccessController::open_pin(PinPurpose purpose) {
-  pin_ = std::make_unique<ParentPinPresentation>(ParentPinMode::Authenticate);
+  pin_ = std::make_unique<ParentPinPresentation>(
+      access_store_->uses_button_combo(*credential_ref_) ? ParentPinMode::ComboAuthenticate
+                                                          : ParentPinMode::Authenticate);
   pin_purpose_ = purpose;
 }
 
@@ -150,7 +175,7 @@ std::optional<ParentAccessEvent> ParentAccessController::handle_pin(
     }
     close_pin();
     (void)state_.handle(Action::Confirm);
-    return std::nullopt;
+    return profile_landing_event(*state_.active_profile());
   }
 
   if (*pin_purpose_ == PinPurpose::Reauthenticate &&

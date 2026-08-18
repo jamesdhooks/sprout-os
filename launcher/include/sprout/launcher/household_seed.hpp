@@ -23,6 +23,10 @@ struct HouseholdSeed {
   std::vector<SeededProfile> profiles;
 };
 
+[[nodiscard]] bool seeded_library_item_matches(
+    const SeededLibraryItem& seeded, const std::string& platform,
+    const std::string& title);
+
 [[nodiscard]] HouseholdSeed load_household_seed(
     const std::filesystem::path& path);
 void apply_household_seed(ProfileRepository& repository,
