@@ -257,7 +257,8 @@ class AudioMixer {
         SDL_free(conversion.buf);
         throw std::runtime_error("Could not convert package sound " + declaration.id);
       }
-      sounds_.emplace_back(conversion.buf, conversion.buf + conversion.len_cvt);
+      auto* converted_buffer = conversion.buf;
+      sounds_.emplace_back(converted_buffer, converted_buffer + conversion.len_cvt);
       SDL_free(conversion.buf);
     }
     device_ = SDL_OpenAudioDevice(nullptr, 0, &desired, &format_, 0);
