@@ -651,7 +651,7 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
   }
 }
 
-void render_saving(SDL_Renderer* renderer) {
+void render_saving_impl(SDL_Renderer* renderer) {
   SDL_SetRenderDrawColor(renderer, 24, 35, 45, 255);
   SDL_RenderClear(renderer);
   const auto phase = static_cast<float>(SDL_GetTicks() % 900U) / 900.0F *
@@ -715,6 +715,8 @@ int setup_step_number(SetupStep step) {
 }
 
 }  // namespace
+
+void render_saving(SDL_Renderer* renderer) { render_saving_impl(renderer); }
 
 bool render_startup_splash(SDL_Renderer* renderer,
                            const std::filesystem::path& image_path) {
