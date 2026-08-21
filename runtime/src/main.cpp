@@ -11,12 +11,15 @@
 #include <cctype>
 #include <cstdint>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <optional>
+#include <memory>
 #include <vector>
 
 namespace {
@@ -26,6 +29,7 @@ struct Arguments {
   std::filesystem::path storage{"sprout-data/native-games"};
   std::filesystem::path capture;
   std::filesystem::path capture_title;
+  std::string capture_title_state{"idle"};
   std::string capture_state;
   std::uint64_t seed{1};
   bool smoke_test{};
@@ -45,6 +49,8 @@ Arguments parse_arguments(int count, char** values) {
       arguments.capture = values[++index];
     } else if (argument == "--capture-title" && index + 1 < count) {
       arguments.capture_title = values[++index];
+    } else if (argument == "--capture-title-state" && index + 1 < count) {
+      arguments.capture_title_state = values[++index];
     } else if (argument == "--capture-state" && index + 1 < count) {
       arguments.capture_state = values[++index];
     } else if (argument == "--smoke-test") {
@@ -52,7 +58,7 @@ Arguments parse_arguments(int count, char** values) {
     } else {
       throw std::runtime_error("Usage: sprout-runtime --package PATH "
                                "[--storage PATH] [--seed NUMBER] [--capture BMP] "
-                               "[--capture-title BMP] "
+                               "[--capture-title BMP] [--capture-title-state idle|reset-holding|reset-cancelled|reset-complete] "
                                "[--capture-state NAME] "
                                "[--smoke-test]");
     }
@@ -62,6 +68,15 @@ Arguments parse_arguments(int count, char** values) {
   }
   if (!arguments.capture_state.empty() && arguments.capture.empty()) {
     throw std::runtime_error("--capture-state requires --capture");
+  }
+  if (arguments.capture_title.empty() && arguments.capture_title_state != "idle") {
+    throw std::runtime_error("--capture-title-state requires --capture-title");
+  }
+  if (arguments.capture_title_state != "idle" &&
+      arguments.capture_title_state != "reset-holding" &&
+      arguments.capture_title_state != "reset-cancelled" &&
+      arguments.capture_title_state != "reset-complete") {
+    throw std::runtime_error("Unsupported --capture-title-state value");
   }
   return arguments;
 }
@@ -110,7 +125,11 @@ class TextureStore {
  public:
   TextureStore(SDL_Renderer* renderer,
                const sprout::runtime::AssetCatalogue& assets)
-      : renderer_(renderer), assets_(assets), textures_(assets.atlases.size()) {}
+      : renderer_(renderer), assets_(assets), textures_(assets.atlases.size()) {
+    for (std::size_t index = 0; index < assets.atlases.size(); ++index) {
+      textures_[index].resize(1 + assets.atlases[index].mips.size());
+    }
+  }
 
   ~TextureStore() {
     reset();
@@ -120,35 +139,59 @@ class TextureStore {
   TextureStore& operator=(const TextureStore&) = delete;
 
   void reset() {
-    for (SDL_Texture*& texture : textures_) {
-      SDL_DestroyTexture(texture);
-      texture = nullptr;
+    for (auto& levels : textures_) {
+      for (SDL_Texture*& texture : levels) {
+        SDL_DestroyTexture(texture);
+        texture = nullptr;
+      }
     }
   }
 
-  SDL_Texture* get(std::size_t index) {
+  std::size_t level_for(std::size_t index, double requested_scale) const {
+    const auto& atlas = assets_.atlases.at(index);
+    std::size_t selected = 0;
+    double selected_scale = 1.0;
+    for (std::size_t mip = 0; mip < atlas.mips.size(); ++mip) {
+      const double scale = atlas.mips[mip].scale;
+      if (scale + 1e-9 >= requested_scale && scale < selected_scale) {
+        selected = mip + 1;
+        selected_scale = scale;
+      }
+    }
+    return selected;
+  }
+
+  SDL_Texture* get(std::size_t index, std::size_t level = 0) {
     if (index >= textures_.size()) {
       throw std::runtime_error("Draw command references an unknown atlas");
     }
-    if (textures_[index] != nullptr) return textures_[index];
+    if (level >= textures_[index].size()) {
+      throw std::runtime_error("Draw command references an unknown atlas mip");
+    }
+    if (textures_[index][level] != nullptr) return textures_[index][level];
     const auto& atlas = assets_.atlases[index];
-    textures_[index] = IMG_LoadTexture(renderer_, atlas.image.string().c_str());
-    if (textures_[index] == nullptr) {
+    const auto& image = level == 0 ? atlas.image : atlas.mips[level - 1].image;
+    const int expected_width = level == 0 ? atlas.width : atlas.mips[level - 1].width;
+    const int expected_height = level == 0 ? atlas.height : atlas.mips[level - 1].height;
+    textures_[index][level] = IMG_LoadTexture(renderer_, image.string().c_str());
+    if (textures_[index][level] == nullptr) {
       throw std::runtime_error("Could not load sprite atlas " + atlas.id + ": " +
                                IMG_GetError());
     }
     int width = 0;
     int height = 0;
-    if (SDL_QueryTexture(textures_[index], nullptr, nullptr, &width, &height) != 0 ||
-        width != atlas.width || height != atlas.height) {
+    if (SDL_QueryTexture(textures_[index][level], nullptr, nullptr, &width, &height) != 0 ||
+        width != expected_width || height != expected_height) {
       throw std::runtime_error("Sprite atlas dimensions do not match manifest: " +
                                atlas.id);
     }
 #if SDL_VERSION_ATLEAST(2, 0, 12)
-    SDL_SetTextureScaleMode(textures_[index], SDL_ScaleModeLinear);
+    SDL_SetTextureScaleMode(textures_[index][level],
+        atlas.sampling == sprout::runtime::TextureSampling::Nearest
+            ? SDL_ScaleModeNearest : SDL_ScaleModeLinear);
 #endif
-    SDL_SetTextureBlendMode(textures_[index], SDL_BLENDMODE_BLEND);
-    return textures_[index];
+    SDL_SetTextureBlendMode(textures_[index][level], SDL_BLENDMODE_BLEND);
+    return textures_[index][level];
   }
 
   const sprout::runtime::TextureAtlas& atlas(std::size_t index) const {
@@ -161,7 +204,7 @@ class TextureStore {
  private:
   SDL_Renderer* renderer_{};
   const sprout::runtime::AssetCatalogue& assets_;
-  std::vector<SDL_Texture*> textures_;
+  std::vector<std::vector<SDL_Texture*>> textures_;
 };
 
 struct GeometryBuffers {
@@ -172,6 +215,99 @@ struct GeometryBuffers {
 
   std::vector<SDL_Vertex> vertices;
   std::vector<int> indices;
+};
+
+class AudioMixer {
+ public:
+  explicit AudioMixer(const std::vector<sprout::runtime::PackageSound>& declarations) {
+    if (declarations.empty()) return;
+    SDL_AudioSpec desired{};
+    desired.freq = 48000;
+    desired.format = AUDIO_S16SYS;
+    desired.channels = 2;
+    desired.samples = 1024;
+    desired.callback = callback;
+    desired.userdata = this;
+    format_ = desired;
+    for (const auto& declaration : declarations) {
+      SDL_AudioSpec source{};
+      Uint8* raw = nullptr;
+      Uint32 raw_length = 0;
+      if (SDL_LoadWAV(declaration.file.string().c_str(), &source, &raw,
+                      &raw_length) == nullptr) {
+        throw std::runtime_error("Could not load package sound " + declaration.id);
+      }
+      SDL_AudioCVT conversion{};
+      if (SDL_BuildAudioCVT(&conversion, source.format, source.channels,
+                            source.freq, format_.format, format_.channels,
+                            format_.freq) < 0) {
+        SDL_FreeWAV(raw);
+        throw std::runtime_error("Could not convert package sound " + declaration.id);
+      }
+      conversion.len = static_cast<int>(raw_length);
+      conversion.buf = static_cast<Uint8*>(SDL_malloc(
+          static_cast<std::size_t>(conversion.len) * conversion.len_mult));
+      if (conversion.buf == nullptr) {
+        SDL_FreeWAV(raw);
+        throw std::runtime_error("Could not allocate package sound " + declaration.id);
+      }
+      std::memcpy(conversion.buf, raw, raw_length);
+      SDL_FreeWAV(raw);
+      if (SDL_ConvertAudio(&conversion) < 0) {
+        SDL_free(conversion.buf);
+        throw std::runtime_error("Could not convert package sound " + declaration.id);
+      }
+      sounds_.emplace_back(conversion.buf, conversion.buf + conversion.len_cvt);
+      SDL_free(conversion.buf);
+    }
+    device_ = SDL_OpenAudioDevice(nullptr, 0, &desired, &format_, 0);
+    if (device_ == 0) return;
+    SDL_PauseAudioDevice(device_, 0);
+  }
+
+  ~AudioMixer() {
+    if (device_ != 0) SDL_CloseAudioDevice(device_);
+  }
+
+  void play(const std::vector<sprout::runtime::SoundRequest>& requests) {
+    if (device_ == 0) return;
+    SDL_LockAudioDevice(device_);
+    for (const auto& request : requests) {
+      if (request.sound >= sounds_.size()) continue;
+      std::size_t slot = voices_.size();
+      for (std::size_t index = 0; index < voices_.size(); ++index) {
+        if (!voices_[index].has_value()) { slot = index; break; }
+      }
+      if (slot == voices_.size()) slot = next_voice_++ % voices_.size();
+      voices_[slot] = Voice{request.sound, 0, request.volume};
+    }
+    SDL_UnlockAudioDevice(device_);
+  }
+
+ private:
+  struct Voice { std::size_t sound; std::size_t offset; std::uint8_t volume; };
+
+  static void callback(void* userdata, Uint8* stream, int length) {
+    auto& mixer = *static_cast<AudioMixer*>(userdata);
+    SDL_memset(stream, 0, static_cast<std::size_t>(length));
+    for (auto& voice : mixer.voices_) {
+      if (!voice.has_value()) continue;
+      const auto& sound = mixer.sounds_[voice->sound];
+      const std::size_t remaining = sound.size() - voice->offset;
+      const std::size_t count = std::min<std::size_t>(remaining, length);
+      SDL_MixAudioFormat(stream, sound.data() + voice->offset,
+                         mixer.format_.format, static_cast<Uint32>(count),
+                         voice->volume * SDL_MIX_MAXVOLUME / 255);
+      voice->offset += count;
+      if (voice->offset >= sound.size()) voice.reset();
+    }
+  }
+
+  SDL_AudioDeviceID device_{};
+  SDL_AudioSpec format_{};
+  std::vector<std::vector<Uint8>> sounds_;
+  std::array<std::optional<Voice>, 8> voices_{};
+  std::size_t next_voice_{};
 };
 
 void draw_text(SDL_Renderer* renderer, const std::string& text,
@@ -236,21 +372,31 @@ void draw_frame(SDL_Renderer* renderer, sprout::runtime::Session& session,
     }
 
     const std::size_t atlas_index = command.sprite.atlas;
-    SDL_Texture* texture = textures.get(atlas_index);
     const auto& atlas = textures.atlas(atlas_index);
+    const double requested_scale = std::max(
+        static_cast<double>(command.sprite.width) / command.sprite.source_width,
+        static_cast<double>(command.sprite.height) / command.sprite.source_height);
+    const std::size_t texture_level = textures.level_for(atlas_index, requested_scale);
+    SDL_Texture* texture = textures.get(atlas_index, texture_level);
+    const double source_scale = texture_level == 0 ? 1.0 : atlas.mips[texture_level - 1].scale;
+    const int texture_width = texture_level == 0 ? atlas.width : atlas.mips[texture_level - 1].width;
+    const int texture_height = texture_level == 0 ? atlas.height : atlas.mips[texture_level - 1].height;
     geometry.vertices.clear();
     geometry.indices.clear();
     while (command_index < commands.size() &&
            commands[command_index].type ==
                sprout::runtime::DrawCommandType::Sprite &&
-           commands[command_index].sprite.atlas == atlas_index) {
+           commands[command_index].sprite.atlas == atlas_index &&
+           textures.level_for(atlas_index, std::max(
+             static_cast<double>(commands[command_index].sprite.width) / commands[command_index].sprite.source_width,
+             static_cast<double>(commands[command_index].sprite.height) / commands[command_index].sprite.source_height)) == texture_level) {
       const auto& sprite = commands[command_index].sprite;
-      float u0 = static_cast<float>(sprite.source_x) / atlas.width;
-      float v0 = static_cast<float>(sprite.source_y) / atlas.height;
-      float u1 = static_cast<float>(sprite.source_x + sprite.source_width) /
-                 atlas.width;
-      float v1 = static_cast<float>(sprite.source_y + sprite.source_height) /
-                 atlas.height;
+      float u0 = static_cast<float>(sprite.source_x * source_scale) / texture_width;
+      float v0 = static_cast<float>(sprite.source_y * source_scale) / texture_height;
+      float u1 = static_cast<float>((sprite.source_x + sprite.source_width) * source_scale) /
+                 texture_width;
+      float v1 = static_cast<float>((sprite.source_y + sprite.source_height) * source_scale) /
+                 texture_height;
       if (sprite.flip_x) std::swap(u0, u1);
       if (sprite.flip_y) std::swap(v0, v1);
       const float x0 = static_cast<float>(sprite.x);
@@ -611,17 +757,26 @@ void draw_title_screen(SDL_Renderer* renderer,
     const int row_height = controls.h / 2;
     const SDL_Rect status_row{controls.x + 6, controls.y + 1,
                               controls.w - 12, row_height};
-    const SDL_Rect reset_row{controls.x + 6, controls.y + row_height - 1,
-                             controls.w - 34, controls.h - row_height};
+    const SDL_Rect reset_row{controls.x + 10, controls.y + row_height - 1,
+                             controls.w - 20, controls.h - row_height};
     draw_text(renderer, std::string(status) + "    A Continue", status_row,
               text_color);
     draw_text(renderer,
-              reset_complete ? "Progress reset" : "Hold B Reset",
+              reset_complete ? "Reset!" : "Hold B Reset",
               reset_row, text_color);
-    draw_hold_progress(renderer, controls.x + controls.w - 17,
-                       controls.y + row_height +
-                           (controls.h - row_height) / 2,
-                       8, reset_progress, text_color);
+    if (reset_progress > 0.0 && !reset_complete) {
+      const int bar_x = reset_row.x + 8;
+      const int bar_w = reset_row.w - 16;
+      const int bar_h = std::max(5, reset_row.h / 5);
+      const int bar_y = reset_row.y + reset_row.h - bar_h - 2;
+      fill_rounded_rect(renderer, {bar_x, bar_y, bar_w, bar_h}, bar_h / 2,
+                        {text_color.r, text_color.g, text_color.b, 55});
+      const int filled = static_cast<int>(std::lround(bar_w * reset_progress));
+      if (filled >= bar_h) {
+        fill_rounded_rect(renderer, {bar_x, bar_y, filled, bar_h}, bar_h / 2,
+                          text_color);
+      }
+    }
   } else {
     draw_text(renderer, "A Start    B Back", controls, text_color);
   }
@@ -668,7 +823,7 @@ int main(int count, char** values) {
       return 0;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
       throw std::runtime_error(std::string("SDL initialization failed: ") +
                                SDL_GetError());
     }
@@ -701,14 +856,29 @@ int main(int count, char** values) {
     }
 
     session.start();
+    AudioMixer audio(package.sounds);
+    audio.play(session.drain_sounds());
 
     SDL_Texture* title_texture = nullptr;
     if (package.title_screen.enabled) {
       title_texture = load_title_texture(renderer, package.title_screen);
       auto title_status = session.title_status().value_or("");
       const bool can_reset_progress = session.can_reset_progress();
+      double captured_reset_fraction = 0.0;
+      bool captured_reset_complete = false;
+      if (arguments.capture_title_state == "reset-holding") {
+        captured_reset_fraction = 0.62;
+      } else if (arguments.capture_title_state == "reset-cancelled") {
+        captured_reset_fraction = 0.0;
+      } else if (arguments.capture_title_state == "reset-complete") {
+        if (can_reset_progress) session.reset_progress();
+        title_status = session.title_status().value_or("");
+        captured_reset_fraction = 1.0;
+        captured_reset_complete = true;
+      }
       draw_title_screen(renderer, package, title_texture, title_status,
-                        can_reset_progress);
+                        can_reset_progress, captured_reset_fraction,
+                        captured_reset_complete);
       if (!arguments.capture_title.empty()) {
         capture_frame(renderer, arguments.capture_title);
         session.stop();
@@ -723,8 +893,10 @@ int main(int count, char** values) {
       }
       bool waiting = arguments.capture.empty();
       bool primary_was_down = false;
+      sprout::runtime::Actions previous_title_actions{};
       bool reset_timing = false;
       bool reset_complete = false;
+      bool reset_armed = !read_actions(controller).secondary;
       double reset_fraction = 0.0;
       std::chrono::steady_clock::time_point reset_started{};
       while (waiting) {
@@ -733,6 +905,18 @@ int main(int count, char** values) {
           if (event.type == SDL_QUIT) waiting = false;
         }
         const auto actions = read_actions(controller);
+        sprout::runtime::Actions title_edges{
+            .up = actions.up && !previous_title_actions.up,
+            .down = actions.down && !previous_title_actions.down,
+            .left = actions.left && !previous_title_actions.left,
+            .right = actions.right && !previous_title_actions.right,
+            .primary = actions.primary && !previous_title_actions.primary,
+            .secondary = actions.secondary && !previous_title_actions.secondary,
+            .start = actions.start && !previous_title_actions.start,
+            .back = actions.back && !previous_title_actions.back};
+        session.step_title(title_edges);
+        const auto updated_status = session.title_status().value_or("");
+        if (updated_status != title_status) title_status = updated_status;
         if (actions.back || (actions.secondary && !can_reset_progress)) {
           session.stop();
           print_events(session);
@@ -744,7 +928,8 @@ int main(int count, char** values) {
           SDL_Quit();
           return 0;
         }
-        if (can_reset_progress && actions.secondary) {
+        if (!actions.secondary) reset_armed = true;
+        if (can_reset_progress && actions.secondary && reset_armed && !reset_complete) {
           const auto now = std::chrono::steady_clock::now();
           if (!reset_timing) {
             reset_started = now;
@@ -760,13 +945,17 @@ int main(int count, char** values) {
           }
         } else {
           reset_timing = false;
-          reset_complete = false;
-          reset_fraction = 0.0;
+          if (!actions.secondary) {
+            reset_complete = false;
+            reset_fraction = 0.0;
+          }
         }
-        if (actions.primary && !actions.secondary && !primary_was_down) {
+        if (actions.primary && !actions.secondary && !primary_was_down &&
+            !reset_complete) {
           waiting = false;
         }
         primary_was_down = actions.primary;
+        previous_title_actions = actions;
         draw_title_screen(renderer, package, title_texture, title_status,
                           can_reset_progress, reset_fraction, reset_complete);
         std::this_thread::sleep_for(std::chrono::milliseconds(8));
@@ -816,6 +1005,7 @@ int main(int count, char** values) {
           break;
         }
         session.step(actions);
+        audio.play(session.drain_sounds());
         accumulator -= tick;
         ++steps;
       }

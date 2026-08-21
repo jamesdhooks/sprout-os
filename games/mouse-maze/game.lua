@@ -31,6 +31,10 @@ local rectangular_room_limit = 63
 local initial_missing_room_ratio = 0.04
 local maximum_missing_room_ratio = 0.22
 local rich_direction = {up = "north", right = "east", down = "south", left = "west"}
+local maze_steps = {{x = 0, y = -2}, {x = 2, y = 0},
+                    {x = 0, y = 2}, {x = -2, y = 0}}
+local cardinal_steps = {{x = 0, y = -1}, {x = 1, y = 0},
+                        {x = 0, y = 1}, {x = -1, y = 0}}
 
 local grid = {}
 local wall_tiles = ""
@@ -131,7 +135,7 @@ local function indicator_reservation_bounds()
 end
 
 local function build_tiles()
-  local terrain = ""
+  local terrain_bytes = {}
   for y = 0, rows - 1 do
     local row = grid[y + 1]
     for x = 0, columns - 1 do
@@ -143,9 +147,10 @@ local function build_tiles()
            (y < rows - 1 and grid[y + 2][x + 1] == 1)) then
         tile = 1
       end
-      terrain = terrain .. string.char(tile)
+      terrain_bytes[#terrain_bytes + 1] = string.char(tile)
     end
   end
+  local terrain = table.concat(terrain_bytes)
   wall_tiles = string.gsub(terrain, string.char(2), string.char(0))
   floor_tiles = string.gsub(terrain,
       "[" .. string.char(1) .. string.char(2) .. "]", string.char(1))
@@ -285,9 +290,7 @@ local function carve_maze()
   while #stack > 0 do
     local current = stack[#stack]
     local candidates = {}
-    local directions = {{x = 0, y = -2}, {x = 2, y = 0},
-                        {x = 0, y = 2}, {x = -2, y = 0}}
-    for _, step in ipairs(directions) do
+    for _, step in ipairs(maze_steps) do
       local next_x, next_y = current.x + step.x, current.y + step.y
       if next_x > 0 and next_y > 0 and
           next_x < columns - 1 and next_y < rows - 1 and
@@ -345,8 +348,7 @@ local function choose_goal()
       greatest_distance = distance
       goal_x, goal_y = current.x, current.y
     end
-    for _, step in ipairs({{x = 0, y = -1}, {x = 1, y = 0},
-                           {x = 0, y = 1}, {x = -1, y = 0}}) do
+    for _, step in ipairs(cardinal_steps) do
       local next_x, next_y = current.x + step.x, current.y + step.y
       local key = next_y * columns + next_x
       if next_x >= 0 and next_y >= 0 and next_x < columns and next_y < rows and
@@ -367,8 +369,7 @@ local function solve_hint_path()
     local current = queue[head]
     head = head + 1
     if current.x == goal_x and current.y == goal_y then break end
-    for _, step in ipairs({{x = 0, y = -1}, {x = 1, y = 0},
-                           {x = 0, y = 1}, {x = -1, y = 0}}) do
+    for _, step in ipairs(cardinal_steps) do
       local next_x, next_y = current.x + step.x, current.y + step.y
       local key = next_y * columns + next_x
       if next_x >= 0 and next_y >= 0 and next_x < columns and next_y < rows and
@@ -399,6 +400,7 @@ end
 local function show_hint()
   hint_path = solve_hint_path()
   hint_age, hint_remaining = 0, hint_duration
+  sprout.sfx("hint", 0.7)
 end
 
 local function generate_level(next_level)
@@ -435,6 +437,7 @@ local function complete_level()
   local solved = sprout.storage_get("solved", 0) + 1
   sprout.storage_set("solved", solved)
   sprout.emit("LevelCompleted", string.format("maze-%04d", level))
+  sprout.sfx("cheese")
 end
 
 local function requested_level_skip(actions)
@@ -473,6 +476,7 @@ end
 
 function reset_progress()
   sprout.storage_set("solved", 0)
+  sprout.sfx("reset")
   generate_level(1)
 end
 
@@ -537,6 +541,7 @@ function update(actions)
       move_from_x, move_from_y = mouse_x, mouse_y
       mouse_x, mouse_y = mouse_x + queued_dx, mouse_y + queued_dy
       movement_tick = 0
+      sprout.sfx("step", 0.28)
     end
   end
   previous = actions
@@ -595,10 +600,22 @@ function render()
       level_indicator_y + 1, level_width - 6, level_indicator_height - 2,
       88, 38, 79)
   if complete then
-    sprout.rounded_rect(ui_pixels(104), ui_pixels(102), ui_pixels(112),
-        ui_pixels(36), ui_pixels(10), 255, 226, 155, 246)
-    sprout.display_label("Cheese!", ui_pixels(112), ui_pixels(108),
-        ui_pixels(96), ui_pixels(24), 82, 35, 65)
+    sprout.rect(0, 0, screen_width, screen_height, 41, 25, 51, 150)
+    local pop = math.min(1, completion_ticks / 12)
+    local bob = math.sin(completion_ticks * 0.22) * ui_pixels(3)
+    local card_w, card_h = ui_pixels(174) * pop, ui_pixels(118) * pop
+    local card_x, card_y = (screen_width - card_w) / 2,
+        (screen_height - card_h) / 2 + bob
+    if card_w >= ui_pixels(28) then
+      sprout.rounded_rect(math.floor(card_x), math.floor(card_y),
+          math.floor(card_w), math.floor(card_h), ui_pixels(14),
+          84, 39, 67, 248)
+      sprout.sprite("rich.cheese-goal", math.floor(screen_width / 2),
+          math.floor(card_y + ui_pixels(57)), 0.56 * pop)
+      sprout.display_label("Cheese!", math.floor(card_x + ui_pixels(20)),
+          math.floor(card_y + ui_pixels(77)), math.floor(card_w - ui_pixels(40)),
+          ui_pixels(28), 255, 239, 187)
+    end
   end
 end
 
@@ -643,7 +660,6 @@ function capture_scenario(name)
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "gameplay-level-1000" then
     generate_level(1000)
-    mouse_x, mouse_y = floor_near_center()
     direction, complete, completion_ticks = "right", false, 0
   elseif name == "win" then
     mouse_x, mouse_y = goal_x, goal_y

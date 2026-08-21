@@ -67,9 +67,9 @@ try {
     }
 
     $games = @(
-        @{ id = "snake"; terminal = @("fail") },
-        @{ id = "mouse-maze"; terminal = @("win") },
-        @{ id = "blocks-buttons"; terminal = @("win", "fail") }
+        @{ id = "snake"; states = @("gameplay", "endless-gameplay", "win", "fail") },
+        @{ id = "mouse-maze"; states = @("gameplay", "gameplay-level-2", "generated-level-100", "gameplay-level-1000", "hint", "win") },
+        @{ id = "blocks-buttons"; states = @("gameplay", "undo", "late-gameplay", "win", "fail") }
     )
     foreach ($game in $games) {
         $package = Join-Path $repoRoot "games\$($game.id)"
@@ -80,7 +80,15 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "Title capture failed for $($game.id)." }
         $records.Add([pscustomobject]@{ area = $game.id; view = "title"; status = "captured"; file = "games/$($game.id)/title.bmp" })
 
-        foreach ($state in @("gameplay") + $game.terminal) {
+        foreach ($titleState in @("reset-holding", "reset-cancelled", "reset-complete")) {
+            $titleStatePath = Join-Path $destination "title-$titleState.bmp"
+            & $runtime --package $package --storage (Join-Path $storageDirectory $game.id) --seed 7 `
+                --capture-title $titleStatePath --capture-title-state $titleState
+            if ($LASTEXITCODE -ne 0) { throw "Title state capture failed for $($game.id)/$titleState." }
+            $records.Add([pscustomobject]@{ area = $game.id; view = "title-$titleState"; status = "captured"; file = "games/$($game.id)/title-$titleState.bmp" })
+        }
+
+        foreach ($state in $game.states) {
             $path = Join-Path $destination "$state.bmp"
             & $runtime --package $package --storage (Join-Path $storageDirectory $game.id) --seed 7 --capture $path --capture-state $state
             if ($LASTEXITCODE -ne 0) { throw "State capture failed for $($game.id)/$state." }
@@ -93,7 +101,6 @@ try {
     $env:SPROUT_STATIC_UI = $previousStaticUi
 }
 
-$records.Add([pscustomobject]@{ area = "snake"; view = "win"; status = "not-applicable"; reason = "Snake is endless; it has no win condition." })
 $records.Add([pscustomobject]@{ area = "mouse-maze"; view = "fail"; status = "not-applicable"; reason = "Mouse Maze has no loss condition." })
 $records.Add([pscustomobject]@{ area = "runtime"; view = "pause-overlay"; status = "not-implemented"; reason = "The runtime currently emits pause lifecycle events but has no visual pause overlay." })
 $records | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outputRoot "coverage.json") -Encoding utf8

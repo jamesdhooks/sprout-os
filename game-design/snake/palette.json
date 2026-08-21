@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "id": "starlight-snake-v1",
+  "native": ["#161338", "#201B52", "#352768", "#604285", "#F7EBC9", "#B8772B", "#EFB63E", "#FFDE70", "#8F2855", "#C83B68", "#EE6A91", "#3D5FA8", "#244A48", "#3D7662", "#78AA74", "#8DE5C2"],
+  "pico8": {"standardIndices": [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14], "extendedRemaps": {}}
+}

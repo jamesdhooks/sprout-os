@@ -79,6 +79,51 @@ if(BUILD_TESTING)
             "${PROJECT_SOURCE_DIR}/tools/generate-arcade-assets.py" --check
   )
   add_test(
+    NAME blocks-buttons-robot-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/build_blocks_buttons_robot_assets.py" --check
+  )
+  add_test(
+    NAME blocks-buttons-world-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/build_blocks_buttons_world_assets.py" --check
+  )
+  add_test(
+    NAME snake-character-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/build_snake_character_assets.py" --check
+  )
+  add_test(
+    NAME snake-world-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/build_snake_world_assets.py" --check
+  )
+  add_test(
+    NAME arcade-palette-contracts
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/validate_arcade_palettes.py"
+  )
+  add_test(
+    NAME arcade-audio-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/generate_arcade_audio.py" --check
+  )
+  add_test(
+    NAME pico8-arcade-audio
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/generate_pico8_audio.py" --check
+  )
+  add_test(
+    NAME arcade-mip-assets
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/generate_arcade_mips.py" --check
+  )
+  add_test(
+    NAME blocks-buttons-campaign
+    COMMAND "${Python3_EXECUTABLE}"
+            "${PROJECT_SOURCE_DIR}/tools/blocks_buttons_campaign.py" validate
+  )
+  add_test(
     NAME arcade-atlas-importer
     COMMAND "${Python3_EXECUTABLE}"
             "${PROJECT_SOURCE_DIR}/tools/import-sprite-atlases-test.py"

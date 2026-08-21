@@ -102,6 +102,11 @@ struct RuntimeEvent {
   std::string value;
 };
 
+struct SoundRequest {
+  std::size_t sound{};
+  std::uint8_t volume{255};
+};
+
 class Session {
  public:
   Session(PackageManifest package, std::filesystem::path storage_root,
@@ -115,10 +120,12 @@ class Session {
 
   void start();
   void step(const Actions& actions);
+  void step_title(const Actions& actions);
   void apply_capture_scenario(std::string_view scenario);
   void stop();
   const std::vector<DrawCommand>& render();
   std::vector<RuntimeEvent> drain_events();
+  std::vector<SoundRequest> drain_sounds();
   std::string snapshot() const;
   std::optional<std::string> title_status() const;
   bool can_reset_progress() const;

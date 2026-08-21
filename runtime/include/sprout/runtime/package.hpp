@@ -47,6 +47,11 @@ struct LibraryArtwork {
   PresentationFit fit{PresentationFit::Cover};
 };
 
+struct PackageSound {
+  std::string id;
+  std::filesystem::path file;
+};
+
 struct PackageManifest {
   std::uint32_t schema_version{};
   std::string id;
@@ -62,6 +67,7 @@ struct PackageManifest {
   AssetCatalogue assets;
   TitleScreen title_screen;
   LibraryArtwork library_artwork;
+  std::vector<PackageSound> sounds;
 };
 
 PackageManifest load_package(const std::filesystem::path& package_root);

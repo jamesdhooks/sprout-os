@@ -1,6 +1,6 @@
 # Arcade Content Pipeline
 
-Status: **Planned for Mouse Maze and Blocks & Buttons**
+Status: **Implemented for the Blocks & Buttons 30-room campaign; retained for future generated content**
 
 Procedural content must be reproducible, measurable, and reviewable. Runtime generation is appropriate for endless/daily content; large campaigns are generated, solved, scored, deduplicated, and exported offline.
 
@@ -78,4 +78,4 @@ Campaign review samples the start/end of every band and every mechanic transitio
 
 - Mouse Maze: deterministic DFS/loop generator, BFS analysis, readability filter, campaign builder.
 - Blocks & Buttons: reverse generator, forward solver, deadlock analysis, solution signature, campaign builder.
-- Snake: no offline campaign; the same seed record and difficulty schema describe endless/daily runs.
+- Snake: no offline campaign; Round and Endless use runtime free-cell selection and explicit speed stages.

@@ -1,456 +1,395 @@
 {
   "schema": "sprite-atlas.v1",
-  "id": "sprout-snake-world",
-  "image": "sprout-snake-world-atlas.png",
+  "id": "snake-world",
+  "image": "snake-world-atlas.png",
   "size": {
-    "width": 2048,
-    "height": 2048
+    "width": 1024,
+    "height": 1024
   },
-  "scale": 1,
   "frames": {
     "grass-plain": {
       "frame": {
-        "x": 2,
-        "y": 2,
-        "width": 497,
-        "height": 497
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 7,
-        "y": 7,
-        "width": 497,
-        "height": 497
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
+        "y": 0.5
+      }
     },
     "grass-clover": {
       "frame": {
-        "x": 503,
-        "y": 2,
-        "width": 507,
-        "height": 498
+        "x": 256,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 2,
-        "y": 7,
-        "width": 507,
-        "height": 498
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
+        "y": 0.5
+      }
     },
     "grass-flower": {
       "frame": {
-        "x": 1014,
-        "y": 2,
-        "width": 285,
-        "height": 312
+        "x": 512,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 113,
-        "y": 100,
-        "width": 285,
-        "height": 312
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
+        "y": 0.5
+      }
     },
     "grass-pebble": {
       "frame": {
-        "x": 1303,
-        "y": 2,
-        "width": 284,
-        "height": 310
+        "x": 768,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 114,
-        "y": 101,
-        "width": 284,
-        "height": 310
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
+        "y": 0.5
+      }
     },
     "apple-01": {
       "frame": {
-        "x": 2,
-        "y": 504,
-        "width": 496,
-        "height": 511
+        "x": 0,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 8,
+        "x": 0,
         "y": 0,
-        "width": 496,
-        "height": 511
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "apple"
-      ]
+        "y": 0.5
+      }
     },
     "apple-02": {
       "frame": {
-        "x": 502,
-        "y": 504,
-        "width": 496,
-        "height": 509
+        "x": 256,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 8,
-        "y": 1,
-        "width": 496,
-        "height": 509
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "apple"
-      ]
+        "y": 0.5
+      }
     },
     "apple-03": {
       "frame": {
-        "x": 1002,
-        "y": 504,
-        "width": 278,
-        "height": 289
+        "x": 512,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 117,
-        "y": 111,
-        "width": 278,
-        "height": 289
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "apple"
-      ]
+        "y": 0.5
+      }
     },
     "apple-04": {
       "frame": {
-        "x": 1284,
-        "y": 504,
-        "width": 283,
-        "height": 314
+        "x": 768,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 114,
-        "y": 99,
-        "width": 283,
-        "height": 314
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "apple"
-      ]
+        "y": 0.5
+      }
     },
     "pear-01": {
       "frame": {
-        "x": 1571,
-        "y": 504,
-        "width": 269,
-        "height": 372
+        "x": 0,
+        "y": 512,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 121,
-        "y": 70,
-        "width": 269,
-        "height": 372
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "pear"
-      ]
+        "y": 0.5
+      }
     },
     "pear-02": {
       "frame": {
-        "x": 2,
-        "y": 1019,
-        "width": 496,
-        "height": 501
+        "x": 256,
+        "y": 512,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 8,
-        "y": 5,
-        "width": 496,
-        "height": 501
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "pear"
-      ]
+        "y": 0.5
+      }
     },
     "pear-03": {
       "frame": {
-        "x": 502,
-        "y": 1019,
-        "width": 254,
-        "height": 347
+        "x": 512,
+        "y": 512,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 129,
-        "y": 82,
-        "width": 254,
-        "height": 347
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "pear"
-      ]
+        "y": 0.5
+      }
     },
     "pear-04": {
       "frame": {
-        "x": 760,
-        "y": 1019,
-        "width": 320,
-        "height": 317
+        "x": 768,
+        "y": 512,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 96,
-        "y": 97,
-        "width": 320,
-        "height": 317
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "fruit",
-        "pear"
-      ]
+        "y": 0.5
+      }
     },
     "eat-burst-01": {
       "frame": {
-        "x": 1084,
-        "y": 1019,
-        "width": 496,
-        "height": 498
+        "x": 0,
+        "y": 768,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 8,
-        "y": 7,
-        "width": 496,
-        "height": 498
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
+        "y": 0.5
+      }
     },
     "eat-burst-02": {
       "frame": {
-        "x": 1584,
-        "y": 1019,
-        "width": 417,
-        "height": 319
+        "x": 256,
+        "y": 768,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 47,
-        "y": 96,
-        "width": 417,
-        "height": 319
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
+        "y": 0.5
+      }
     },
     "eat-burst-03": {
       "frame": {
-        "x": 2,
-        "y": 1524,
-        "width": 326,
-        "height": 342
+        "x": 512,
+        "y": 768,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 93,
-        "y": 85,
-        "width": 326,
-        "height": 342
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
+        "y": 0.5
+      }
     },
     "eat-burst-04": {
       "frame": {
-        "x": 332,
-        "y": 1524,
-        "width": 319,
-        "height": 314
+        "x": 768,
+        "y": 768,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 96,
-        "y": 99,
-        "width": 319,
-        "height": 314
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
+        "y": 0.5
+      }
     }
   },
   "animations": {

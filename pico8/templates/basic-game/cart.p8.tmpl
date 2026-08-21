@@ -1,0 +1,129 @@
+pico-8 cartridge // http://www.pico-8.com
+version 43
+__lua__
+-- {{GAME_TITLE}}
+-- Sprout PICO-8 starter cart
+
+qa_capture="normal"
+screen="title"
+px=64
+py=76
+goal_x=96
+goal_y=42
+won_at=0
+
+function _init()
+ cartdata("{{DEV_SAVE_ID}}")
+ if qa_capture=="gameplay" then
+  screen="play"
+ elseif qa_capture=="win" then
+  screen="win"
+  won_at=time()
+ end
+end
+
+function start_game()
+ px=32
+ py=96
+ goal_x=96
+ goal_y=42
+ screen="play"
+end
+
+function _update60()
+ if screen=="title" then
+  if btnp(4) then start_game() end
+  return
+ end
+
+ if screen=="win" then
+  if btnp(4) or btnp(5) then screen="title" end
+  return
+ end
+
+ if btnp(5) then
+  screen="title"
+  return
+ end
+
+ local speed=1.25
+ if btn(0) then px-=speed end
+ if btn(1) then px+=speed end
+ if btn(2) then py-=speed end
+ if btn(3) then py+=speed end
+ px=mid(5,px,122)
+ py=mid(14,py,122)
+
+ if abs(px-goal_x)<7 and abs(py-goal_y)<7 then
+  screen="win"
+  won_at=time()
+  dset(0,dget(0)+1)
+ end
+end
+
+function panel(x,y,w,h,fill,edge)
+ rectfill(x+2,y,x+w-3,y+h,fill)
+ rectfill(x,y+2,x+w-1,y+h-3,fill)
+ rect(x+2,y,x+w-3,y+h,edge)
+ line(x,y+2,x,y+h-3,edge)
+ line(x+w-1,y+2,x+w-1,y+h-3,edge)
+end
+
+function center(text,y,color)
+ print(text,64-#text*2,y,color)
+end
+
+function draw_title()
+ cls(1)
+ for i=1,20 do
+  local x=(i*37)%128
+  local y=(i*19)%84
+  pset(x,y,6+(i%2))
+ end
+ panel(12,21,104,67,3,12)
+ center("{{PICO_TITLE_LINE_1}}",36,7)
+ center("{{PICO_TITLE_LINE_2}}",44,10)
+ circfill(64,66,10,11)
+ circfill(60,63,3,10)
+ circfill(68,63,3,10)
+ center("PRESS Z TO PLAY",103,7)
+ center("ARROWS MOVE  X BACK",112,6)
+end
+
+function draw_play()
+ cls(3)
+ rectfill(0,0,127,11,1)
+ print("{{PICO_SHORT_TITLE}}",4,3,7)
+ print("X:BACK",96,3,6)
+ for x=8,120,16 do
+  for y=20,116,16 do
+   pset(x,y,11)
+  end
+ end
+ circfill(goal_x,goal_y,6,10)
+ circ(goal_x,goal_y,6,9)
+ line(goal_x-3,goal_y,goal_x+3,goal_y,7)
+ line(goal_x,goal_y-3,goal_x,goal_y+3,7)
+ circfill(px,py,5,12)
+ circfill(px-2,py-2,1,7)
+ circfill(px+2,py-2,1,7)
+end
+
+function draw_win()
+ cls(3)
+ local age=time()-won_at
+ local bob=sin(age*.7)*2
+ panel(16,32,96,58,1,12)
+ circfill(64,53+bob,12,10)
+ circ(64,53+bob,12,9)
+ center("YOU DID IT!",72,7)
+ center("Z:AGAIN  X:HOME",81,6)
+end
+
+function _draw()
+ if screen=="title" then draw_title()
+ elseif screen=="play" then draw_play()
+ else draw_win() end
+end
+__gfx__
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

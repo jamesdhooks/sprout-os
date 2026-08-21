@@ -1,0 +1,24 @@
+# {{GAME_TITLE}}
+
+Starter PICO-8 game created by `tools/pico8_game.py`.
+
+New to the fantasy console itself? Read
+`docs/development/pico8-authoring-handbook.md` before expanding this cart.
+
+## Controls
+
+- D-pad or arrow keys: move
+- A button or `Z`: start/confirm
+- B button or `X`: return to title
+
+## Development
+
+```powershell
+python tools/pico8_game.py validate {{GAME_SLUG}}
+python tools/pico8_game.py run {{GAME_SLUG}}
+python tools/pico8_game.py capture {{GAME_SLUG}} --state gameplay
+python tools/pico8_game.py deploy-ssh {{GAME_SLUG}} --host onion@DEVICE-IP
+```
+
+Replace the starter goal game, then update this file with the actual rules,
+controls, persistence schema, QA states, and device-test results.

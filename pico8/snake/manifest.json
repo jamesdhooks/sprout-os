@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "pico8:snake",
+  "title": "Starlight Snake",
+  "version": "0.2.0",
+  "cart": "snake.p8",
+  "onionPlatform": "PICO",
+  "libraryArtwork": "library-cover.png",
+  "saveTemplate": "sprout_snake_v1_{profileHash}",
+  "devSaveId": "sprout_snake_dev",
+  "license": "GPL-3.0-or-later",
+  "backend": "fake-08",
+  "capabilities": ["profile-scoped-progress", "seeded-round"]
+}

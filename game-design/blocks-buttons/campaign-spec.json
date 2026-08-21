@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "gameId": "sprout.blocks-buttons",
+  "generator": "blocks-reverse-pull",
+  "generatorVersion": 1,
+  "rooms": 30,
+  "board": [8, 8],
+  "bands": [
+    {"first": 1, "last": 8, "crates": [1], "minimumPushes": [2, 7]},
+    {"first": 9, "last": 20, "crates": [2], "minimumPushes": [4, 14]},
+    {"first": 21, "last": 30, "crates": [2, 3], "minimumPushes": [7, 24]}
+  ]
+}
