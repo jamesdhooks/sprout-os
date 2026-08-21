@@ -332,20 +332,23 @@ struct Session::Impl {
       luaL_error(state, "frame draw-command limit exceeded");
       return;
     }
-    runtime.drawing.push_back({
-        .type = DrawCommandType::Sprite,
-        .sprite = {.atlas = frame.atlas,
-                   .source_x = frame.x,
-                   .source_y = frame.y,
-                   .source_width = frame.width,
-                   .source_height = frame.height,
-                   .x = target_x,
-                   .y = target_y,
-                   .width = width,
-                   .height = height,
-                   .flip_x = flip_x,
-                   .flip_y = flip_y,
-                   .alpha = static_cast<std::uint8_t>(alpha)}});
+    DrawSprite sprite{};
+    sprite.atlas = frame.atlas;
+    sprite.source_x = frame.x;
+    sprite.source_y = frame.y;
+    sprite.source_width = frame.width;
+    sprite.source_height = frame.height;
+    sprite.x = target_x;
+    sprite.y = target_y;
+    sprite.width = width;
+    sprite.height = height;
+    sprite.flip_x = flip_x;
+    sprite.flip_y = flip_y;
+    sprite.alpha = static_cast<std::uint8_t>(alpha);
+    DrawCommand draw{};
+    draw.type = DrawCommandType::Sprite;
+    draw.sprite = std::move(sprite);
+    runtime.drawing.push_back(std::move(draw));
   }
 
   static int sprite(lua_State* state) {
@@ -585,18 +588,20 @@ struct Session::Impl {
           runtime.drawing.size() >= kMaximumDrawCommands) {
         return luaL_error(state, "tilemap is outside the logical surface");
       }
-      runtime.drawing.push_back({
-          .type = DrawCommandType::Sprite,
-          .sprite = {.atlas = frame.atlas,
-                     .source_x = frame.x,
-                     .source_y = frame.y,
-                     .source_width = frame.width,
-                     .source_height = frame.height,
-                     .x = target_x,
-                     .y = target_y,
-                     .width = target_width,
-                     .height = target_height},
-      });
+      DrawSprite sprite{};
+      sprite.atlas = frame.atlas;
+      sprite.source_x = frame.x;
+      sprite.source_y = frame.y;
+      sprite.source_width = frame.width;
+      sprite.source_height = frame.height;
+      sprite.x = target_x;
+      sprite.y = target_y;
+      sprite.width = target_width;
+      sprite.height = target_height;
+      DrawCommand draw{};
+      draw.type = DrawCommandType::Sprite;
+      draw.sprite = std::move(sprite);
+      runtime.drawing.push_back(std::move(draw));
     }
     return 0;
   }
