@@ -74,6 +74,18 @@ std::optional<ParentAccessEvent> ParentAccessController::request_exit(
   return std::nullopt;
 }
 
+std::optional<ParentAccessEvent> ParentAccessController::advance_pin_delay(
+    const AccessMoment& now) {
+  if (pin_ == nullptr) return std::nullopt;
+  return resolve_pin_event(pin_->advance_after_input_delay(), now);
+}
+
+bool ParentAccessController::expire_pin_if_needed() {
+  if (pin_ == nullptr || !pin_->expired()) return false;
+  close_pin();
+  return true;
+}
+
 void ParentAccessController::lock_and_return_to_profiles() {
   if (access_store_ != nullptr) access_store_->lock();
   if (state_.screen() != Screen::ProfileSelect) {
@@ -155,7 +167,11 @@ void ParentAccessController::close_pin() noexcept {
 
 std::optional<ParentAccessEvent> ParentAccessController::handle_pin(
     Action action, const AccessMoment& now) {
-  const auto event = pin_->handle(action);
+  return resolve_pin_event(pin_->handle(action), now);
+}
+
+std::optional<ParentAccessEvent> ParentAccessController::resolve_pin_event(
+    std::optional<ParentPinEvent> event, const AccessMoment& now) {
   if (event == ParentPinEvent::Cancelled) {
     close_pin();
     return std::nullopt;

@@ -7,8 +7,9 @@ CC BY 4.0 license.
 - Source: https://github.com/libretro/retroarch-assets
 - License: https://creativecommons.org/licenses/by/4.0/
 
-`../icons/filter.png` is derived from Lucide's `list-filter` icon, licensed
-under the ISC license.
+The interface PNGs in `../icons/` are derived from Fluent UI System Icons,
+including the filled navigation, filter, status, settings, trophy, and motion
+icons. They are licensed under the MIT license.
 
-- Source: https://github.com/lucide-icons/lucide
-- License: https://github.com/lucide-icons/lucide/blob/main/LICENSE
+- Source: https://github.com/microsoft/fluentui-system-icons
+- License: https://github.com/microsoft/fluentui-system-icons/blob/main/LICENSE

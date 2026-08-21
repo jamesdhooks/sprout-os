@@ -34,6 +34,8 @@ class ParentAccessController {
 
   [[nodiscard]] bool has_pin_prompt() const noexcept;
   [[nodiscard]] const ParentPinPresentation& pin_prompt() const;
+  [[nodiscard]] std::optional<ParentAccessEvent> advance_pin_delay(const AccessMoment& now);
+  [[nodiscard]] bool expire_pin_if_needed();
   [[nodiscard]] bool ensure_active_profile_access(const AccessMoment& now);
   [[nodiscard]] std::optional<ParentAccessEvent> request_exit(
       const AccessMoment& now);
@@ -52,6 +54,8 @@ class ParentAccessController {
   void close_pin() noexcept;
   [[nodiscard]] std::optional<ParentAccessEvent> handle_pin(
       Action action, const AccessMoment& now);
+  [[nodiscard]] std::optional<ParentAccessEvent> resolve_pin_event(
+      std::optional<ParentPinEvent> event, const AccessMoment& now);
 
   LauncherState& state_;
   ParentAccessStore* access_store_;

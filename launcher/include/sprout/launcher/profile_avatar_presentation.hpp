@@ -49,6 +49,7 @@ class ProfileAvatarPresentation {
   [[nodiscard]] std::size_t page_index() const noexcept;
   [[nodiscard]] std::size_t page_count() const noexcept;
   [[nodiscard]] std::size_t avatar_first_column() const noexcept;
+  [[nodiscard]] std::size_t background_first_column() const noexcept;
   [[nodiscard]] bool custom_image_available() const noexcept;
   [[nodiscard]] bool import_focused() const noexcept;
   [[nodiscard]] const std::string& notice() const noexcept;
@@ -71,6 +72,7 @@ class ProfileAvatarPresentation {
   std::size_t avatar_first_column_{0};
   std::size_t appearance_focus_{0};
   std::size_t background_focus_{0};
+  std::size_t background_first_column_{0};
   std::size_t accent_focus_{0};
   std::string notice_;
 };

@@ -1,6 +1,6 @@
 {
   "label": "Sprout",
-  "icon": "/mnt/SDCARD/App/Sprout/bin/assets/sprout-startup-storybook.png",
+  "icon": "/mnt/SDCARD/Icons/Default/app/sprout.png",
   "launch": "launch.sh",
   "description": "A calm family launcher for Miyoo"
 }

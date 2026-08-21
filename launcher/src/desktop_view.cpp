@@ -4,7 +4,6 @@
 #include "sprout/launcher/framebuffer_page_writer.hpp"
 #include "sprout/launcher/portrait_outline.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
-#include "sprout/launcher/profile_select_layout.hpp"
 #include "sprout/launcher/string_compat.hpp"
 #include "sprout/ui/font_metrics.hpp"
 
@@ -114,6 +113,10 @@ Color kMuted{83, 108, 91};
 Color kFocus{229, 117, 87};
 Color kHoney{241, 188, 73};
 bool gRoundedTiles{true};
+bool gTileShadows{true};
+
+void draw_interface_icon(SDL_Renderer* renderer, std::string_view asset,
+                         const SDL_Rect& destination, Color color);
 
 void apply_interface_theme(std::string_view theme) {
   if (theme == "white") {
@@ -167,6 +170,20 @@ void fill_rect(SDL_Renderer* renderer, const SDL_Rect& rect, Color color) {
     SDL_RenderDrawLine(renderer, rect.x + inset, rect.y + row,
                        rect.x + rect.w - inset - 1, rect.y + row);
   }
+}
+
+void draw_tile_shadow(SDL_Renderer* renderer, const SDL_Rect& tile) {
+  if (!gTileShadows) return;
+  fill_rect(renderer, {tile.x + 4, tile.y + 6, tile.w, tile.h},
+            {18, 28, 32, 54});
+}
+
+void draw_motion_toggle_icon(SDL_Renderer* renderer, const SDL_Rect& bounds,
+                             bool enabled) {
+  const int size = std::min(bounds.w, bounds.h) * 2 / 5;
+  draw_interface_icon(renderer, enabled ? "play" : "pause",
+                      {bounds.x + (bounds.w - size) / 2,
+                       bounds.y + (bounds.h - size) / 2, size, size}, kFocus);
 }
 
 void outline_rect(SDL_Renderer* renderer, SDL_Rect rect, int thickness, Color color) {
@@ -267,13 +284,18 @@ SDL_Texture* cached_texture(SDL_Renderer* renderer,
     SDL_Renderer* renderer;
     std::string path;
     SDL_Texture* texture;
+    std::uint64_t last_used;
   };
   static std::vector<Entry> cache;
+  static std::uint64_t use_sequence = 0;
   const auto encoded = path_as_utf8(path);
   const auto found = std::find_if(cache.begin(), cache.end(), [&](const Entry& entry) {
     return entry.renderer == renderer && entry.path == encoded;
   });
-  if (found != cache.end()) return found->texture;
+  if (found != cache.end()) {
+    found->last_used = ++use_sequence;
+    return found->texture;
+  }
   SDL_Texture* texture = IMG_LoadTexture(renderer, encoded.c_str());
   if (texture == nullptr) {
     std::cerr << "SPROUT_TEXTURE load-failed path=" << encoded
@@ -284,7 +306,16 @@ SDL_Texture* cached_texture(SDL_Renderer* renderer,
   SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
 #endif
   SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-  cache.push_back({renderer, encoded, texture});
+  constexpr std::size_t kTextureCacheLimit = 16;
+  if (cache.size() >= kTextureCacheLimit) {
+    const auto least_recent = std::min_element(
+        cache.begin(), cache.end(), [](const Entry& left, const Entry& right) {
+          return left.last_used < right.last_used;
+        });
+    SDL_DestroyTexture(least_recent->texture);
+    cache.erase(least_recent);
+  }
+  cache.push_back({renderer, encoded, texture, ++use_sequence});
   return texture;
 }
 
@@ -522,10 +553,33 @@ bool render_treated_portrait(SDL_Renderer* renderer,
 void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
                            const std::filesystem::path& managed_image_root,
                            const std::filesystem::path& built_in_avatar_root) {
-  const auto slots = profile_select_layout(
-      static_cast<int>(state.profiles().size()),
-      static_cast<int>(state.focus_index()));
   const bool static_ui = SDL_getenv("SPROUT_STATIC_UI") != nullptr;
+  const int profile_count = static_cast<int>(state.profiles().size());
+  const int focused_index = static_cast<int>(state.focus_index());
+  struct ProfileCarouselMotion {
+    SDL_Renderer* renderer{nullptr};
+    int profile_count{0};
+    int from{0};
+    int to{0};
+    std::uint32_t started_at{0};
+  };
+  static ProfileCarouselMotion motion;
+  const auto now = SDL_GetTicks();
+  if (motion.renderer != renderer || motion.profile_count != profile_count) {
+    motion = {renderer, profile_count, focused_index, focused_index, now};
+  } else if (motion.to != focused_index) {
+    motion.from = motion.to;
+    motion.to = focused_index;
+    motion.started_at = now;
+  }
+  int carousel_delta = motion.to - motion.from;
+  if (carousel_delta > profile_count / 2) carousel_delta -= profile_count;
+  if (carousel_delta < -(profile_count / 2)) carousel_delta += profile_count;
+  const float linear = static_ui ? 1.0F : std::min(1.0F,
+      static_cast<float>(now - motion.started_at) / 180.0F);
+  const float eased = 1.0F - (1.0F - linear) * (1.0F - linear);
+  const float carousel_focus = static_cast<float>(motion.from) +
+      static_cast<float>(carousel_delta) * eased;
   const double phase = static_ui
                            ? 0.0
                            : static_cast<double>(SDL_GetTicks64() % 2400U) /
@@ -533,11 +587,22 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
 
   for (std::size_t index = 0; index < state.profiles().size(); ++index) {
     const auto& profile = state.profiles()[index];
-    const bool focused = index == state.focus_index();
-    const auto& slot = slots[index];
-    const int center_x = slot.center_x;
-    const int center_y = slot.center_y;
-    const int size = slot.avatar_size;
+    const bool focused = static_cast<int>(index) == focused_index;
+    float offset = static_cast<float>(index) - carousel_focus;
+    while (offset > static_cast<float>(profile_count) / 2.0F) {
+      offset -= static_cast<float>(profile_count);
+    }
+    while (offset < -static_cast<float>(profile_count) / 2.0F) {
+      offset += static_cast<float>(profile_count);
+    }
+    // Let the carousel fall naturally off either edge. Only the centre and
+    // immediate neighbours need textures on a 640px handheld display.
+    if (std::abs(offset) > 1.55F) continue;
+    const float distance = std::abs(offset);
+    const int center_x = static_cast<int>(std::round(320.0F + offset * 230.0F));
+    const int center_y = static_cast<int>(std::round(232.0F + distance * 8.0F));
+    const int size = static_cast<int>(std::round(232.0F -
+        std::min(1.0F, distance) * 64.0F));
     const int bob =
         focused ? static_cast<int>(std::round(std::sin(phase) * 4.0)) : 0;
     const double angle = focused ? std::sin(phase) * 2.25 : 0.0;
@@ -575,14 +640,36 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
       if (focused) outline_rect(renderer, avatar, 6, kHoney);
     }
 
-    const SDL_Rect name_panel{center_x - (focused ? 70 : 62),
+    const bool centre = distance < 0.08F;
+    const SDL_Rect name_panel{center_x - (centre ? 78 : 66),
                               center_y + size / 2 + 12,
-                              focused ? 140 : 124, focused ? 38 : 34};
+                              centre ? 156 : 132, centre ? 40 : 34};
     fill_rect(renderer, name_panel, {255, 250, 231, 230});
     draw_centered_text(renderer, profile.display_name, center_x,
-                       name_panel.y + (focused ? 7 : 6),
-                       focused ? 3 : 2, kText);
+                       name_panel.y + (centre ? 8 : 6),
+                       centre ? 3 : 2, kText);
   }
+}
+
+void render_saving(SDL_Renderer* renderer) {
+  SDL_SetRenderDrawColor(renderer, 24, 35, 45, 255);
+  SDL_RenderClear(renderer);
+  const auto phase = static_cast<float>(SDL_GetTicks() % 900U) / 900.0F *
+      2.0F * 3.14159265358979323846F;
+  constexpr int kDots = 10;
+  for (int index = 0; index < kDots; ++index) {
+    const float angle = phase + static_cast<float>(index) *
+        2.0F * 3.14159265358979323846F / static_cast<float>(kDots);
+    const int x = 320 + static_cast<int>(std::round(std::cos(angle) * 42.0F));
+    const int y = 208 + static_cast<int>(std::round(std::sin(angle) * 42.0F));
+    const int size = index == 0 ? 14 : 9;
+    const std::uint8_t alpha = static_cast<std::uint8_t>(
+        70 + (kDots - index) * 17);
+    fill_rect(renderer, {x - size / 2, y - size / 2, size, size},
+              {255, 214, 117, alpha});
+  }
+  draw_centered_text(renderer, "SAVING", 320, 292, 4, {255, 250, 231, 255});
+  present_frame(renderer);
 }
 
 void render_home(SDL_Renderer* renderer, const LauncherState& state,
@@ -887,7 +974,7 @@ namespace {
 std::string_view dashboard_row_label(DashboardRowKind kind) {
   switch (kind) {
     case DashboardRowKind::NextUp: return "NEXT UP";
-    case DashboardRowKind::Recent: return "RECENT";
+    case DashboardRowKind::Recent: return "CONTINUE PLAYING";
     case DashboardRowKind::Progress: return "STATS";
     case DashboardRowKind::Platforms: return "PLATFORMS";
     case DashboardRowKind::NeedsReview: return "REVIEW";
@@ -996,38 +1083,29 @@ void draw_scroll_right_hint(SDL_Renderer* renderer) {
   }
 }
 
+void draw_interface_icon(SDL_Renderer* renderer, std::string_view asset,
+                         const SDL_Rect& destination, Color color) {
+  if (SDL_Texture* icon = cached_texture(
+          renderer, executable_asset("icons/" + std::string(asset) + ".png"));
+      icon != nullptr) {
+    SDL_SetTextureColorMod(icon, color.red, color.green, color.blue);
+    SDL_SetTextureAlphaMod(icon, color.alpha);
+    SDL_RenderCopy(renderer, icon, nullptr, &destination);
+  }
+}
+
 void draw_review_icon(SDL_Renderer* renderer,
                       std::optional<GameReviewVerdict> verdict, int x, int y) {
-  const Color color = verdict == GameReviewVerdict::Positive
-                          ? Color{52, 132, 83}
-                          : verdict == GameReviewVerdict::Negative
-                                ? kFocus
-                                : kMuted;
-  set_color(renderer, color);
-  if (!verdict.has_value()) {
-    SDL_Rect ring{x + 2, y + 2, 12, 12};
-    SDL_RenderDrawRect(renderer, &ring);
-    draw_centered_text(renderer, "?", x + 8, y + 5, 1, color);
-    return;
-  }
-  const int direction = *verdict == GameReviewVerdict::Positive ? -1 : 1;
-  SDL_Rect palm{x + 5, y + 5, 9, 7};
-  SDL_RenderDrawRect(renderer, &palm);
-  SDL_RenderDrawLine(renderer, x + 5, y + 8, x + 1,
-                     y + 8 + direction * 5);
-  SDL_RenderDrawLine(renderer, x + 1, y + 8 + direction * 5, x + 4,
-                     y + 8 + direction * 5);
+  if (!verdict.has_value()) return;
+  const Color color = kFocus;
+  const std::string_view asset = *verdict == GameReviewVerdict::Positive
+      ? "thumbs-up-solid" : "thumbs-down-solid";
+  draw_interface_icon(renderer, asset, {x, y, 17, 17}, color);
 }
 
 void draw_trophy_icon(SDL_Renderer* renderer, int x, int y, bool completed) {
   const Color color = completed ? kHoney : Color{155, 166, 155};
-  set_color(renderer, color);
-  SDL_Rect cup{x + 4, y + 2, 8, 8};
-  SDL_RenderDrawRect(renderer, &cup);
-  SDL_RenderDrawLine(renderer, x + 2, y + 4, x + 4, y + 8);
-  SDL_RenderDrawLine(renderer, x + 14, y + 4, x + 12, y + 8);
-  SDL_RenderDrawLine(renderer, x + 8, y + 10, x + 8, y + 13);
-  SDL_RenderDrawLine(renderer, x + 4, y + 14, x + 12, y + 14);
+  draw_interface_icon(renderer, "trophy", {x, y, 17, 17}, color);
 }
 
 std::string compact_time(std::uint64_t milliseconds) {
@@ -1091,6 +1169,27 @@ int dashboard_card_width(SDL_Renderer* renderer,
       width <= 0 || artwork_height <= 0) return 194;
   return std::max(80, static_cast<int>(width *
                                        (static_cast<double>(height) / artwork_height)));
+}
+
+int dashboard_card_height(SDL_Renderer* renderer,
+                          const GameDashboardPresentation& dashboard,
+                          const DashboardGameCard& card, int base_height) {
+  if (base_height <= 260) return base_height;
+  const auto* game = dashboard.find_game(card.item_id);
+  if (game == nullptr) return base_height;
+  auto artwork = game->inventory.artwork_path;
+  if (!artwork.empty() && artwork.is_relative()) {
+    artwork = executable_asset(artwork.generic_string());
+  }
+  auto* texture = artwork.empty() ? nullptr : cached_texture(renderer, artwork);
+  int width = 0;
+  int height = 0;
+  if (texture == nullptr || SDL_QueryTexture(texture, nullptr, nullptr, &width, &height) != 0 ||
+      width <= 0 || height <= 0) return base_height;
+  // Big Mode gives portrait covers a full hero treatment, while landscape
+  // covers retain their natural wide-card character rather than becoming a
+  // screen-tall strip.
+  return width >= height ? 348 : base_height;
 }
 
 Color dashboard_row_color(DashboardRowKind kind) {
@@ -1159,18 +1258,40 @@ void draw_dashboard_selected_setting(SDL_Renderer* renderer,
   draw_centered_text(renderer, label, chip.x + chip.w / 2, chip.y + 5, 2, kText);
 }
 
+void draw_focus_sheen(SDL_Renderer* renderer, const SDL_Rect& bounds) {
+  // A narrow diagonal band of diminishing white strokes gives the active art
+  // a soft glass highlight without changing the artwork or adding another
+  // panel. It is clipped to the tile so it cannot bleed into its neighbours.
+  SDL_Rect previous_clip{};
+  const SDL_bool had_clip = SDL_RenderIsClipEnabled(renderer);
+  SDL_RenderGetClipRect(renderer, &previous_clip);
+  SDL_RenderSetClipRect(renderer, &bounds);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  for (int stripe = 0; stripe < 38; ++stripe) {
+    const auto alpha = static_cast<std::uint8_t>(
+        28 - (stripe * 24) / 37);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+    const int x = bounds.x + 18 + stripe * 3;
+    SDL_RenderDrawLine(renderer, x, bounds.y + 3,
+                       x - 104, bounds.y + bounds.h - 3);
+  }
+  SDL_RenderSetClipRect(renderer, had_clip ? &previous_clip : nullptr);
+}
+
 void render_dashboard_game_card(SDL_Renderer* renderer,
                                 const GameDashboardPresentation& dashboard,
                                 const DashboardGameCard& card, SDL_Rect bounds,
-                                bool focused) {
+                                bool focused, float scale) {
+  scale = std::clamp(scale, 0.80F, 1.05F);
+  if (scale < 0.999F || scale > 1.001F) {
+    const int width = std::max(1, static_cast<int>(std::round(bounds.w * scale)));
+    const int height = std::max(1, static_cast<int>(std::round(bounds.h * scale)));
+    bounds = {bounds.x + (bounds.w - width) / 2,
+              bounds.y + (bounds.h - height) / 2, width, height};
+  }
   const auto* game = dashboard.find_game(card.item_id);
   if (game == nullptr) return;
-  // The offset shadow was designed for floating rounded tiles.  With square
-  // edges it reads as a stray background strip, so remove it entirely.
-  if (gRoundedTiles) {
-    fill_rect(renderer, {bounds.x + 5, bounds.y + 6, bounds.w, bounds.h},
-              {32, 55, 45, 82});
-  }
+  draw_tile_shadow(renderer, bounds);
   std::filesystem::path artwork = game->inventory.artwork_path;
   if (!artwork.empty() && artwork.is_relative()) {
     artwork = executable_asset(artwork.generic_string());
@@ -1189,10 +1310,13 @@ void render_dashboard_game_card(SDL_Renderer* renderer,
                        bounds.x + bounds.w / 2, bounds.y + bounds.h / 2 - 8,
                        2, {255, 250, 231});
   }
-  const SDL_Rect review_badge{bounds.x + bounds.w - 39, bounds.y + 10, 29, 29};
-  fill_rect(renderer, review_badge, {255, 250, 231, 205});
-  draw_review_icon(renderer, game->profile.verdict,
-                   review_badge.x + 6, review_badge.y + 6);
+  if (focused) draw_focus_sheen(renderer, bounds);
+  if (game->profile.verdict.has_value()) {
+    const SDL_Rect review_badge{bounds.x + bounds.w - 39, bounds.y + 10, 29, 29};
+    fill_rect(renderer, review_badge, {255, 250, 231, 205});
+    draw_review_icon(renderer, game->profile.verdict,
+                     review_badge.x + 6, review_badge.y + 6);
+  }
   if (focused) outline_rect(renderer, bounds, 4, kFocus);
 }
 
@@ -1424,6 +1548,7 @@ void render_game_dashboard(SDL_Renderer* renderer,
   apply_interface_theme(dashboard.interface_theme());
   apply_accent(dashboard.accent_rgb());
   gRoundedTiles = dashboard.rounded_tiles();
+  gTileShadows = dashboard.tile_shadows();
   if (dashboard.stage() == GameDashboardStage::Filters) {
     render_dashboard_filters(renderer, dashboard);
     return;
@@ -1437,30 +1562,96 @@ void render_game_dashboard(SDL_Renderer* renderer,
     return;
   }
   render_dashboard_background(renderer, dashboard);
-  // Keep the dashboard's viewport stable.  SDL's renderer on the device cannot
-  // safely animate these clipped, texture-backed rows by translating the final
-  // layout; that path can leave the display empty after a row navigation.
-  const int row_motion = 0;
   const auto rows = dashboard.rows();
   if (rows.empty()) {
     draw_heading_panel(renderer, {90, 174, 460, 112}, "NO MATCHES");
   } else {
     const auto row_focus = dashboard.row_focus();
     const bool big_mode = dashboard.big_mode();
-    const std::size_t visible_rows = big_mode ? 1U : 2U;
     const std::size_t first = big_mode
                                   ? row_focus
                                   : (rows.size() <= 2 ? 0
                                                       : std::min(row_focus, rows.size() - 2));
-    for (std::size_t row_index = first;
-         row_index < std::min(rows.size(), first + visible_rows); ++row_index) {
+    constexpr int kSmallRowStride = 216;
+    const auto row_height_for = [&](std::size_t index) {
+      // Big Mode retains the exact normal-row rhythm for stats, platforms,
+      // and settings. Only a game-art rail expands, and it consumes precisely
+      // the space of two normal rows.
+      return big_mode && !rows[index].games.empty()
+                 ? kSmallRowStride * 2
+                 : kSmallRowStride;
+    };
+    const auto row_scroll_for = [&](std::size_t index) {
+      int offset = 0;
+      for (std::size_t row = 0; row < index && row < rows.size(); ++row) {
+        offset += row_height_for(row);
+      }
+      return static_cast<float>(offset);
+    };
+    // This stores only a viewport origin, not rendered content. Each row and
+    // each card below is still drawn directly at its interpolated position.
+    // On a new input we start from the currently visible fractional origin,
+    // which also makes rapid direction changes continuous.
+    struct ViewportMotion {
+      const GameDashboardPresentation* dashboard{nullptr};
+      std::size_t row_count{0};
+      float from{0.0F};
+      float target{0.0F};
+      std::uint32_t started{0};
+    };
+    static ViewportMotion motion;
+    struct CarouselMotion {
+      const GameDashboardPresentation* dashboard{nullptr};
+      std::size_t row_key{0};
+      std::size_t item_count{0};
+      std::size_t focus{0};
+      float from{0.0F};
+      float target{0.0F};
+      std::uint32_t started{0};
+    };
+    static CarouselMotion carousel;
+    static CarouselMotion settings_carousel;
+    const auto now = SDL_GetTicks();
+    const bool reset_motion = !dashboard.motion_enabled() ||
+        motion.dashboard != &dashboard || motion.row_count != rows.size();
+    const float target_scroll = row_scroll_for(first);
+    float current_scroll = target_scroll;
+    if (reset_motion) {
+      motion = {&dashboard, rows.size(), current_scroll, current_scroll, now};
+    } else {
+      const float elapsed = static_cast<float>(now - motion.started);
+      const float progress = std::min(1.0F, elapsed / 150.0F);
+      const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                      (1.0F - progress);
+      current_scroll = motion.from + (motion.target - motion.from) * eased;
+      if (std::abs(motion.target - target_scroll) > 0.001F) {
+        motion.from = current_scroll;
+        motion.target = target_scroll;
+        motion.started = now;
+      }
+    }
+    if (motion.dashboard == &dashboard && dashboard.motion_enabled()) {
+      const float elapsed = static_cast<float>(now - motion.started);
+      const float progress = std::min(1.0F, elapsed / 150.0F);
+      const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                      (1.0F - progress);
+      current_scroll = motion.from + (motion.target - motion.from) * eased;
+    }
+    for (std::size_t row_index = 0; row_index < rows.size(); ++row_index) {
       const auto& row = rows[row_index];
       const bool focused_row = row_index == row_focus;
-      const int row_slot = static_cast<int>(row_index - first);
-      const int row_height = big_mode ? 408 : 216;
-      const int card_height = big_mode ? 364 : 174;
-      const int title_y = 4 + row_slot * row_height + row_motion;
-      const int card_y = title_y + 34;
+      const bool large_game_row = big_mode && !row.games.empty();
+      const int card_height = large_game_row ? 364 : 174;
+      const int title_y = static_cast<int>(std::round(
+          16.0F + row_scroll_for(row_index) - current_scroll));
+      // Full-height game art needs a little more air below its heading than
+      // compact utility tiles. This also applies when a game rail begins as
+      // the second visible row and intentionally runs below the viewport.
+      const int card_y = title_y + (large_game_row ? 40 : 34);
+      // Reserve the bottom strip exclusively for the deliberate next-row
+      // preview chip. Without this guard an entering row can draw its own
+      // title underneath that chip, producing a doubled label.
+      if (card_y >= kHeight - 48 || card_y + card_height <= 0) continue;
       draw_dashboard_row_chip(renderer, row.kind, title_y);
       if (focused_row) {
         if (!row.settings.empty()) {
@@ -1471,16 +1662,87 @@ void render_game_dashboard(SDL_Renderer* renderer,
       }
       if (!row.games.empty()) {
         const auto focus = std::min(dashboard.item_focus(row.kind), row.games.size() - 1);
-        std::size_t index = focus;
-          int card_x = 18;
-        while (index < row.games.size() && card_x < kWidth - 18) {
-          const int card_width = dashboard_card_width(renderer, dashboard,
-                                                      row.games[index], card_height);
-          render_dashboard_game_card(renderer, dashboard, row.games[index],
-                                     {card_x, card_y, card_width, card_height},
-                                     focused_row && index == focus);
-          card_x += card_width + 12;
-          ++index;
+        const auto card_height_for = [&](std::size_t item) {
+          return dashboard_card_height(renderer, dashboard, row.games[item], card_height);
+        };
+        const auto card_width = [&](std::size_t item) {
+          return dashboard_card_width(renderer, dashboard, row.games[item],
+                                      card_height_for(item));
+        };
+        const std::size_t row_key = static_cast<std::size_t>(row.kind);
+        const bool reset_carousel = !focused_row || !dashboard.motion_enabled() ||
+            carousel.dashboard != &dashboard || carousel.row_key != row_key ||
+            carousel.item_count != row.games.size();
+        float target_offset = 0.0F;
+        if (reset_carousel) {
+          for (std::size_t index = 0; index < focus; ++index) {
+            target_offset += static_cast<float>(card_width(index) + 12);
+          }
+        } else {
+          target_offset = carousel.target;
+          if (focus > carousel.focus) {
+            for (std::size_t index = carousel.focus; index < focus; ++index) {
+              target_offset += static_cast<float>(card_width(index) + 12);
+            }
+          } else {
+            for (std::size_t index = focus; index < carousel.focus; ++index) {
+              target_offset -= static_cast<float>(card_width(index) + 12);
+            }
+          }
+        }
+        float current_offset = target_offset;
+        if (reset_carousel) {
+          if (focused_row) carousel = {&dashboard, row_key, row.games.size(), focus,
+                                       target_offset, target_offset, now};
+        } else {
+          const float elapsed = static_cast<float>(now - carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = carousel.from + (carousel.target - carousel.from) * eased;
+          if (std::abs(carousel.target - target_offset) > 0.001F) {
+            carousel.from = current_offset;
+            carousel.target = target_offset;
+            carousel.focus = focus;
+            carousel.started = now;
+            current_offset = carousel.from;
+          }
+        }
+        if (focused_row && dashboard.motion_enabled()) {
+          const float elapsed = static_cast<float>(now - carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = carousel.from + (carousel.target - carousel.from) * eased;
+        }
+        const float motion_progress = dashboard.motion_progress(now);
+        const float motion_eased = 1.0F - (1.0F - motion_progress) *
+            (1.0F - motion_progress) * (1.0F - motion_progress);
+        const float focus_scale = focused_row && dashboard.motion_active(now)
+            ? 0.92F + 0.08F * motion_eased +
+                  0.022F * std::sin(motion_progress * 3.14159265F)
+            : 1.0F;
+        std::size_t first_visible = focus;
+        float first_offset = target_offset;
+        while (first_visible > 0 &&
+               18.0F + first_offset - current_offset > 18.0F) {
+          --first_visible;
+          first_offset -= static_cast<float>(card_width(first_visible) + 12);
+        }
+        float offset = first_offset;
+        for (std::size_t index = first_visible; index < row.games.size(); ++index) {
+          const int width = card_width(index);
+          const int height = card_height_for(index);
+          const int card_x = static_cast<int>(std::round(18.0F + offset - current_offset));
+          if (card_x >= kWidth - 18) break;
+          if (card_x + width > 18) {
+            render_dashboard_game_card(renderer, dashboard, row.games[index],
+                                       {card_x, card_y + (card_height - height) / 2,
+                                        width, height},
+                                       focused_row && index == focus,
+                                       focused_row && index == focus ? focus_scale : 0.92F);
+          }
+          offset += static_cast<float>(width + 12);
         }
       } else if (!row.platforms.empty()) {
         const auto focus = std::min(dashboard.item_focus(row.kind), row.platforms.size() - 1);
@@ -1488,9 +1750,19 @@ void render_game_dashboard(SDL_Renderer* renderer,
         for (std::size_t index = platform_first;
              index < std::min(row.platforms.size(), platform_first + 3); ++index) {
           const SDL_Rect card{18 + static_cast<int>(index - platform_first) * 206,
-                              card_y, 194, 174};
+                              card_y, 194, card_height};
           const bool selected = focused_row && index == focus;
-          fill_rect(renderer, card, selected ? kPanelFocused : kPanel);
+          const bool active = std::find(dashboard.filter().platforms.begin(),
+                                        dashboard.filter().platforms.end(),
+                                        row.platforms[index].platform) !=
+                              dashboard.filter().platforms.end();
+          // Selection is the dashboard cursor; an active platform is a
+          // persistent filter. Keep the card surface neutral and reserve the
+          // compact Lucide check badge for the active-filter state.
+          const Color selected_panel{kPanelFocused.red, kPanelFocused.green,
+                                     kPanelFocused.blue, 255};
+          draw_tile_shadow(renderer, card);
+          fill_rect(renderer, card, selected ? selected_panel : kPanel);
           if (selected) outline_rect(renderer, card, 4, kFocus);
           // Platform art is the content of this row.  Keep its canvas nearly
           // card-sized: the wordmark/count are deliberately only a small
@@ -1504,6 +1776,12 @@ void render_game_dashboard(SDL_Renderer* renderer,
                              card.x + card.w / 2, card.y + 143, 1, kText);
           draw_centered_text(renderer, std::to_string(row.platforms[index].game_count),
                              card.x + card.w / 2, card.y + 157, 1, kMuted);
+          if (active) {
+            const SDL_Rect badge{card.x + card.w - 39, card.y + 10, 29, 29};
+            fill_rect(renderer, badge, {kFocus.red, kFocus.green, kFocus.blue, 235});
+            draw_interface_icon(renderer, "check", {badge.x + 6, badge.y + 6, 17, 17},
+                                kPanel);
+          }
         }
       } else if (row.statistics.has_value()) {
         const auto& stats = *row.statistics;
@@ -1520,8 +1798,9 @@ void render_game_dashboard(SDL_Renderer* renderer,
         for (std::size_t index = card_first;
              index < std::min(cards.size(), card_first + 3); ++index) {
           const SDL_Rect card{18 + static_cast<int>(index - card_first) * 206,
-                              card_y, 194, 174};
+                              card_y, 194, card_height};
           const bool selected = focused_row && dashboard.item_focus(row.kind) == index;
+          draw_tile_shadow(renderer, card);
           fill_rect(renderer, card, selected ? kPanelFocused : kPanel);
           if (selected) outline_rect(renderer, card, 4, kFocus);
           draw_centered_text(renderer, cards[index].second, card.x + card.w / 2,
@@ -1531,15 +1810,49 @@ void render_game_dashboard(SDL_Renderer* renderer,
         }
       } else if (!row.settings.empty()) {
         const auto focus = std::min(dashboard.item_focus(row.kind), row.settings.size() - 1);
-        // Settings behave as a true queue: moving focus advances the next
-        // card into the leftmost, active position every time.
-        const std::size_t first_setting = focus;
-        for (std::size_t index = first_setting;
-             index < std::min(row.settings.size(), first_setting + 3); ++index) {
-          const SDL_Rect card{18 + static_cast<int>(index - first_setting) * 206,
-                              card_y, 194, 174};
+        constexpr float kSettingsStride = 206.0F;
+        const float target_offset = static_cast<float>(focus) * kSettingsStride;
+        const std::size_t row_key = static_cast<std::size_t>(row.kind);
+        float current_offset = target_offset;
+        const bool reset_carousel = !focused_row || !dashboard.motion_enabled() ||
+            settings_carousel.dashboard != &dashboard ||
+            settings_carousel.row_key != row_key ||
+            settings_carousel.item_count != row.settings.size();
+        if (reset_carousel) {
+          if (focused_row) settings_carousel = {&dashboard, row_key,
+                                                row.settings.size(), focus, target_offset,
+                                                target_offset, now};
+        } else {
+          const float elapsed = static_cast<float>(now - settings_carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = settings_carousel.from +
+              (settings_carousel.target - settings_carousel.from) * eased;
+          if (std::abs(settings_carousel.target - target_offset) > 0.001F) {
+            settings_carousel.from = current_offset;
+            settings_carousel.target = target_offset;
+            settings_carousel.started = now;
+            current_offset = settings_carousel.from;
+          }
+        }
+        if (focused_row && dashboard.motion_enabled()) {
+          const float elapsed = static_cast<float>(now - settings_carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = settings_carousel.from +
+              (settings_carousel.target - settings_carousel.from) * eased;
+        }
+        for (std::size_t index = 0; index < row.settings.size(); ++index) {
+          const int card_x = static_cast<int>(std::round(
+              18.0F + static_cast<float>(index) * kSettingsStride - current_offset));
+          if (card_x >= kWidth - 18) break;
+          if (card_x + 194 <= 18) continue;
+          const SDL_Rect card{card_x, card_y, 194, card_height};
           const bool selected = focused_row && index == focus;
           const bool enabled = row.settings[index] == "BIG MODE" && dashboard.big_mode();
+          draw_tile_shadow(renderer, card);
           fill_rect(renderer, card, selected ? kPanelFocused
                                              : (enabled ? Color{255, 239, 188, 240}
                                                         : kPanel));
@@ -1600,17 +1913,17 @@ void render_game_dashboard(SDL_Renderer* renderer,
               outline_rect(renderer, screen, 3, glyph);
             }
           } else if (row.settings[index] == "TILE STYLE") {
-            const SDL_Rect sample{card.x + 42, card.y + 36, card.w - 84, card.h - 72};
             const bool rounded = dashboard.rounded_tiles();
-            const bool saved = gRoundedTiles;
-            gRoundedTiles = rounded;
-            fill_rect(renderer, sample, kFocus);
-            outline_rect(renderer, sample, 3, kText);
-            gRoundedTiles = saved;
+            draw_interface_icon(renderer, rounded ? "tile-circle" : "tile-square",
+                                {card.x + 46, card.y + 30, 102, 102}, kFocus);
+          } else if (row.settings[index] == "SHADOWS") {
+            const Color glyph = dashboard.tile_shadows() ? kFocus : kMuted;
+            const SDL_Rect sample{card.x + 48, card.y + 42, card.w - 96, card.h - 84};
+            if (dashboard.tile_shadows()) draw_tile_shadow(renderer, sample);
+            fill_rect(renderer, sample, glyph);
           } else if (row.settings[index] == "MOTION") {
-            const SDL_Rect trail{card.x + 34, card.y + 78, card.w - 68, 10};
-            fill_rect(renderer, trail, kPanelFocused);
-            fill_rect(renderer, {trail.x, trail.y, dashboard.motion_enabled() ? trail.w : trail.w / 3, trail.h}, kFocus);
+            draw_motion_toggle_icon(renderer, {card.x, card.y, card.w, card.h},
+                                    dashboard.motion_enabled());
           } else if (row.settings[index] == "THEME") {
             if (SDL_Texture* icon = cached_texture(renderer, executable_asset("icons/theme.png"));
                 icon != nullptr) {
@@ -1637,9 +1950,21 @@ void render_game_dashboard(SDL_Renderer* renderer,
         }
       }
     }
-    const auto preview_index = first + visible_rows;
+    // The preview sits after two normal row slots. In Big Mode a game rail
+    // consumes both slots, but stats/platform/settings consume one each. This
+    // prevents the preview label from duplicating and drawing over the second
+    // visible small rail.
+    std::size_t preview_index = first;
+    int consumed_slots = 0;
+    while (preview_index < rows.size() && consumed_slots < 2) {
+      consumed_slots += big_mode && !rows[preview_index].games.empty() ? 2 : 1;
+      ++preview_index;
+    }
     if (preview_index < rows.size()) {
-      draw_dashboard_row_chip(renderer, rows[preview_index].kind, 448);
+      const bool preview_follows_game =
+          big_mode && !rows[first].games.empty();
+      draw_dashboard_row_chip(renderer, rows[preview_index].kind,
+                              preview_follows_game ? 430 : 448);
     }
   }
   if (!dashboard.notice().empty()) {
@@ -1760,24 +2085,23 @@ void render_profile_avatars(
       // The focused choice owns the full screen; tiles are only the picker.
       fill_rect(renderer, {0, 232, kWidth, kHeight - 232}, {12, 25, 35, 132});
       constexpr std::size_t row_count = 2;
+      constexpr std::size_t visible_columns = 4;
       const std::size_t total = backgrounds.size();
       const std::size_t column_count = (total + row_count - 1U) / row_count;
       const std::size_t focus = presentation.focus_index();
-      const std::size_t focus_column = focus / row_count;
-      for (int relative_column = -1; relative_column <= 1; ++relative_column) {
-        const auto column = static_cast<std::size_t>(
-            (static_cast<long long>(focus_column) + relative_column +
-             static_cast<long long>(column_count)) %
-            static_cast<long long>(column_count));
+      const std::size_t first_column = presentation.background_first_column();
+      for (std::size_t visible_column = 0; visible_column < visible_columns;
+           ++visible_column) {
+        const auto column = first_column + visible_column;
+        if (column >= column_count) break;
         for (std::size_t row = 0; row < row_count; ++row) {
           const std::size_t index = column * row_count + row;
           if (index >= total) continue;
           const auto& choice = backgrounds[index];
           const bool selected = index == focus;
-          const SDL_Rect tile{112 + (relative_column + 1) * 144,
+          const SDL_Rect tile{50 + static_cast<int>(visible_column) * 138,
                               250 + static_cast<int>(row) * 108, 128, 92};
-          fill_rect(renderer, tile, {255, 250, 231, 224});
-          const SDL_Rect art{tile.x + 5, tile.y + 5, tile.w - 10, tile.h - 10};
+          const SDL_Rect art = tile;
           if (choice.flat_color) {
             fill_rect(renderer, art,
                       {static_cast<std::uint8_t>((choice.color_rgb >> 16) & 0xffU),
@@ -1787,13 +2111,21 @@ void render_profile_avatars(
                          renderer, executable_asset("backgrounds/" +
                                                     std::string(choice.filename)));
                      texture != nullptr) {
-            SDL_RenderCopy(renderer, texture, nullptr, &art);
+            // Match flat-colour choices: every picker tile uses the selected
+            // tile style, rather than letting image previews retain square
+            // corners behind the focus outline.
+            render_rounded_artwork(renderer, texture, art, gRoundedTiles ? 14 : 0);
           }
           if (selected) outline_rect(renderer, tile, 5, kFocus);
         }
       }
+      const bool has_previous = first_column > 0;
+      const bool has_next = first_column + visible_columns < column_count;
+      draw_interface_icon(renderer, "arrow-left", {14, 326, 32, 32},
+                          has_previous ? kText : Color{kMuted.red, kMuted.green, kMuted.blue, 82});
+      draw_interface_icon(renderer, "arrow-right", {594, 326, 32, 32},
+                          has_next ? kText : Color{kMuted.red, kMuted.green, kMuted.blue, 82});
     }
-    draw_scroll_right_hint(renderer);
     present_frame(renderer);
     return;
   }
@@ -1971,7 +2303,7 @@ void render_parent_pin(SDL_Renderer* renderer,
   set_color(renderer, kBackground);
   SDL_RenderClear(renderer);
   const bool combo = pin.uses_button_combo();
-  draw_centered_text(renderer, combo ? "ENTER PIN" : pin.title(), kWidth / 2, 54, 4, kText);
+  draw_centered_text(renderer, pin.title(), kWidth / 2, 54, 4, kText);
   if (!combo) draw_centered_text(renderer, pin.description(), kWidth / 2, 98, 1, kMuted);
 
   if (pin.is_confirmation()) {
@@ -1998,8 +2330,12 @@ void render_parent_pin(SDL_Renderer* renderer,
       outline_rect(renderer, box, 3, index < static_cast<int>(count) ? kFocus : kPanelFocused);
       if (index < static_cast<int>(count)) draw_centered_text(renderer, "*", box.x + box.w / 2, 157, 4, kFocus);
     }
+    // Keep the countdown quiet while someone is actively entering a combo.
+    // The final half maps across the entire bar to make the actual deadline clear.
+    const float remaining = pin.expiry_fraction();
+    const float visible_fraction = remaining >= 0.5F ? 1.0F : remaining * 2.0F;
     fill_rect(renderer, {0, kHeight - 5,
-                         static_cast<int>(kWidth * pin.expiry_fraction()), 5}, kFocus);
+                         static_cast<int>(kWidth * visible_fraction), 5}, kFocus);
     if (!pin.error_message().empty()) draw_centered_text(renderer, pin.error_message(), kWidth / 2, 370, 1, kFocus);
     present_frame(renderer);
     return;

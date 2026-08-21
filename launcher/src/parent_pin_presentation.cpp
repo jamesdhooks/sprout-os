@@ -36,8 +36,9 @@ std::string_view ParentPinPresentation::title() const noexcept {
     return "PARENT PIN";
   }
   if (mode_ == ParentPinMode::Updated) return "PIN UPDATED";
-  if (mode_ == ParentPinMode::ComboAuthenticate) return "PARENT COMBO";
-  if (mode_ == ParentPinMode::ComboCreate) return ready_to_save_ ? "SAVE BUTTON COMBO" : confirming_ ? "CONFIRM COMBO" : "SET BUTTON COMBO";
+  if (mode_ == ParentPinMode::ComboAuthenticate) return "ENTER PIN";
+  if (mode_ == ParentPinMode::ComboCreate)
+    return ready_to_save_ ? "PIN READY" : confirming_ ? "ENTER PIN AGAIN" : "ENTER PIN";
   if (mode_ == ParentPinMode::Change) {
     return confirming_ ? "CONFIRM NEW PIN" : "SET NEW PIN";
   }
@@ -68,6 +69,7 @@ float ParentPinPresentation::expiry_fraction() const noexcept {
       std::chrono::steady_clock::now() - last_input_).count();
   return std::max(0.0F, 1.0F - static_cast<float>(elapsed) / 20000.0F);
 }
+bool ParentPinPresentation::expired() const noexcept { return expiry_fraction() <= 0.0F; }
 
 std::size_t ParentPinPresentation::focus_index() const noexcept {
   return focus_index_;

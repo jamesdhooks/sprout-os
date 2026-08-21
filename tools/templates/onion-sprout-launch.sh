@@ -137,6 +137,16 @@ while :; do
   if [ "$STATUS" -eq 75 ]; then
     exit 75
   fi
+  if [ "$STATUS" -eq 74 ]; then
+    # Sprout has flushed its stores and released SDL. Suspending here ensures
+    # Onion's framebuffer owner is resumed only after the device wakes.
+    sync
+    SPROUT_SUSPEND_PATH="${SPROUT_SUSPEND_PATH:-/sys/power/state}"
+    if [ -w "$SPROUT_SUSPEND_PATH" ]; then
+      echo mem >"$SPROUT_SUSPEND_PATH" 2>/dev/null || true
+    fi
+    exit 0
+  fi
 
   printf '%s unapproved-exit-restarting status=%s\n' \
     "$(date +%Y-%m-%dT%H:%M:%S)" "$STATUS" >>"$LOG_FILE"

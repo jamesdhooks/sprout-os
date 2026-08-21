@@ -8,16 +8,24 @@
 namespace sprout::launcher {
 namespace {
 
-std::string shell_quote(std::string_view value) {
-  std::string quoted{"'"};
+std::string onion_command_quote(std::string_view value) {
+  // Onion runtime.sh parses the command file itself before running it. Its
+  // parser recognizes the native `"launcher" "rom"` form, not POSIX single
+  // quotes, so preserve that contract while escaping shell metacharacters.
+  std::string quoted{"\""};
   for (const char character : value) {
-    if (character == '\'') {
-      quoted += "'\\''";
-    } else {
-      quoted += character;
+    switch (character) {
+      case '\\':
+      case '\"':
+      case '$':
+      case '`':
+        quoted += '\\';
+        [[fallthrough]];
+      default:
+        quoted += character;
     }
   }
-  quoted += '\'';
+  quoted += '\"';
   return quoted;
 }
 
@@ -61,10 +69,9 @@ ProcessResult OnionRuntimeHandoffProcess::run(
     if (!output) {
       return failed("The staged Onion command could not be created");
     }
-    output << "#!/bin/sh\n"
-           << "LD_PRELOAD=/mnt/SDCARD/miyoo/lib/libpadsp.so exec "
-           << shell_quote(executable.string()) << ' '
-           << shell_quote(arguments[0]) << "\n";
+    output << "LD_PRELOAD=/mnt/SDCARD/miyoo/lib/libpadsp.so "
+           << onion_command_quote(executable.string()) << ' '
+           << onion_command_quote(arguments[0]) << "\n";
     output.flush();
     if (!output) {
       std::filesystem::remove(staged_command, error);

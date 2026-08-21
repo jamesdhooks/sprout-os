@@ -34,7 +34,8 @@ class GameDashboardPresentation {
                             std::string background_ref = "builtin:garden-morning",
                             std::string interface_theme = "cream",
                             std::uint32_t accent_rgb = 0xE57557U,
-                            bool rounded_tiles = true, bool motion_enabled = true);
+                            bool rounded_tiles = true, bool motion_enabled = true,
+                            bool tile_shadows = true);
 
   [[nodiscard]] GameDashboardStage stage() const noexcept;
   [[nodiscard]] ReadOnlyView<DashboardRow> rows() const noexcept;
@@ -65,6 +66,9 @@ class GameDashboardPresentation {
   [[nodiscard]] std::uint32_t accent_rgb() const noexcept;
   [[nodiscard]] bool rounded_tiles() const noexcept;
   [[nodiscard]] bool motion_enabled() const noexcept;
+  [[nodiscard]] bool tile_shadows() const noexcept;
+  [[nodiscard]] bool motion_active(std::uint32_t now) const noexcept;
+  [[nodiscard]] float motion_progress(std::uint32_t now) const noexcept;
   void set_big_mode(bool enabled) noexcept;
   void set_profile_avatar_ref(std::string reference);
   void set_profile_background_ref(std::string reference);
@@ -72,6 +76,9 @@ class GameDashboardPresentation {
   void set_accent_rgb(std::uint32_t accent_rgb) noexcept;
   void set_rounded_tiles(bool rounded) noexcept;
   void set_motion_enabled(bool enabled) noexcept;
+  void set_tile_shadows(bool enabled) noexcept;
+  void begin_motion(std::uint32_t now) noexcept;
+  void focus_game(std::string_view item_id);
 
   [[nodiscard]] std::optional<GameDashboardEvent> handle(
       Action action, std::int64_t now);
@@ -104,6 +111,9 @@ class GameDashboardPresentation {
   std::uint32_t accent_rgb_{0xE57557U};
   bool rounded_tiles_{true};
   bool motion_enabled_{true};
+  bool tile_shadows_{true};
+  bool motion_active_{false};
+  std::uint32_t motion_started_{0};
   std::vector<GameLibraryRecord> records_;
   GameDashboardModel model_;
   std::vector<DashboardRow> rows_;

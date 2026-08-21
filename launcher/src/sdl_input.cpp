@@ -21,12 +21,12 @@ std::optional<Action> keyboard_action(SDL_Keycode key) {
     // The Miyoo's physical SELECT key reaches SDL as Escape (keyboard input,
     // not an SDL game-controller BACK event).
     case SDLK_ESCAPE:
-    // Some Miyoo Mini keypad revisions expose SELECT as the right shift key.
-    // Treat both hardware translations as the same global return action.
-    case SDLK_RSHIFT:
-    case SDLK_RCTRL:
     // Alternate Miyoo gpio-key translation used by this handheld revision.
     case SDLK_t:
+    // Another Miyoo keymap reports physical SELECT as left Alt. It must take
+    // the same session-level route rather than being treated as a dashboard
+    // utility control.
+    case SDLK_LALT:
       return Action::ProfileSelect;
     case SDLK_SPACE:
     case SDLK_z:
@@ -35,15 +35,15 @@ std::optional<Action> keyboard_action(SDL_Keycode key) {
       return Action::Back;
     case SDLK_LSHIFT:
       return Action::Filters;
-    case SDLK_LALT:
-      return Action::ClearFilters;
     case SDLK_HOME:
       return Action::GameSwitcher;
     case SDLK_TAB:
     case SDLK_PAGEDOWN:
+    case SDLK_RSHIFT:
       return Action::ZoomOut;
     case SDLK_BACKSPACE:
     case SDLK_PAGEUP:
+    case SDLK_RCTRL:
       return Action::ZoomIn;
     case SDLK_x:
     case SDLK_b:

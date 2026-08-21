@@ -13,6 +13,11 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
 
+from PIL import Image
+
+
+THUMBNAIL_MAX_SIZE = (640, 384)
+
 
 SYSTEM_FOLDERS = {
     "NES": "FC",
@@ -84,6 +89,16 @@ def extract_entry(archive: Path, info: zipfile.ZipInfo, output: Path, destinatio
     with zipfile.ZipFile(archive) as source, source.open(info) as reader, target.open("wb") as writer:
         shutil.copyfileobj(reader, writer, length=1024 * 1024)
     return info.file_size
+
+
+def write_thumbnail(source: Path, destination: Path) -> int:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with Image.open(source) as image:
+        if image.mode not in ("RGB", "RGBA"):
+            image = image.convert("RGBA" if "A" in image.getbands() else "RGB")
+        image.thumbnail(THUMBNAIL_MAX_SIZE, Image.Resampling.LANCZOS)
+        image.save(destination, format="PNG", optimize=True)
+    return destination.stat().st_size
 
 
 def find_rom(
@@ -218,7 +233,14 @@ def main() -> None:
                     image_archive, image_info = image_source
                     extracted_bytes += extract_entry(image_archive, image_info, args.output, image_name)
                     extracted_files += 1
-                    cover = image_name
+                    thumbnail_name = (
+                        f"Roms/{folder}/Imgs/.sprout-thumbs/"
+                        f"{PurePosixPath(relative).with_suffix('.png')}"
+                    )
+                    extracted_bytes += write_thumbnail(
+                        args.output / image_name, args.output / thumbnail_name)
+                    extracted_files += 1
+                    cover = thumbnail_name
                 else:
                     cover = ""
                     missing_art.append(f"{platform}: {title}")

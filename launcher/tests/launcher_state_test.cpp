@@ -46,31 +46,26 @@ void profile_navigation_wraps() {
   expect(state.focus_index() == 0, "right should wrap to the first profile");
 }
 
-void profile_vertical_navigation_follows_grid_rows() {
+void profile_selector_defaults_to_last_accessed_profile() {
+  auto profiles = make_profiles(4);
+  profiles[3].last_accessed = true;
+  LauncherState state(std::move(profiles));
+  expect(state.focus_index() == 3,
+         "profile selector should focus the last accessed profile on launch");
+}
+
+void profile_vertical_navigation_moves_the_carousel() {
   LauncherState state(make_profiles(6));
   (void)state.handle(Action::Right);
   (void)state.handle(Action::Down);
-  expect(state.focus_index() == 4,
-         "down should keep the selected column on the next grid row");
+  expect(state.focus_index() == 2,
+         "down should advance the single profile carousel");
   (void)state.handle(Action::Up);
   expect(state.focus_index() == 1,
-         "up should keep the selected column on the previous grid row");
+         "up should reverse the single profile carousel");
   (void)state.handle(Action::Up);
-  expect(state.focus_index() == 4,
-         "up should wrap vertically to the final grid row");
-}
-
-void profile_vertical_navigation_handles_incomplete_rows() {
-  LauncherState state(make_profiles(5));
-  (void)state.handle(Action::Left);
-  expect(state.focus_index() == 4, "left should still wrap linearly");
-  (void)state.handle(Action::Up);
-  expect(state.focus_index() == 1,
-         "up should return from a short final row to the same column");
-  (void)state.handle(Action::Right);
-  (void)state.handle(Action::Down);
-  expect(state.focus_index() == 4,
-         "down should choose the nearest valid item in a short final row");
+  expect(state.focus_index() == 0,
+         "up should wrap the carousel backwards");
 }
 
 void child_profile_opens_child_home() {
@@ -148,8 +143,8 @@ int main() {
   try {
     fixture_has_parent_and_child();
     profile_navigation_wraps();
-    profile_vertical_navigation_follows_grid_rows();
-    profile_vertical_navigation_handles_incomplete_rows();
+    profile_selector_defaults_to_last_accessed_profile();
+    profile_vertical_navigation_moves_the_carousel();
     child_profile_opens_child_home();
     parent_profile_opens_parent_home();
     home_navigation_and_lifecycle_are_explicit();

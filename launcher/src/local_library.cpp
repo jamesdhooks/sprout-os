@@ -78,6 +78,18 @@ std::filesystem::path find_onion_artwork(
       system_root / "Imgs" / rom_relative_path,
       system_root / "Imgs" / rom_relative_path.filename(),
   };
+  // Household payloads generate compact, aspect-preserving card art here.
+  // Prefer it over Onion's full-resolution source cover whenever present.
+  for (auto base : artwork_bases) {
+    auto thumbnail = system_root / "Imgs" / ".sprout-thumbs" /
+        base.lexically_relative(system_root / "Imgs");
+    thumbnail.replace_extension(".png");
+    std::error_code error;
+    if (std::filesystem::is_regular_file(thumbnail, error) && !error) {
+      const auto canonical = std::filesystem::weakly_canonical(thumbnail, error);
+      if (!error && within(canonical, system_root)) return canonical;
+    }
+  }
   for (auto base : artwork_bases) {
     for (const auto extension : kArtworkExtensions) {
       auto candidate = base;

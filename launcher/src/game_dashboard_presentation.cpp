@@ -23,7 +23,8 @@ GameDashboardPresentation::GameDashboardPresentation(
     GameLibraryRepository& repository, std::string profile_id,
     std::vector<Profile> child_profiles, bool parent_mode, bool big_mode,
     std::string avatar_ref, std::string background_ref, std::string interface_theme,
-    std::uint32_t accent_rgb, bool rounded_tiles, bool motion_enabled)
+    std::uint32_t accent_rgb, bool rounded_tiles, bool motion_enabled,
+    bool tile_shadows)
     : repository_(repository),
       profile_id_(std::move(profile_id)),
       child_profiles_(std::move(child_profiles)),
@@ -35,6 +36,7 @@ GameDashboardPresentation::GameDashboardPresentation(
       accent_rgb_(accent_rgb),
       rounded_tiles_(rounded_tiles),
       motion_enabled_(motion_enabled),
+      tile_shadows_(tile_shadows),
       records_(repository_.list_for_profile(profile_id_, false)),
       model_(records_) {
   if (!parent_mode_) {
@@ -148,6 +150,17 @@ std::uint32_t GameDashboardPresentation::accent_rgb() const noexcept {
 }
 bool GameDashboardPresentation::rounded_tiles() const noexcept { return rounded_tiles_; }
 bool GameDashboardPresentation::motion_enabled() const noexcept { return motion_enabled_; }
+bool GameDashboardPresentation::tile_shadows() const noexcept { return tile_shadows_; }
+bool GameDashboardPresentation::motion_active(std::uint32_t now) const noexcept {
+  // Keep repainting through the complete viewport transition. The dashboard
+  // renderer owns the exact easing, but it needs this window to receive every
+  // frame through its settled final position.
+  return motion_enabled_ && motion_active_ && now - motion_started_ < 260U;
+}
+float GameDashboardPresentation::motion_progress(std::uint32_t now) const noexcept {
+  if (!motion_active(now)) return 1.0F;
+  return std::min(1.0F, static_cast<float>(now - motion_started_) / 180.0F);
+}
 
 void GameDashboardPresentation::set_big_mode(bool enabled) noexcept {
   big_mode_ = enabled;
@@ -170,6 +183,25 @@ void GameDashboardPresentation::set_accent_rgb(std::uint32_t accent_rgb) noexcep
 }
 void GameDashboardPresentation::set_rounded_tiles(bool rounded) noexcept { rounded_tiles_ = rounded; }
 void GameDashboardPresentation::set_motion_enabled(bool enabled) noexcept { motion_enabled_ = enabled; }
+void GameDashboardPresentation::set_tile_shadows(bool enabled) noexcept { tile_shadows_ = enabled; }
+void GameDashboardPresentation::begin_motion(std::uint32_t now) noexcept {
+  if (!motion_enabled_) return;
+  motion_started_ = now;
+  motion_active_ = true;
+}
+
+void GameDashboardPresentation::focus_game(std::string_view item_id) {
+  for (std::size_t row_index = 0; row_index < rows_.size(); ++row_index) {
+    const auto& row = rows_[row_index];
+    for (std::size_t item_index = 0; item_index < row.games.size(); ++item_index) {
+      if (row.games[item_index].item_id == item_id) {
+        row_focus_ = row_index;
+        item_focus_[row_offset(row.kind)] = item_index;
+        return;
+      }
+    }
+  }
+}
 
 void GameDashboardPresentation::open_search() {
   stage_ = GameDashboardStage::Search;
@@ -482,18 +514,19 @@ std::optional<GameDashboardEvent> GameDashboardPresentation::handle(
     return std::nullopt;
   }
   if (action == Action::ZoomOut || action == Action::ZoomIn) {
-    if (!parent_mode_) return std::nullopt;
-    toggle_review(action == Action::ZoomIn ? GameReviewVerdict::Positive
-                                           : GameReviewVerdict::Negative,
-                  now);
-    return std::nullopt;
+    // Some Miyoo keymaps surface physical SELECT as this legacy auxiliary
+    // action. Never let an ambiguous hardware key silently review a game.
+    // Reviews remain deliberate actions on the game-detail page.
+    return GameDashboardEvent{.type = GameDashboardEventType::BackRequested};
   }
   if ((action != Action::Confirm && action != Action::Menu) || rows_.empty()) return std::nullopt;
   const auto& row = rows_[row_focus_];
   const auto focus = item_focus(row.kind);
   if (!row.games.empty()) {
     const auto& item_id = row.games[std::min(focus, row.games.size() - 1)].item_id;
-    if (!parent_mode_ && action == Action::Confirm) {
+    // A always launches the focused game. START (Menu) is the deliberate
+    // alternate path for the full game page, including for parent profiles.
+    if (action == Action::Confirm) {
       return GameDashboardEvent{.type = GameDashboardEventType::LaunchRequested,
                                 .item_id = item_id};
     }
@@ -508,10 +541,12 @@ std::optional<GameDashboardEvent> GameDashboardPresentation::handle(
   } else if (!row.platforms.empty()) {
     model_.toggle_platform(row.platforms[std::min(focus, row.platforms.size() - 1)].platform);
     rebuild();
-    const auto all = std::find_if(rows_.begin(), rows_.end(), [](const auto& candidate) {
-      return candidate.kind == DashboardRowKind::AllGames;
+    const auto platforms = std::find_if(rows_.begin(), rows_.end(), [](const auto& candidate) {
+      return candidate.kind == DashboardRowKind::Platforms;
     });
-    if (all != rows_.end()) row_focus_ = static_cast<std::size_t>(all - rows_.begin());
+    if (platforms != rows_.end()) {
+      row_focus_ = static_cast<std::size_t>(platforms - rows_.begin());
+    }
   }
   return std::nullopt;
 }
@@ -541,8 +576,8 @@ void GameDashboardPresentation::rebuild() {
   DashboardRow settings;
   settings.kind = DashboardRowKind::Settings;
   settings.settings = parent_mode_
-                          ? std::vector<std::string>{"PROFILE", "BACKGROUND", "THEME", "ACCENT", "TILE STYLE", "MOTION", "BIG MODE", "SET PIN", "BACKUP", "LOCK", "PROFILES"}
-                          : std::vector<std::string>{"PROFILE", "BACKGROUND", "THEME", "ACCENT", "BIG MODE", "PROFILES"};
+                          ? std::vector<std::string>{"PROFILE", "BACKGROUND", "THEME", "ACCENT", "TILE STYLE", "SHADOWS", "MOTION", "BIG MODE", "SET PIN", "BACKUP", "LOCK", "PROFILES"}
+                          : std::vector<std::string>{"PROFILE", "BACKGROUND", "THEME", "ACCENT", "SHADOWS", "BIG MODE", "PROFILES"};
   rows_.push_back(std::move(settings));
   available_platforms_ = model_.available_platform_summaries();
   if (rows_.empty()) row_focus_ = 0;

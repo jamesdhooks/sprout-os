@@ -72,6 +72,7 @@ class LauncherState {
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] ReadOnlyView<Profile> profiles() const noexcept;
   [[nodiscard]] const Profile* active_profile() const noexcept;
+  [[nodiscard]] bool activate_profile(std::string_view profile_id) noexcept;
   void set_active_profile_interface_theme(std::string theme);
   void set_active_profile_accent_rgb(std::uint32_t accent_rgb) noexcept;
   [[nodiscard]] ReadOnlyView<std::string_view> menu_items() const noexcept;
@@ -79,7 +80,6 @@ class LauncherState {
 
  private:
   void move_focus(int delta, std::size_t item_count);
-  void move_profile_focus_vertical(int row_delta);
 
   std::vector<Profile> profiles_;
   Screen screen_{Screen::ProfileSelect};

@@ -1153,13 +1153,22 @@ int main(int argc, char* argv[]) {
     return result;
   }
 
-  const bool startup_art_loaded =
+  // A one-shot marker exists only after Onion returns from a Sprout-launched
+  // game. Do not replay the cold-boot artwork on that path.
+  const bool returning_from_onion = data_root.has_value() &&
+      std::filesystem::exists(*data_root / "data" / "onion-return-session");
+  const bool startup_art_loaded = !returning_from_onion &&
       sprout::launcher::render_startup_splash(renderer, startup_splash);
+  if (returning_from_onion) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+  }
   std::cerr << "SPROUT_STARTUP first-frame-presented art="
             << (startup_art_loaded ? "loaded" : "fallback") << std::endl;
   // Give the opening artwork enough time to read as an intentional boot
   // screen rather than a flash between Onion and profile selection.
-  SDL_Delay(startup_art_loaded ? 2500 : 250);
+  SDL_Delay(returning_from_onion ? 0 : (startup_art_loaded ? 2500 : 250));
 
   SDL_GameController* controller = nullptr;
   for (int index = 0; index < SDL_NumJoysticks(); ++index) {
@@ -1256,6 +1265,10 @@ int main(int argc, char* argv[]) {
     parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
         *data_root / "data" / "security.sqlite3",
         *data_root / "secrets" / "device-access.key");
+    // A parent unlock is a session credential, not a device credential.  Do
+    // not carry an in-memory selection grant across a cold Sprout launch.
+    // This keeps the parent profile protected after an Onion/device restart.
+    parent_access->lock();
     image_source = pending_profile_image(*data_root);
     wizard = std::make_unique<sprout::launcher::SetupWizard>(
         *configuration, *profiles, daily_time_policy.get());
@@ -1437,11 +1450,26 @@ int main(int argc, char* argv[]) {
             return true;
           }
         }
+        // Onion owns the game and GameSwitcher lifecycle. Preserve this
+        // one-shot return target so its post-game Sprout launch restores the
+        // dashboard rather than behaving like a cold boot.
+        const auto return_session = *data_root / "data" / "onion-return-session";
+        {
+          std::ofstream output(return_session, std::ios::binary | std::ios::trunc);
+          output << active_profile->id << '\n' << target.item_id << '\n';
+          output.flush();
+          if (!output) {
+            report_result("GAME COULD NOT START: RETURN SESSION UNAVAILABLE");
+            return true;
+          }
+        }
         const auto launch_result = onion_launch->launch(target);
         std::cout << "Onion handoff result: " << launch_result.item_id
                   << " outcome=" << static_cast<int>(launch_result.outcome)
                   << " detail=" << launch_result.detail << '\n';
         if (!launch_result.completed()) {
+          std::error_code ignored;
+          std::filesystem::remove(return_session, ignored);
           report_result("GAME COULD NOT START: " + launch_result.detail);
           return true;
         }
@@ -1470,19 +1498,37 @@ int main(int argc, char* argv[]) {
     const bool rounded_tiles = !stored_active_profile.has_value() ||
         stored_active_profile->preferences_json.find("\"tile_style\":\"square\"") ==
             std::string::npos;
-    // Motion is opt-in until the device renderer has a safe compositor-backed
-    // transition implementation.  This also recovers profiles that enabled the
-    // experimental implementation before it was withdrawn.
-    const bool motion_enabled = false;
+    const bool motion_enabled = !stored_active_profile.has_value() ||
+        stored_active_profile->preferences_json.find("\"motion\":false") ==
+            std::string::npos;
+    const bool tile_shadows = !stored_active_profile.has_value() ||
+        stored_active_profile->preferences_json.find("\"tile_shadows\":false") ==
+            std::string::npos;
     game_dashboard =
         std::make_unique<sprout::launcher::GameDashboardPresentation>(
             *game_library, active_profile->id, std::move(child_profiles),
             parent_mode, game_library->metadata_flag("dashboard.big_mode"),
             active_profile->avatar_ref, active_profile->background_ref,
             active_profile->interface_theme, active_profile->accent_rgb,
-            rounded_tiles, motion_enabled);
+            rounded_tiles, motion_enabled, tile_shadows);
     return true;
   };
+  // A return marker is created only immediately before a validated Onion
+  // launch. Consume it once; ordinary containment boots still begin at the
+  // profile selector.
+  if (data_root.has_value() && state.has_value()) {
+    const auto return_session = *data_root / "data" / "onion-return-session";
+    std::ifstream input(return_session, std::ios::binary);
+    std::string profile_id;
+    std::string item_id;
+    if (std::getline(input, profile_id) && std::getline(input, item_id) &&
+        !profile_id.empty() && state->activate_profile(profile_id) &&
+        open_game_dashboard()) {
+      game_dashboard->focus_game(item_id);
+      std::error_code ignored;
+      std::filesystem::remove(return_session, ignored);
+    }
+  }
   const auto handle_session_action = [&](Action action) {
     try {
       if (action == Action::GameSwitcher) {
@@ -1551,6 +1597,16 @@ int main(int argc, char* argv[]) {
                                parent_pin_workflow == ParentPinWorkflow::ChangeCreate);
         if (parent_pin_workflow == ParentPinWorkflow::ChangeCreate) {
           parent_credential_ref = kCredentialRef;
+          // Settings lives after first-run setup, so persist the credential
+          // reference here as well as the hash in security.sqlite.  Without
+          // this, the PIN appears to work until the launcher restarts and the
+          // next controller is constructed with no credential reference.
+          if (configuration != nullptr) {
+            auto saved_configuration = configuration->load_active();
+            saved_configuration.parent_credential_ref =
+                std::string(kCredentialRef);
+            (void)configuration->save(std::move(saved_configuration));
+          }
           // The controller captured its credential reference at construction.
           // Rebuild it now so the just-created PIN protects the very next
           // parent-profile selection, not only a later launcher restart.
@@ -1686,6 +1742,10 @@ int main(int argc, char* argv[]) {
           game_dashboard.reset();
           return true;
         }
+        if (action == Action::Up || action == Action::Down ||
+            action == Action::Left || action == Action::Right) {
+          game_dashboard->begin_motion(SDL_GetTicks());
+        }
         const auto dashboard_event = game_dashboard->handle(
             action, current_access_time().utc_seconds);
         if (!dashboard_event.has_value()) return true;
@@ -1769,6 +1829,26 @@ int main(int argc, char* argv[]) {
               }
               profiles->set_preferences_json(state->active_profile()->id, preferences);
               game_dashboard->set_motion_enabled(enabled);
+            }
+          } else if (target == "SHADOWS" && profiles != nullptr &&
+                     state->active_profile() != nullptr) {
+            const bool enabled = !game_dashboard->tile_shadows();
+            auto stored = profiles->find_profile(state->active_profile()->id);
+            if (stored.has_value()) {
+              auto preferences = stored->preferences_json;
+              constexpr std::string_view key = "\"tile_shadows\"";
+              const auto position = preferences.find(key);
+              if (position == std::string::npos) {
+                const auto close = preferences.rfind('}');
+                preferences.insert(close == std::string::npos ? preferences.size() : close,
+                    (preferences.size() > 2 ? "," : "") + std::string{"\"tile_shadows\":"} + (enabled ? "true" : "false"));
+              } else {
+                const auto value = preferences.find(':', position);
+                const auto end = preferences.find_first_of(",}", value);
+                preferences.replace(value + 1, end - value - 1, enabled ? "true" : "false");
+              }
+              profiles->set_preferences_json(state->active_profile()->id, preferences);
+              game_dashboard->set_tile_shadows(enabled);
             }
           } else if (target == "THEME" && profiles != nullptr &&
                      state->active_profile() != nullptr) {
@@ -1951,14 +2031,28 @@ int main(int argc, char* argv[]) {
   bool select_held = false;
   bool onion_exit_hold_active = false;
   bool onion_exit_chord = false;
+  bool saving_for_sleep = false;
+  std::uint32_t saving_started_at = 0;
   std::uint32_t onion_exit_hold_started = 0;
+  std::uint32_t last_dashboard_motion_frame = 0;
   while (running) {
     SDL_Event event{};
     if (SDL_WaitEventTimeout(&event, 16) != 0) {
       if (event.type == SDL_QUIT) {
-        if (!contained_device) {
+        if (contained_device) {
+          // A normal power press is surfaced by the Miyoo SDL backend as a
+          // quit event. Keep Sprout visible just long enough to acknowledge
+          // the save, then let the wrapper release fb0 and suspend safely.
+          saving_for_sleep = true;
+          saving_started_at = SDL_GetTicks();
+          dirty = true;
+        } else {
           running = false;
         }
+      } else if (saving_for_sleep) {
+        // Do not let a queued key activate anything while the device is
+        // committing its final frame and preparing to sleep.
+        continue;
       } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
         if (SDL_getenv("SPROUT_INPUT_PROBE") != nullptr) {
           std::cerr << "SPROUT_INPUT key sym=" << event.key.keysym.sym
@@ -1976,8 +2070,7 @@ int main(int argc, char* argv[]) {
           continue;
         }
         const bool start_key = key == SDLK_RETURN;
-        const bool select_key = key == SDLK_ESCAPE || key == SDLK_RSHIFT ||
-                                key == SDLK_RCTRL || key == SDLK_t;
+        const bool select_key = key == SDLK_ESCAPE || key == SDLK_t;
         if (start_key) start_held = true;
         if (select_key) select_held = true;
         // Parent escape gesture: hold the two labelled front buttons together.
@@ -2001,8 +2094,7 @@ int main(int argc, char* argv[]) {
       } else if (event.type == SDL_KEYUP) {
         const auto key = event.key.keysym.sym;
         const bool start_key = key == SDLK_RETURN;
-        const bool select_key = key == SDLK_ESCAPE || key == SDLK_RSHIFT ||
-                                key == SDLK_RCTRL || key == SDLK_t;
+        const bool select_key = key == SDLK_ESCAPE || key == SDLK_t;
         if (start_key) start_held = false;
         if (select_key) select_held = false;
         if (!start_held || !select_held) onion_exit_hold_active = false;
@@ -2017,11 +2109,38 @@ int main(int argc, char* argv[]) {
           std::cerr << "SPROUT_INPUT controller-button="
                     << static_cast<int>(event.cbutton.button) << '\n';
         }
+        // Some Miyoo revisions expose START/SELECT through SDL's controller
+        // path rather than the keyboard path. Mirror the keyboard chord here
+        // so the parent-only Start + Select escape hatch is always available.
+        const bool start_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_START;
+        const bool select_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK;
+        if (start_button) start_held = true;
+        if (select_button) select_held = true;
+        if (start_held && select_held) {
+          onion_exit_hold_active = true;
+          onion_exit_chord = true;
+          onion_exit_hold_started = SDL_GetTicks();
+          std::cerr << "Parent Onion exit hold started\n";
+          continue;
+        }
+        if (start_button || select_button) continue;
         const auto action = sprout::launcher::controller_action(event.cbutton.button);
         if (action.has_value()) {
           running = handle_session_action(*action);
           dirty = true;
         }
+      } else if (event.type == SDL_CONTROLLERBUTTONUP) {
+        const bool start_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_START;
+        const bool select_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK;
+        if (start_button) start_held = false;
+        if (select_button) select_held = false;
+        if (!start_held || !select_held) onion_exit_hold_active = false;
+        if ((start_button || select_button) && !onion_exit_chord) {
+          running = handle_session_action(start_button ? Action::Menu
+                                                       : Action::ProfileSelect);
+          dirty = true;
+        }
+        if (!start_held && !select_held) onion_exit_chord = false;
       } else if (event.type == SDL_CONTROLLERAXISMOTION &&
                  SDL_getenv("SPROUT_INPUT_PROBE") != nullptr &&
                  (event.caxis.value > 8000 || event.caxis.value < -8000)) {
@@ -2048,13 +2167,42 @@ int main(int argc, char* argv[]) {
       }
       dirty = true;
     }
+    if (saving_for_sleep && SDL_GetTicks() - saving_started_at >= 650U) {
+      // SQLite writes are committed at each state transition; sync makes the
+      // final filesystem boundary explicit before the wrapper sleeps.
+      std::system("sync");
+      exit_status = sprout::launcher::kOnionSleepExitCode;
+      running = false;
+      continue;
+    }
+    // The profile-selector parent PIN uses the access controller rather than
+    // the settings workflow. It needs the same delayed fourth-marker advance
+    // and unattended expiry handling as the settings PIN.
+    if (access_controller != nullptr && access_controller->has_pin_prompt()) {
+      if (access_controller->expire_pin_if_needed()) {
+        dirty = true;
+      } else if (const auto access_event =
+                     access_controller->advance_pin_delay(current_access_time());
+                 access_event.has_value()) {
+        if (access_event->type ==
+            sprout::launcher::ParentAccessEventType::ExitRequested) {
+          running = !commit_parent_exit_marker();
+        } else if ((access_event->target == "Family Dashboard" ||
+                    access_event->target == "Game Dashboard") &&
+                   open_game_dashboard()) {
+          // Unlocking from profile selection is a complete navigation event;
+          // redraw the newly opened dashboard without another button press.
+        }
+        dirty = true;
+      }
+    }
     // Keep the fourth combo marker on-screen long enough to be perceived
     // before advancing to verification or the confirmation pass.
     const bool combo_was_pending = parent_pin != nullptr && parent_pin->completion_pending();
     if (parent_pin != nullptr &&
+        parent_pin_workflow == ParentPinWorkflow::ChangeVerify &&
         parent_pin->advance_after_input_delay() ==
-            sprout::launcher::ParentPinEvent::Submitted &&
-        parent_pin_workflow == ParentPinWorkflow::ChangeVerify) {
+            sprout::launcher::ParentPinEvent::Submitted) {
       std::string pin = parent_pin->take_pin();
       constexpr std::string_view kCredentialRef = "secret:parent-primary";
       if (!parent_access->verify_pin(std::string(kCredentialRef), std::move(pin))) {
@@ -2064,6 +2212,33 @@ int main(int argc, char* argv[]) {
             sprout::launcher::ParentPinMode::ComboCreate);
         parent_pin_workflow = ParentPinWorkflow::ChangeCreate;
       }
+      parent_pin_last_input = SDL_GetTicks();
+      dirty = true;
+    }
+    // Combo creation also completes after its fourth button settles on screen.
+    // Unlike numeric PINs it therefore never emits Submitted from the input
+    // handler itself; persist it from this delayed completion path.
+    if (parent_pin != nullptr &&
+        parent_pin_workflow == ParentPinWorkflow::ChangeCreate &&
+        parent_pin->advance_after_input_delay() ==
+            sprout::launcher::ParentPinEvent::Submitted) {
+      std::string pin = parent_pin->take_pin();
+      constexpr std::string_view kCredentialRef = "secret:parent-primary";
+      parent_access->set_pin(std::string(kCredentialRef), std::move(pin), true);
+      parent_credential_ref = kCredentialRef;
+      if (configuration != nullptr) {
+        auto saved_configuration = configuration->load_active();
+        saved_configuration.parent_credential_ref = std::string(kCredentialRef);
+        (void)configuration->save(std::move(saved_configuration));
+      }
+      if (state.has_value()) {
+        access_controller =
+            std::make_unique<sprout::launcher::ParentAccessController>(
+                *state, parent_access.get(), parent_credential_ref);
+      }
+      parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+          sprout::launcher::ParentPinMode::Updated);
+      parent_pin_workflow = ParentPinWorkflow::ChangeDone;
       parent_pin_last_input = SDL_GetTicks();
       dirty = true;
     }
@@ -2093,9 +2268,15 @@ int main(int argc, char* argv[]) {
         archive == nullptr && SDL_getenv("SPROUT_STATIC_UI") == nullptr;
     if (animated_profile_focus) dirty = true;
     if (parent_pin != nullptr && parent_pin->uses_button_combo()) dirty = true;
+    if (game_dashboard != nullptr &&
+        game_dashboard->motion_active(SDL_GetTicks())) {
+      dirty = true;
+    }
 
     if (dirty) {
-      if (recovery != nullptr) {
+      if (saving_for_sleep) {
+        sprout::launcher::render_saving(renderer);
+      } else if (recovery != nullptr) {
         sprout::launcher::render_recovery(renderer, *recovery);
       } else if (parent_pin != nullptr) {
         sprout::launcher::render_parent_pin(renderer, *parent_pin);
@@ -2112,6 +2293,7 @@ int main(int argc, char* argv[]) {
         sprout::launcher::render_setup(renderer, *setup);
       } else if (game_dashboard != nullptr) {
         sprout::launcher::render_game_dashboard(renderer, *game_dashboard);
+        last_dashboard_motion_frame = SDL_GetTicks();
       } else if (archive != nullptr) {
         sprout::launcher::render_profile_archive(renderer, *archive);
       } else {

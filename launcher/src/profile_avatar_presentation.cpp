@@ -1,5 +1,6 @@
 #include "sprout/launcher/profile_avatar_presentation.hpp"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 #include <utility>
@@ -86,6 +87,11 @@ ProfileAvatarPresentation::ProfileAvatarPresentation(
           }
         }
       }
+      constexpr std::size_t kRows = 2;
+      constexpr std::size_t kVisibleColumns = 4;
+      const auto selected_column = background_focus_ / kRows;
+      background_first_column_ = selected_column >= kVisibleColumns
+          ? selected_column - (kVisibleColumns - 1U) : 0;
     } else if (stage_ == ProfileAvatarStage::Accent) {
       const auto accent = stored_accent(profiles_[profile_focus_].preferences_json);
       for (std::size_t index = 0; index < kAccentColors.size(); ++index) {
@@ -143,6 +149,10 @@ std::size_t ProfileAvatarPresentation::page_count() const noexcept {
 
 std::size_t ProfileAvatarPresentation::avatar_first_column() const noexcept {
   return avatar_first_column_;
+}
+
+std::size_t ProfileAvatarPresentation::background_first_column() const noexcept {
+  return background_first_column_;
 }
 
 bool ProfileAvatarPresentation::custom_image_available() const noexcept {
@@ -273,10 +283,23 @@ std::optional<ProfileAvatarEvent> ProfileAvatarPresentation::handle(
 }
 
 void ProfileAvatarPresentation::move_background_focus(int delta) {
-  const auto count = static_cast<long long>(built_in_backgrounds().size());
+  const auto count = built_in_backgrounds().size();
+  if (count == 0) return;
   const auto current = static_cast<long long>(background_focus_);
-  background_focus_ = static_cast<std::size_t>(
-      (current + static_cast<long long>(delta) + count) % count);
+  const auto last = static_cast<long long>(count - 1U);
+  background_focus_ = static_cast<std::size_t>(std::clamp(
+      current + static_cast<long long>(delta), 0LL, last));
+
+  // The background picker is a bounded viewport, not an infinite carousel.
+  // Advance it only when the next input actually moves focus beyond an edge.
+  constexpr std::size_t kRows = 2;
+  constexpr std::size_t kVisibleColumns = 4;
+  const auto selected_column = background_focus_ / kRows;
+  if (selected_column < background_first_column_) {
+    background_first_column_ = selected_column;
+  } else if (selected_column >= background_first_column_ + kVisibleColumns) {
+    background_first_column_ = selected_column - (kVisibleColumns - 1U);
+  }
 }
 
 void ProfileAvatarPresentation::move_profile_focus(int delta) {

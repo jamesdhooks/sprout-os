@@ -130,6 +130,7 @@ set -u
 printf 'launch\n' >>"$TEST_CALL_LOG"
 case "$TEST_MODE" in
   handoff) exit 75 ;;
+  sleep) exit 74 ;;
   authorized) : >"$SPROUT_EXIT_MARKER"; exit 0 ;;
   error) exit 9 ;;
   *) exit 64 ;;
@@ -147,6 +148,9 @@ EOF
   export SPROUT_EXIT_MARKER="$EXIT_MARKER"
   export SPROUT_STOP_AUDIOSERVER_SCRIPT="$RUNTIME_ROOT/script/stop_audioserver.sh"
   export SPROUT_AUTO_LAUNCH=1
+  SPROUT_SUSPEND_PATH="$TEST_ROOT/suspend-request"
+  : >"$SPROUT_SUSPEND_PATH"
+  export SPROUT_SUSPEND_PATH
   export TEST_AUDIO_MARKER TEST_ENV_LOG TEST_CALL_LOG
 }
 
@@ -207,6 +211,20 @@ run_error_signal_case() {
   DUMMY_PID_2=""
 }
 
+run_sleep_case() {
+  prepare_case sleep
+  start_dummy_launcher
+  export SPROUT_ONION_L_PID="$DUMMY_PID"
+  export TEST_MODE=sleep
+  sh "$WRAPPER_PATH"
+  [ "$(cat "$SPROUT_SUSPEND_PATH")" = "mem" ] || fail "sleep did not request kernel suspend"
+  [ ! -e "$LOCK_DIR" ] || fail "sleep left the single-owner lock behind"
+  assert_dummy_resumed
+  kill -TERM "$DUMMY_PID"
+  wait "$DUMMY_PID" 2>/dev/null || true
+  DUMMY_PID=""
+}
+
 run_duplicate_wait_case() {
   prepare_case duplicate-wait
   mkdir "$LOCK_DIR"
@@ -231,6 +249,7 @@ run_duplicate_wait_case() {
 }
 
 run_handoff_case
+run_sleep_case
 run_error_signal_case
 run_duplicate_wait_case
 printf 'Onion wrapper lifecycle contract passed\n'

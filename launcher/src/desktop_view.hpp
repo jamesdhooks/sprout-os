@@ -32,6 +32,7 @@ void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop);
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin);
+void render_saving(SDL_Renderer* renderer);
 void render_game_dashboard(SDL_Renderer* renderer,
                            const GameDashboardPresentation& dashboard);
 void render_profile_archive(SDL_Renderer* renderer,

@@ -64,10 +64,15 @@ int main(int, char**) {
       !require_key(SDLK_TAB, sprout::launcher::Action::ZoomOut,
                    "Miyoo L must not act as Back") ||
       !require_key(SDLK_BACKSPACE, sprout::launcher::Action::ZoomIn,
-                   "Miyoo R must not act as Back")) {
+                   "Miyoo R must not act as Back") ||
+      !require_key(SDLK_RSHIFT, sprout::launcher::Action::ZoomOut,
+                   "Miyoo L keyboard signal must not act as Select") ||
+      !require_key(SDLK_RCTRL, sprout::launcher::Action::ZoomIn,
+                   "Miyoo R keyboard signal must not act as Select")) {
     return 1;
   }
-  if (sprout::launcher::keyboard_action(SDLK_ESCAPE).has_value()) {
+  if (sprout::launcher::keyboard_action(SDLK_ESCAPE) !=
+      sprout::launcher::Action::ProfileSelect) {
     std::cerr << "Miyoo Select must not expose a second Sprout menu\n";
     return 1;
   }

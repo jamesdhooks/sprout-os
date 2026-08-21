@@ -98,6 +98,8 @@ def validate(package: Path) -> None:
     assert b"rmdir \"$SPROUT_LOCK_DIR\"" in launch, "launch.sh must release its lock on exit"
     assert b"unapproved-exit-restarting" in launch
     assert b'"$STATUS" -eq 75' in launch
+    assert b'"$STATUS" -eq 74' in launch
+    assert b"SPROUT_SUSPEND_PATH" in launch
     assert b"sprout-stock-onion-session" in launch
     assert b'exec "$APP_ROOT/bin/sprout-launcher"' not in launch, (
         "wrapper must remain alive so EXIT/INT/TERM cleanup can resume Onion"
@@ -131,6 +133,8 @@ def validate(package: Path) -> None:
     startup_app = runtime.index(b"    state_change check_switcher\n", auto_launch)
     boot_router = runtime[auto_launch:startup_app]
     assert b"if sprout_containment_enabled; then" in boot_router
+    assert b'if [ -f "$sysdir/.sprout-handoff" ] && [ -f "$sysdir/cmd_to_run.sh" ]; then' in boot_router
+    assert b"state_change check_game" in boot_router
     assert b'rm -f "$sysdir/cmd_to_run.sh"' in boot_router
     assert b'rm -f "$sysdir/.runGameSwitcher"' in boot_router
     assert b"rm -f /tmp/quick_switch /tmp/run_advmenu" in boot_router
@@ -146,7 +150,10 @@ def validate(package: Path) -> None:
     )
     assert integration["containedSha256"] == sha256(runtime_path)
     assert integration["previousContainedSha256"] == [
-        "de44ce5c9c55671049510ea43cc9e0358d82f5071b5a9f3be0a478341b9b2b6e"
+        "de44ce5c9c55671049510ea43cc9e0358d82f5071b5a9f3be0a478341b9b2b6e",
+        "945acc68b4e335ef1a15de4dad4bfb672c57d51dcd6a30828febb90ca4096fd5",
+        "c85e92b3f520c849201496d5f6994519367de522c316f9ac10417a3a226d78fa",
+        "64320326c18ccb4e7549789eba508b3384202599ca4fcc7f07ade1124e578241",
     ]
     assert integration["maintenanceFlag"] == (
         "/mnt/SDCARD/sprout-dev/maintenance/allow-stock-onion"
@@ -171,6 +178,8 @@ def validate(package: Path) -> None:
 
     app_config = json.loads((app / "config.json").read_text(encoding="utf-8"))
     assert app_config["label"] == "Sprout", "Onion app label must be Sprout"
+    assert app_config["icon"] == "/mnt/SDCARD/Icons/Default/app/sprout.png"
+    assert png_dimensions(package / "Icons" / "Default" / "app" / "sprout.png") == (74, 74)
 
     seed = json.loads((app / "config" / "household-seed.json").read_text(encoding="utf-8"))
     profile_ids = [profile["id"] for profile in seed["profiles"]]

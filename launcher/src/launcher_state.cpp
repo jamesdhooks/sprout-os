@@ -1,6 +1,4 @@
 #include "sprout/launcher/launcher_state.hpp"
-#include "sprout/launcher/profile_select_layout.hpp"
-
 #include <algorithm>
 #include <array>
 #include <stdexcept>
@@ -30,6 +28,13 @@ LauncherState::LauncherState(std::vector<Profile> profiles)
     : profiles_(std::move(profiles)) {
   if (profiles_.empty()) {
     throw std::invalid_argument("A launcher household requires at least one profile");
+  }
+  const auto last = std::find_if(profiles_.begin(), profiles_.end(),
+                                 [](const Profile& profile) {
+                                   return profile.last_accessed;
+                                 });
+  if (last != profiles_.end()) {
+    profile_focus_ = static_cast<std::size_t>(last - profiles_.begin());
   }
 }
 
@@ -71,7 +76,9 @@ std::optional<LauncherEvent> LauncherState::handle(Action action) {
       return std::nullopt;
     }
     if (action == Action::Up || action == Action::Down) {
-      move_profile_focus_vertical(action == Action::Up ? -1 : 1);
+      // The selector is one deliberate Netflix-style carousel, not a grid.
+      // Keep all D-pad directions useful without inventing a second axis.
+      move_focus(action == Action::Up ? -1 : 1, profiles_.size());
       return std::nullopt;
     }
     if (action == Action::Back) {
@@ -146,6 +153,20 @@ void LauncherState::move_focus(int delta, std::size_t item_count) {
       (signed_focus + static_cast<long long>(delta) + signed_count) % signed_count);
 }
 
+bool LauncherState::activate_profile(std::string_view profile_id) noexcept {
+  const auto found = std::find_if(profiles_.begin(), profiles_.end(),
+                                  [profile_id](const Profile& profile) {
+                                    return profile.id == profile_id;
+                                  });
+  if (found == profiles_.end()) return false;
+  active_profile_index_ = static_cast<std::size_t>(found - profiles_.begin());
+  profile_focus_ = *active_profile_index_;
+  menu_focus_ = 0;
+  screen_ = found->role == ProfileRole::Child ? Screen::ChildHome
+                                              : Screen::ParentHome;
+  return true;
+}
+
 void LauncherState::set_active_profile_interface_theme(std::string theme) {
   if (active_profile_index_.has_value()) {
     profiles_[*active_profile_index_].interface_theme = std::move(theme);
@@ -154,27 +175,6 @@ void LauncherState::set_active_profile_interface_theme(std::string theme) {
 
 void LauncherState::set_active_profile_accent_rgb(std::uint32_t accent_rgb) noexcept {
   if (active_profile_index_.has_value()) profiles_[*active_profile_index_].accent_rgb = accent_rgb;
-}
-
-void LauncherState::move_profile_focus_vertical(int row_delta) {
-  const auto profile_count = profiles_.size();
-  const auto columns = profile_select_column_count(profile_count);
-  const auto rows = (profile_count + columns - 1) / columns;
-  if (rows <= 1) {
-    return;
-  }
-
-  const auto current_row = profile_focus_ / columns;
-  const auto current_column = profile_focus_ % columns;
-  const auto signed_rows = static_cast<long long>(rows);
-  const auto target_row = static_cast<std::size_t>(
-      (static_cast<long long>(current_row) + row_delta + signed_rows) %
-      signed_rows);
-  const auto target_row_start = target_row * columns;
-  const auto target_row_size =
-      std::min(columns, profile_count - target_row_start);
-  profile_focus_ =
-      target_row_start + std::min(current_column, target_row_size - 1);
 }
 
 }  // namespace sprout::launcher

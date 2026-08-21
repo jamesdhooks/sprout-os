@@ -83,6 +83,10 @@ def package(repo: Path, output: Path, household_seed: Path) -> None:
         app / "integration" / "runtime.json",
     )
     copy_file(household_seed, app / "config" / "household-seed.json")
+    copy_file(
+        repo / "launcher" / "assets" / "icons" / "sprout-onion.png",
+        output / "Icons" / "Default" / "app" / "sprout.png",
+    )
 
     launcher_assets = build / "launcher" / "assets"
     if not launcher_assets.is_dir():

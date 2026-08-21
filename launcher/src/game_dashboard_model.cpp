@@ -256,14 +256,10 @@ std::vector<DashboardRow> GameDashboardModel::rows() const {
     result.push_back(std::move(row));
   };
 
-  const auto next = next_up();
-  if (!next.empty()) {
-    DashboardRow row;
-    row.kind = DashboardRowKind::NextUp;
-    row.games = next;
-    result.push_back(std::move(row));
-  }
-
+  // The dashboard stays deliberately flat: resume what was already in play,
+  // then consider the intelligent queue, then browse the complete library.
+  // Avoid adding short-lived workflow rows here; those are recommendations,
+  // not destinations.
   std::vector<const GameLibraryRecord*> recent;
   for (const auto& game : records_) {
     if (matches(game) && game.play.launch_count > 0) recent.push_back(&game);
@@ -273,11 +269,23 @@ std::vector<DashboardRow> GameDashboardModel::rows() const {
   });
   append_games(DashboardRowKind::Recent, std::move(recent));
 
-  DashboardRow progress_row;
-  progress_row.kind = DashboardRowKind::Progress;
-  progress_row.statistics = statistics();
-  result.push_back(std::move(progress_row));
-  const auto platforms = platform_summaries();
+  const auto recommendations = next_up();
+  if (!recommendations.empty()) {
+    DashboardRow row;
+    row.kind = DashboardRowKind::Recommended;
+    row.games = recommendations;
+    result.push_back(std::move(row));
+  }
+
+  std::vector<const GameLibraryRecord*> all;
+  for (const auto& game : records_) {
+    if (matches(game)) all.push_back(&game);
+  }
+  append_games(DashboardRowKind::AllGames, std::move(all), true);
+
+  // Platforms are filter controls, so their availability never shrinks to
+  // the currently selected platform(s). An active card is styled by the view.
+  const auto platforms = available_platform_summaries();
   if (!platforms.empty()) {
     DashboardRow platform_row;
     platform_row.kind = DashboardRowKind::Platforms;
@@ -285,30 +293,10 @@ std::vector<DashboardRow> GameDashboardModel::rows() const {
     result.push_back(std::move(platform_row));
   }
 
-  std::vector<const GameLibraryRecord*> needs_review;
-  std::vector<const GameLibraryRecord*> unplayed;
-  std::vector<const GameLibraryRecord*> finish_next;
-  std::vector<const GameLibraryRecord*> recommended;
-  std::vector<const GameLibraryRecord*> all;
-  std::vector<const GameLibraryRecord*> hidden;
-  for (const auto& game : records_) {
-    if (matches(game)) {
-      all.push_back(&game);
-      if (game.play.launch_count > 0 && !game.profile.verdict.has_value())
-        needs_review.push_back(&game);
-      if (game.play.launch_count == 0) unplayed.push_back(&game);
-      if (game.play.launch_count > 0 && !game.profile.completed)
-        finish_next.push_back(&game);
-      if (game.household.recommended) recommended.push_back(&game);
-    }
-    if (game.household.hidden && matches(game, true)) hidden.push_back(&game);
-  }
-  append_games(DashboardRowKind::NeedsReview, std::move(needs_review));
-  append_games(DashboardRowKind::Unplayed, std::move(unplayed));
-  append_games(DashboardRowKind::FinishNext, std::move(finish_next));
-  append_games(DashboardRowKind::Recommended, std::move(recommended));
-  append_games(DashboardRowKind::AllGames, std::move(all), true);
-  append_games(DashboardRowKind::Hidden, std::move(hidden));
+  DashboardRow progress_row;
+  progress_row.kind = DashboardRowKind::Progress;
+  progress_row.statistics = statistics();
+  result.push_back(std::move(progress_row));
   return result;
 }
 

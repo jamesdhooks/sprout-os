@@ -41,6 +41,7 @@ class ParentPinPresentation {
   [[nodiscard]] bool ready_to_save() const noexcept;
   [[nodiscard]] bool completion_pending() const noexcept;
   [[nodiscard]] float expiry_fraction() const noexcept;
+  [[nodiscard]] bool expired() const noexcept;
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] std::size_t entered_digits() const noexcept;
   [[nodiscard]] ReadOnlyView<std::string_view> choices() const noexcept;
