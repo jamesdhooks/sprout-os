@@ -165,8 +165,10 @@ struct Session::Impl {
     if (runtime.drawing.size() >= kMaximumDrawCommands) {
       return luaL_error(state, "frame draw-command limit exceeded");
     }
-    runtime.drawing.push_back(
-        {.type = DrawCommandType::Rectangle, .rectangle = rectangle});
+    DrawCommand draw{};
+    draw.type = DrawCommandType::Rectangle;
+    draw.rectangle = rectangle;
+    runtime.drawing.push_back(draw);
     return 0;
   }
 
@@ -203,8 +205,10 @@ struct Session::Impl {
     if (runtime.drawing.size() >= kMaximumDrawCommands) {
       return luaL_error(state, "frame draw-command limit exceeded");
     }
-    runtime.drawing.push_back({.type = DrawCommandType::RoundedRectangle,
-                               .rounded_rectangle = rounded});
+    DrawCommand draw{};
+    draw.type = DrawCommandType::RoundedRectangle;
+    draw.rounded_rectangle = rounded;
+    runtime.drawing.push_back(draw);
     return 0;
   }
 
@@ -244,8 +248,10 @@ struct Session::Impl {
     if (runtime.drawing.size() >= kMaximumDrawCommands) {
       return luaL_error(state, "frame draw-command limit exceeded");
     }
-    runtime.drawing.push_back(
-        {.type = DrawCommandType::Label, .label = std::move(command)});
+    DrawCommand draw{};
+    draw.type = DrawCommandType::Label;
+    draw.label = std::move(command);
+    runtime.drawing.push_back(std::move(draw));
     return 0;
   }
 
@@ -283,8 +289,10 @@ struct Session::Impl {
     if (runtime.drawing.size() >= kMaximumDrawCommands) {
       return luaL_error(state, "frame draw-command limit exceeded");
     }
-    runtime.drawing.push_back(
-        {.type = DrawCommandType::Circle, .circle = circle});
+    DrawCommand draw{};
+    draw.type = DrawCommandType::Circle;
+    draw.circle = circle;
+    runtime.drawing.push_back(draw);
     return 0;
   }
 
