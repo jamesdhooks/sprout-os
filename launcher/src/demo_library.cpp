@@ -1,4 +1,4 @@
-#include "sprout/launcher/library_presentation.hpp"
+#include "sprout/launcher/demo_library.hpp"
 
 #include <filesystem>
 #include <optional>

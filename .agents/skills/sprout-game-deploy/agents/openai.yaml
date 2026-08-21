@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout Game Deployment"
+  short_description: "Preview and deploy games safely to Miyoo"
+  default_prompt: "Use $sprout-game-deploy to preview or deploy a Sprout game on Windows, Onion, or Miyoo."

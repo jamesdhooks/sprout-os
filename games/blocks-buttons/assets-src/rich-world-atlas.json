@@ -3,462 +3,154 @@
   "id": "blocks-buttons-world",
   "image": "blocks-buttons-world-atlas.png",
   "size": {
-    "width": 2048,
-    "height": 2048
+    "width": 1024,
+    "height": 512
   },
-  "scale": 1,
   "frames": {
     "floor-wood": {
       "frame": {
-        "x": 2,
-        "y": 2,
-        "width": 411,
-        "height": 422
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 50,
-        "y": 45,
-        "width": 411,
-        "height": 422
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
-    },
-    "floor-leaf": {
-      "frame": {
-        "x": 417,
-        "y": 2,
-        "width": 413,
-        "height": 422
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 49,
-        "y": 45,
-        "width": 413,
-        "height": 422
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
-    },
-    "floor-stone": {
-      "frame": {
-        "x": 834,
-        "y": 2,
-        "width": 427,
-        "height": 436
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 42,
-        "y": 38,
-        "width": 427,
-        "height": 436
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "floor"
-      ]
+      }
     },
     "wall-workshop": {
       "frame": {
-        "x": 1265,
-        "y": 2,
-        "width": 412,
-        "height": 422
+        "x": 256,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 50,
-        "y": 45,
-        "width": 412,
-        "height": 422
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "tile",
-        "wall"
-      ]
+      }
     },
     "crate-idle": {
       "frame": {
-        "x": 1681,
-        "y": 2,
-        "width": 349,
-        "height": 361
+        "x": 512,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 81,
-        "y": 75,
-        "width": 349,
-        "height": 361
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "crate"
-      ]
-    },
-    "crate-push-left": {
-      "frame": {
-        "x": 2,
-        "y": 442,
-        "width": 349,
-        "height": 361
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 81,
-        "y": 75,
-        "width": 349,
-        "height": 361
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "crate",
-        "push"
-      ]
-    },
-    "crate-push-right": {
-      "frame": {
-        "x": 355,
-        "y": 442,
-        "width": 347,
-        "height": 361
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 82,
-        "y": 75,
-        "width": 347,
-        "height": 361
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "crate",
-        "push"
-      ]
+      }
     },
     "crate-solved": {
       "frame": {
-        "x": 706,
-        "y": 442,
-        "width": 347,
-        "height": 361
+        "x": 768,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 82,
-        "y": 75,
-        "width": 347,
-        "height": 361
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "crate",
-        "solved"
-      ]
+      }
     },
     "button-up": {
       "frame": {
-        "x": 1057,
-        "y": 442,
-        "width": 297,
-        "height": 296
+        "x": 0,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 107,
-        "y": 108,
-        "width": 297,
-        "height": 296
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "button"
-      ]
-    },
-    "button-half": {
-      "frame": {
-        "x": 1358,
-        "y": 442,
-        "width": 336,
-        "height": 361
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 88,
-        "y": 75,
-        "width": 336,
-        "height": 361
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "button"
-      ]
+      }
     },
     "button-down": {
       "frame": {
-        "x": 1698,
-        "y": 442,
-        "width": 335,
-        "height": 360
+        "x": 256,
+        "y": 256,
+        "width": 256,
+        "height": 256
       },
       "rotated": false,
-      "trimmed": true,
+      "trimmed": false,
       "spriteSourceSize": {
-        "x": 88,
-        "y": 76,
-        "width": 335,
-        "height": 360
+        "x": 0,
+        "y": 0,
+        "width": 256,
+        "height": 256
       },
       "sourceSize": {
-        "width": 512,
-        "height": 512
+        "width": 256,
+        "height": 256
       },
       "pivot": {
         "x": 0.5,
         "y": 1.0
-      },
-      "tags": [
-        "button"
-      ]
-    },
-    "button-solved": {
-      "frame": {
-        "x": 2,
-        "y": 807,
-        "width": 334,
-        "height": 360
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 89,
-        "y": 76,
-        "width": 334,
-        "height": 360
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "button",
-        "solved"
-      ]
-    },
-    "push-puff-01": {
-      "frame": {
-        "x": 340,
-        "y": 807,
-        "width": 202,
-        "height": 166
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 155,
-        "y": 173,
-        "width": 202,
-        "height": 166
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
-    },
-    "push-puff-02": {
-      "frame": {
-        "x": 546,
-        "y": 807,
-        "width": 217,
-        "height": 192
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 147,
-        "y": 160,
-        "width": 217,
-        "height": 192
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
-    },
-    "push-puff-03": {
-      "frame": {
-        "x": 767,
-        "y": 807,
-        "width": 193,
-        "height": 200
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 159,
-        "y": 156,
-        "width": 193,
-        "height": 200
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
-    },
-    "push-puff-04": {
-      "frame": {
-        "x": 964,
-        "y": 807,
-        "width": 218,
-        "height": 164
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 147,
-        "y": 174,
-        "width": 218,
-        "height": 164
-      },
-      "sourceSize": {
-        "width": 512,
-        "height": 512
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 1.0
-      },
-      "tags": [
-        "effect"
-      ]
+      }
     }
   },
-  "animations": {
-    "push-puff": {
-      "frames": [
-        "push-puff-01",
-        "push-puff-02",
-        "push-puff-03",
-        "push-puff-04"
-      ],
-      "fps": 12,
-      "loop": false
-    }
-  }
+  "animations": {}
 }

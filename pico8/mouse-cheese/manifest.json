@@ -7,6 +7,7 @@
   "onionPlatform": "PICO",
   "libraryArtwork": "library-cover.png",
   "saveTemplate": "sprout_mouse_cheese_v1_{profileHash}",
+  "devSaveId": "sprout_mouse_cheese_dev",
   "license": "GPL-3.0-or-later",
   "backend": "fake-08",
   "capabilities": ["profile-scoped-progress", "offline-campaign"]

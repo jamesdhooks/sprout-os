@@ -22,6 +22,8 @@ struct Profile {
   std::uint32_t accent_rgb;
   std::string avatar_ref;
   std::string background_ref{"builtin:garden-morning"};
+  std::string interface_theme{"cream"};
+  bool last_accessed{false};
 };
 
 enum class Screen {
@@ -38,9 +40,13 @@ enum class Action {
   Confirm,
   Back,
   Menu,
+  GameSwitcher,
   SystemMenu,
+  Filters,
+  ClearFilters,
   ZoomIn,
   ZoomOut,
+  ProfileSelect,
 };
 
 enum class EventType {
@@ -66,6 +72,9 @@ class LauncherState {
   [[nodiscard]] std::size_t focus_index() const noexcept;
   [[nodiscard]] ReadOnlyView<Profile> profiles() const noexcept;
   [[nodiscard]] const Profile* active_profile() const noexcept;
+  [[nodiscard]] bool activate_profile(std::string_view profile_id) noexcept;
+  void set_active_profile_interface_theme(std::string theme);
+  void set_active_profile_accent_rgb(std::uint32_t accent_rgb) noexcept;
   [[nodiscard]] ReadOnlyView<std::string_view> menu_items() const noexcept;
   [[nodiscard]] std::optional<LauncherEvent> handle(Action action);
 

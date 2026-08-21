@@ -1,7 +1,7 @@
 # Mouse Maze asset source
 
 The fallback atlas is deterministic original pixel art produced by
-`tools/generate-arcade-assets.py` using the `sprout-arcade-1` palette. Run the
+`tools/generate-arcade-assets.py` using the `mouse-cheese-v1` palette. Run the
 tool after changing its source definitions; `--check` verifies byte-for-byte
 reproducibility.
 

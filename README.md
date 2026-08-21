@@ -41,7 +41,7 @@ Server and connector directories remain intentionally absent until a concrete mi
 
 ## Development
 
-Start with the [getting-started guide](docs/development/getting-started.md), [Sprout Arcade guide](docs/arcade/README.md), [runtime guide](docs/runtime/README.md), [architecture overview](docs/architecture/overview.md), [visual system](docs/architecture/visual-system.md), and relevant [architecture decisions](docs/decisions/).
+Start with the [getting-started guide](docs/development/getting-started.md), [Sprout Arcade guide](docs/arcade/README.md), [PICO-8 authoring handbook](docs/development/pico8-authoring-handbook.md), [PICO-8 project workflow](docs/development/pico8-game-development.md), [runtime guide](docs/runtime/README.md), [architecture overview](docs/architecture/overview.md), [visual system](docs/architecture/visual-system.md), and relevant [architecture decisions](docs/decisions/).
 
 On Windows with Visual Studio C++ tools:
 

@@ -91,6 +91,12 @@ bool contains(const std::vector<SeededLibraryItem>& candidates,
 
 }  // namespace
 
+bool seeded_library_item_matches(const SeededLibraryItem& seeded,
+                                 const std::string& platform,
+                                 const std::string& title) {
+  return contains({seeded}, platform, title);
+}
+
 HouseholdSeed load_household_seed(const std::filesystem::path& path) {
   const auto encoded = read_file(path);
   yyjson_doc* document = yyjson_read(encoded.data(), encoded.size(), 0);

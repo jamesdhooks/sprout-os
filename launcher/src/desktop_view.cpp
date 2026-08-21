@@ -4,7 +4,6 @@
 #include "sprout/launcher/framebuffer_page_writer.hpp"
 #include "sprout/launcher/portrait_outline.hpp"
 #include "sprout/launcher/profile_image_importer.hpp"
-#include "sprout/launcher/profile_select_layout.hpp"
 #include "sprout/launcher/string_compat.hpp"
 #include "sprout/ui/font_metrics.hpp"
 
@@ -106,13 +105,44 @@ struct Color {
   std::uint8_t alpha{255};
 };
 
-constexpr Color kBackground{224, 239, 215};
-constexpr Color kPanel{255, 250, 231, 224};
-constexpr Color kPanelFocused{255, 244, 196, 244};
-constexpr Color kText{37, 67, 53};
-constexpr Color kMuted{83, 108, 91};
-constexpr Color kFocus{229, 117, 87};
-constexpr Color kHoney{241, 188, 73};
+Color kBackground{224, 239, 215};
+Color kPanel{255, 250, 231, 224};
+Color kPanelFocused{255, 244, 196, 244};
+Color kText{37, 67, 53};
+Color kMuted{83, 108, 91};
+Color kFocus{229, 117, 87};
+Color kHoney{241, 188, 73};
+bool gRoundedTiles{true};
+bool gTileShadows{true};
+
+void draw_interface_icon(SDL_Renderer* renderer, std::string_view asset,
+                         const SDL_Rect& destination, Color color);
+
+void apply_interface_theme(std::string_view theme) {
+  if (theme == "white") {
+    kBackground = {244, 246, 248}; kPanel = {255, 255, 255, 230};
+    kPanelFocused = {226, 238, 250, 246}; kText = {24, 34, 45};
+    kMuted = {80, 96, 112}; kFocus = {48, 116, 194}; kHoney = {222, 163, 51};
+  } else if (theme == "black") {
+    kBackground = {18, 21, 25}; kPanel = {39, 44, 51, 235};
+    kPanelFocused = {69, 78, 90, 248}; kText = {246, 247, 249};
+    kMuted = {183, 191, 202}; kFocus = {112, 190, 255}; kHoney = {244, 195, 88};
+  } else if (theme == "grey") {
+    kBackground = {164, 169, 175}; kPanel = {231, 233, 236, 232};
+    kPanelFocused = {255, 255, 255, 248}; kText = {38, 43, 49};
+    kMuted = {91, 98, 106}; kFocus = {75, 119, 169}; kHoney = {202, 151, 61};
+  } else {
+    kBackground = {224, 239, 215}; kPanel = {255, 250, 231, 224};
+    kPanelFocused = {255, 244, 196, 244}; kText = {37, 67, 53};
+    kMuted = {83, 108, 91}; kFocus = {229, 117, 87}; kHoney = {241, 188, 73};
+  }
+}
+
+void apply_accent(std::uint32_t rgb) {
+  kFocus = {static_cast<std::uint8_t>((rgb >> 16) & 0xffU),
+            static_cast<std::uint8_t>((rgb >> 8) & 0xffU),
+            static_cast<std::uint8_t>(rgb & 0xffU)};
+}
 
 void set_color(SDL_Renderer* renderer, Color color) {
   SDL_SetRenderDrawColor(renderer, color.red, color.green, color.blue, color.alpha);
@@ -121,33 +151,46 @@ void set_color(SDL_Renderer* renderer, Color color) {
 void fill_rect(SDL_Renderer* renderer, const SDL_Rect& rect, Color color) {
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   set_color(renderer, color);
-  const int radius = std::min({14, rect.w / 3, rect.h / 3});
+  const int radius = gRoundedTiles ? std::min({14, rect.w / 3, rect.h / 3}) : 0;
   if (radius < 3 || rect.w >= kWidth || rect.h >= kHeight) {
     SDL_RenderFillRect(renderer, &rect);
     return;
   }
-  SDL_Rect middle{rect.x + radius, rect.y, rect.w - radius * 2, rect.h};
-  SDL_Rect center{rect.x, rect.y + radius, rect.w, rect.h - radius * 2};
-  SDL_RenderFillRect(renderer, &middle);
-  SDL_RenderFillRect(renderer, &center);
-  for (int offset = 0; offset < radius; ++offset) {
-    const int vertical = radius - offset;
-    const int inset = radius - static_cast<int>(
-        std::sqrt(static_cast<double>(radius * radius - vertical * vertical)));
-    SDL_RenderDrawLine(renderer, rect.x + inset, rect.y + offset,
-                       rect.x + rect.w - inset - 1, rect.y + offset);
-    SDL_RenderDrawLine(renderer, rect.x + inset,
-                       rect.y + rect.h - offset - 1,
-                       rect.x + rect.w - inset - 1,
-                       rect.y + rect.h - offset - 1);
+  // Draw each pixel row exactly once. The old horizontal/vertical rectangles
+  // overlapped in the middle, double-compositing translucent panels into a
+  // visibly different tone at their edges.
+  for (int row = 0; row < rect.h; ++row) {
+    const int edge = std::min(row, rect.h - row - 1);
+    int inset = 0;
+    if (edge < radius) {
+      const double vertical = radius - edge - 0.5;
+      inset = static_cast<int>(std::ceil(
+          radius - std::sqrt(std::max(0.0, radius * radius - vertical * vertical))));
+    }
+    SDL_RenderDrawLine(renderer, rect.x + inset, rect.y + row,
+                       rect.x + rect.w - inset - 1, rect.y + row);
   }
+}
+
+void draw_tile_shadow(SDL_Renderer* renderer, const SDL_Rect& tile) {
+  if (!gTileShadows) return;
+  fill_rect(renderer, {tile.x + 4, tile.y + 6, tile.w, tile.h},
+            {18, 28, 32, 54});
+}
+
+void draw_motion_toggle_icon(SDL_Renderer* renderer, const SDL_Rect& bounds,
+                             bool enabled) {
+  const int size = std::min(bounds.w, bounds.h) * 2 / 5;
+  draw_interface_icon(renderer, enabled ? "play" : "pause",
+                      {bounds.x + (bounds.w - size) / 2,
+                       bounds.y + (bounds.h - size) / 2, size, size}, kFocus);
 }
 
 void outline_rect(SDL_Renderer* renderer, SDL_Rect rect, int thickness, Color color) {
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
   set_color(renderer, color);
   for (int index = 0; index < thickness; ++index) {
-    const int radius = std::min({14, rect.w / 3, rect.h / 3});
+    const int radius = gRoundedTiles ? std::min({14, rect.w / 3, rect.h / 3}) : 0;
     SDL_RenderDrawLine(renderer, rect.x + radius, rect.y,
                        rect.x + rect.w - radius - 1, rect.y);
     SDL_RenderDrawLine(renderer, rect.x + radius, rect.y + rect.h - 1,
@@ -241,13 +284,18 @@ SDL_Texture* cached_texture(SDL_Renderer* renderer,
     SDL_Renderer* renderer;
     std::string path;
     SDL_Texture* texture;
+    std::uint64_t last_used;
   };
   static std::vector<Entry> cache;
+  static std::uint64_t use_sequence = 0;
   const auto encoded = path_as_utf8(path);
   const auto found = std::find_if(cache.begin(), cache.end(), [&](const Entry& entry) {
     return entry.renderer == renderer && entry.path == encoded;
   });
-  if (found != cache.end()) return found->texture;
+  if (found != cache.end()) {
+    found->last_used = ++use_sequence;
+    return found->texture;
+  }
   SDL_Texture* texture = IMG_LoadTexture(renderer, encoded.c_str());
   if (texture == nullptr) {
     std::cerr << "SPROUT_TEXTURE load-failed path=" << encoded
@@ -258,7 +306,16 @@ SDL_Texture* cached_texture(SDL_Renderer* renderer,
   SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
 #endif
   SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-  cache.push_back({renderer, encoded, texture});
+  constexpr std::size_t kTextureCacheLimit = 16;
+  if (cache.size() >= kTextureCacheLimit) {
+    const auto least_recent = std::min_element(
+        cache.begin(), cache.end(), [](const Entry& left, const Entry& right) {
+          return left.last_used < right.last_used;
+        });
+    SDL_DestroyTexture(least_recent->texture);
+    cache.erase(least_recent);
+  }
+  cache.push_back({renderer, encoded, texture, ++use_sequence});
   return texture;
 }
 
@@ -382,6 +439,7 @@ bool render_treated_portrait(SDL_Renderer* renderer,
                              const SDL_Rect& destination, Color border,
                              float border_radius = 5.0F,
                              double angle = 0.0) {
+  border_radius = gRoundedTiles ? border_radius : 0.0F;
   struct CachedPortrait {
     SDL_Renderer* renderer;
     std::string path;
@@ -495,10 +553,33 @@ bool render_treated_portrait(SDL_Renderer* renderer,
 void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
                            const std::filesystem::path& managed_image_root,
                            const std::filesystem::path& built_in_avatar_root) {
-  const auto slots = profile_select_layout(
-      static_cast<int>(state.profiles().size()),
-      static_cast<int>(state.focus_index()));
   const bool static_ui = SDL_getenv("SPROUT_STATIC_UI") != nullptr;
+  const int profile_count = static_cast<int>(state.profiles().size());
+  const int focused_index = static_cast<int>(state.focus_index());
+  struct ProfileCarouselMotion {
+    SDL_Renderer* renderer{nullptr};
+    int profile_count{0};
+    int from{0};
+    int to{0};
+    std::uint32_t started_at{0};
+  };
+  static ProfileCarouselMotion motion;
+  const auto now = SDL_GetTicks();
+  if (motion.renderer != renderer || motion.profile_count != profile_count) {
+    motion = {renderer, profile_count, focused_index, focused_index, now};
+  } else if (motion.to != focused_index) {
+    motion.from = motion.to;
+    motion.to = focused_index;
+    motion.started_at = now;
+  }
+  int carousel_delta = motion.to - motion.from;
+  if (carousel_delta > profile_count / 2) carousel_delta -= profile_count;
+  if (carousel_delta < -(profile_count / 2)) carousel_delta += profile_count;
+  const float linear = static_ui ? 1.0F : std::min(1.0F,
+      static_cast<float>(now - motion.started_at) / 180.0F);
+  const float eased = 1.0F - (1.0F - linear) * (1.0F - linear);
+  const float carousel_focus = static_cast<float>(motion.from) +
+      static_cast<float>(carousel_delta) * eased;
   const double phase = static_ui
                            ? 0.0
                            : static_cast<double>(SDL_GetTicks64() % 2400U) /
@@ -506,11 +587,22 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
 
   for (std::size_t index = 0; index < state.profiles().size(); ++index) {
     const auto& profile = state.profiles()[index];
-    const bool focused = index == state.focus_index();
-    const auto& slot = slots[index];
-    const int center_x = slot.center_x;
-    const int center_y = slot.center_y;
-    const int size = slot.avatar_size;
+    const bool focused = static_cast<int>(index) == focused_index;
+    float offset = static_cast<float>(index) - carousel_focus;
+    while (offset > static_cast<float>(profile_count) / 2.0F) {
+      offset -= static_cast<float>(profile_count);
+    }
+    while (offset < -static_cast<float>(profile_count) / 2.0F) {
+      offset += static_cast<float>(profile_count);
+    }
+    // Let the carousel fall naturally off either edge. Only the centre and
+    // immediate neighbours need textures on a 640px handheld display.
+    if (std::abs(offset) > 1.55F) continue;
+    const float distance = std::abs(offset);
+    const int center_x = static_cast<int>(std::round(320.0F + offset * 230.0F));
+    const int center_y = static_cast<int>(std::round(232.0F + distance * 8.0F));
+    const int size = static_cast<int>(std::round(232.0F -
+        std::min(1.0F, distance) * 64.0F));
     const int bob =
         focused ? static_cast<int>(std::round(std::sin(phase) * 4.0)) : 0;
     const double angle = focused ? std::sin(phase) * 2.25 : 0.0;
@@ -541,105 +633,81 @@ void render_profile_select(SDL_Renderer* renderer, const LauncherState& state,
       }
     }
     if (!rendered_portrait) {
-      const std::string initial(1, profile.display_name.front());
-      draw_centered_text(renderer, initial, center_x, center_y - 32 + bob, 8,
-                         kText);
+      fill_rect(renderer, avatar,
+                {static_cast<std::uint8_t>((profile.accent_rgb >> 16) & 0xffU),
+                 static_cast<std::uint8_t>((profile.accent_rgb >> 8) & 0xffU),
+                 static_cast<std::uint8_t>(profile.accent_rgb & 0xffU), 255});
+      if (focused) outline_rect(renderer, avatar, 6, kHoney);
     }
 
-    const SDL_Rect name_panel{center_x - (focused ? 70 : 62),
+    const bool centre = distance < 0.08F;
+    const SDL_Rect name_panel{center_x - (centre ? 78 : 66),
                               center_y + size / 2 + 12,
-                              focused ? 140 : 124, focused ? 38 : 34};
+                              centre ? 156 : 132, centre ? 40 : 34};
     fill_rect(renderer, name_panel, {255, 250, 231, 230});
     draw_centered_text(renderer, profile.display_name, center_x,
-                       name_panel.y + (focused ? 7 : 6),
-                       focused ? 3 : 2, kText);
+                       name_panel.y + (centre ? 8 : 6),
+                       centre ? 3 : 2, kText);
   }
+}
+
+void render_saving(SDL_Renderer* renderer) {
+  SDL_SetRenderDrawColor(renderer, 24, 35, 45, 255);
+  SDL_RenderClear(renderer);
+  const auto phase = static_cast<float>(SDL_GetTicks() % 900U) / 900.0F *
+      2.0F * 3.14159265358979323846F;
+  constexpr int kDots = 10;
+  for (int index = 0; index < kDots; ++index) {
+    const float angle = phase + static_cast<float>(index) *
+        2.0F * 3.14159265358979323846F / static_cast<float>(kDots);
+    const int x = 320 + static_cast<int>(std::round(std::cos(angle) * 42.0F));
+    const int y = 208 + static_cast<int>(std::round(std::sin(angle) * 42.0F));
+    const int size = index == 0 ? 14 : 9;
+    const std::uint8_t alpha = static_cast<std::uint8_t>(
+        70 + (kDots - index) * 17);
+    fill_rect(renderer, {x - size / 2, y - size / 2, size, size},
+              {255, 214, 117, alpha});
+  }
+  draw_centered_text(renderer, "SAVING", 320, 292, 4, {255, 250, 231, 255});
+  present_frame(renderer);
 }
 
 void render_home(SDL_Renderer* renderer, const LauncherState& state,
                  const std::filesystem::path& managed_image_root,
                  const std::filesystem::path& built_in_avatar_root,
                  const std::filesystem::path& current_background) {
+  (void)managed_image_root;
+  (void)built_in_avatar_root;
+  (void)current_background;
   const auto* profile = state.active_profile();
   if (profile == nullptr) {
     return;
   }
 
-  if (state.screen() == Screen::ChildHome) {
-    constexpr SDL_Rect avatar_card{48, 92, 248, 286};
-    constexpr SDL_Rect background_card{344, 92, 248, 286};
-    constexpr SDL_Rect avatar_rect{72, 112, 200, 240};
-    constexpr SDL_Rect background_rect{368, 112, 200, 240};
-    fill_rect(renderer, avatar_card, kPanel);
-    fill_rect(renderer, background_card, kPanel);
-    outline_rect(renderer,
-                 state.focus_index() == 0 ? avatar_card : background_card,
-                 6, kHoney);
-
-    bool rendered_portrait = false;
-    if (!managed_image_root.empty() &&
-        starts_with(profile->avatar_ref, "local:")) {
-      try {
-        rendered_portrait = render_treated_portrait(
-            renderer,
-            ProfileImageImporter::resolve_portrait_at(managed_image_root,
-                                                       profile->avatar_ref),
-            avatar_rect, Color{255, 250, 231}, 5.0F);
-      } catch (const std::exception&) {
-      }
-    } else if (!built_in_avatar_root.empty()) {
-      if (const auto* built_in = find_built_in_avatar(profile->avatar_ref);
-          built_in != nullptr) {
-        try {
-          rendered_portrait = render_treated_portrait(
-              renderer,
-              built_in_avatar_thumbnail_path(built_in_avatar_root,
-                                             built_in->id),
-              avatar_rect, Color{255, 250, 231}, 5.0F);
-        } catch (const std::exception&) {
-        }
-      }
-    }
-    if (!rendered_portrait) {
-      const std::string initial(1, profile->display_name.front());
-      draw_centered_text(renderer, initial, avatar_rect.x + avatar_rect.w / 2,
-                         avatar_rect.y + 70, 8, kText);
-    }
-
-    if (SDL_Texture* background = cached_texture(renderer, current_background);
-        background != nullptr) {
-      SDL_RenderCopy(renderer, background, nullptr, &background_rect);
-    } else {
-      fill_rect(renderer, background_rect, {114, 164, 126, 220});
-    }
-    return;
-  }
-
-  fill_rect(renderer, {54, 16, 532, 72}, kPanel);
-  draw_centered_text(renderer, "Hello, " + profile->display_name + "!",
-                     kWidth / 2, 27, 4, kText);
-  draw_centered_text(renderer, "PARENT MENU", kWidth / 2, 68, 1, kMuted);
-
   const auto items = state.menu_items();
-  const int row_start = items.size() > 8 ? 98 : (items.size() > 7 ? 104 : (items.size() > 6 ? 108 : 118));
-  const int row_gap = items.size() > 8 ? 34 : (items.size() > 7 ? 38 : (items.size() > 6 ? 43 : 49));
-  const int row_height = items.size() > 8 ? 27 : (items.size() > 7 ? 31 : (items.size() > 6 ? 35 : 39));
+  const bool child = state.screen() == Screen::ChildHome;
+  constexpr SDL_Rect title{210, 24, 220, 52};
+  fill_rect(renderer, title, {255, 250, 231, 235});
+  draw_centered_text(renderer, child ? "KIDS" : "PARENT", kWidth / 2,
+                     title.y + 12, 3, kText);
+
+  const int row_height = 54;
+  const int row_gap = 64;
+  const int content_height = static_cast<int>(items.size()) * row_gap - 10;
+  const int row_start = 96 + (348 - content_height) / 2;
   for (std::size_t index = 0; index < items.size(); ++index) {
     const bool focused = index == state.focus_index();
-    const SDL_Rect row{focused ? 148 : 156,
+    const SDL_Rect row{focused ? 112 : 124,
                        row_start + static_cast<int>(index) * row_gap,
-                       focused ? 344 : 328, row_height};
+                       focused ? 416 : 392, row_height};
     fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
     if (focused) {
-      outline_rect(renderer, row, 3, kHoney);
+      outline_rect(renderer, row, 4, kHoney);
     }
-    draw_text(renderer, items[index], row.x + 24,
-              row.y + (row_height - font_height(2)) / 2 - 2, 2, kText);
+    draw_centered_text(renderer, items[index], kWidth / 2,
+                       row.y + (row_height - font_height(2)) / 2 - 2, 2,
+                       kText);
   }
-
-  fill_rect(renderer, {150, 438, 340, 30}, {255, 250, 231, 210});
-  draw_centered_text(renderer, "A CHOOSE   B PROFILES", kWidth / 2, 444, 1,
-                     kMuted);
 }
 
 int setup_step_number(SetupStep step) {
@@ -687,6 +755,7 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
                      const std::filesystem::path& accent_atlas,
                      const std::filesystem::path& built_in_avatar_root) {
   std::filesystem::path resolved_background = background_image;
+  std::optional<Color> flat_background;
   if (state.screen() != Screen::ProfileSelect && state.active_profile() != nullptr) {
     constexpr std::string_view prefix = "builtin:";
     const auto& reference = state.active_profile()->background_ref;
@@ -694,8 +763,15 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
       if (const auto* background =
               find_built_in_background(std::string_view(reference).substr(prefix.size()));
           background != nullptr) {
-        resolved_background = executable_asset(
-            "backgrounds/" + std::string(background->filename));
+        if (background->flat_color) {
+          flat_background = Color{
+              static_cast<std::uint8_t>((background->color_rgb >> 16) & 0xffU),
+              static_cast<std::uint8_t>((background->color_rgb >> 8) & 0xffU),
+              static_cast<std::uint8_t>(background->color_rgb & 0xffU), 255};
+        } else {
+          resolved_background = executable_asset(
+              "backgrounds/" + std::string(background->filename));
+        }
       }
     }
   }
@@ -704,7 +780,12 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
   } else {
-    render_storybook_background(renderer, resolved_background);
+    if (flat_background.has_value()) {
+      set_color(renderer, *flat_background);
+      SDL_RenderClear(renderer);
+    } else {
+      render_storybook_background(renderer, resolved_background);
+    }
   }
 
   if (!profile_selector && !accent_atlas.empty()) {
@@ -738,6 +819,7 @@ void render_launcher(SDL_Renderer* renderer, const LauncherState& state,
   present_frame(renderer);
 }
 
+#if 0  // Retired legacy library presentation. The unified dashboard owns game browsing.
 void render_library(
     SDL_Renderer* renderer, const LibraryPresentation& library,
     const Profile* active_profile,
@@ -883,12 +965,1021 @@ void render_library(
   present_frame(renderer);
 }
 
+namespace {
+
+#endif
+
+namespace {
+
+std::string_view dashboard_row_label(DashboardRowKind kind) {
+  switch (kind) {
+    case DashboardRowKind::NextUp: return "NEXT UP";
+    case DashboardRowKind::Recent: return "CONTINUE PLAYING";
+    case DashboardRowKind::Progress: return "STATS";
+    case DashboardRowKind::Platforms: return "PLATFORMS";
+    case DashboardRowKind::NeedsReview: return "REVIEW";
+    case DashboardRowKind::Unplayed: return "UNOPENED";
+    case DashboardRowKind::FinishNext: return "FINISH NEXT";
+    case DashboardRowKind::Recommended: return "RECOMMENDED";
+    case DashboardRowKind::AllGames: return "ALL GAMES";
+    case DashboardRowKind::Hidden: return "HIDDEN";
+    case DashboardRowKind::Settings: return "SETTINGS";
+  }
+  return "GAMES";
+}
+
+std::string_view platform_icon_asset(GamePlatform platform) {
+  switch (platform) {
+    case GamePlatform::GameBoy: return "gb.png";
+    case GamePlatform::GameBoyColor: return "gbc.png";
+    case GamePlatform::GameBoyAdvance: return "gba.png";
+    case GamePlatform::NintendoEntertainmentSystem: return "nes.png";
+    case GamePlatform::SuperNintendo: return "snes.png";
+    case GamePlatform::SegaGenesis: return "genesis.png";
+    case GamePlatform::SegaMasterSystem: return "mastersystem.png";
+    case GamePlatform::SegaGameGear: return "gamegear.png";
+    case GamePlatform::SegaCD: return "segacd.png";
+    case GamePlatform::TurboGrafx16: return "turbografx16.png";
+    case GamePlatform::NeoGeo: return "neogeo.png";
+    case GamePlatform::OnionArcade: return "arcade.png";
+    case GamePlatform::PlayStation: return "playstation.png";
+    // These native/catalogue sources do not have a dedicated RetroArch logo,
+    // but should still use the proper large arcade glyph rather than the old
+    // 16px debug-line fallback.
+    case GamePlatform::Pico8:
+    case GamePlatform::SproutArcade:
+    case GamePlatform::Unknown: return "arcade.png";
+  }
+  return "arcade.png";
+}
+
+void draw_platform_icon(SDL_Renderer* renderer, GamePlatform platform, int x,
+                        int y, Color color, int size = 20) {
+  if (const auto asset = platform_icon_asset(platform); !asset.empty()) {
+    if (SDL_Texture* texture = cached_texture(
+            renderer, executable_asset("platform-icons/" + std::string(asset)));
+        texture != nullptr) {
+      SDL_SetTextureColorMod(texture, color.red, color.green, color.blue);
+      SDL_SetTextureAlphaMod(texture, color.alpha);
+      const SDL_Rect icon{x, y, size, size};
+      SDL_RenderCopy(renderer, texture, nullptr, &icon);
+      return;
+    }
+  }
+  set_color(renderer, color);
+  const bool handheld = platform == GamePlatform::GameBoy ||
+                        platform == GamePlatform::GameBoyColor ||
+                        platform == GamePlatform::GameBoyAdvance ||
+                        platform == GamePlatform::SegaGameGear;
+  if (platform == GamePlatform::SproutArcade) {
+    SDL_RenderDrawLine(renderer, x + 7, y + 15, x + 7, y + 7);
+    SDL_RenderDrawLine(renderer, x + 7, y + 10, x + 2, y + 5);
+    SDL_RenderDrawLine(renderer, x + 7, y + 10, x + 13, y + 4);
+    SDL_RenderDrawLine(renderer, x + 2, y + 5, x + 6, y + 5);
+    SDL_RenderDrawLine(renderer, x + 13, y + 4, x + 9, y + 5);
+    return;
+  }
+  if (platform == GamePlatform::Pico8) {
+    for (int row = 0; row < 3; ++row) {
+      for (int column = 0; column < 3; ++column) {
+        SDL_Rect pixel{x + column * 5, y + row * 5, 3, 3};
+        SDL_RenderFillRect(renderer, &pixel);
+      }
+    }
+    return;
+  }
+  if (platform == GamePlatform::OnionArcade) {
+    SDL_Rect cabinet{x + 2, y + 1, 12, 15};
+    SDL_RenderDrawRect(renderer, &cabinet);
+    SDL_Rect screen{x + 4, y + 3, 8, 5};
+    SDL_RenderDrawRect(renderer, &screen);
+    SDL_RenderDrawPoint(renderer, x + 6, y + 12);
+    SDL_RenderDrawPoint(renderer, x + 10, y + 12);
+    return;
+  }
+  if (handheld) {
+    SDL_Rect body{x + 2, y, 12, 16};
+    SDL_RenderDrawRect(renderer, &body);
+    SDL_Rect screen{x + 4, y + 2, 8, 6};
+    SDL_RenderDrawRect(renderer, &screen);
+    SDL_RenderDrawLine(renderer, x + 5, y + 12, x + 9, y + 12);
+    SDL_RenderDrawLine(renderer, x + 7, y + 10, x + 7, y + 14);
+    SDL_RenderDrawPoint(renderer, x + 11, y + 11);
+    return;
+  }
+  SDL_Rect console{x, y + 4, 16, 9};
+  SDL_RenderDrawRect(renderer, &console);
+  SDL_RenderDrawLine(renderer, x + 3, y + 7, x + 8, y + 7);
+  SDL_RenderDrawPoint(renderer, x + 12, y + 9);
+}
+
+void draw_scroll_right_hint(SDL_Renderer* renderer) {
+  if (SDL_Texture* icon = cached_texture(
+          renderer, executable_asset("icons/arrow-right.png")); icon != nullptr) {
+    SDL_SetTextureColorMod(icon, kText.red, kText.green, kText.blue);
+    SDL_SetTextureAlphaMod(icon, 180);
+    const SDL_Rect destination{kWidth - 54, kHeight - 54, 32, 32};
+    SDL_RenderCopy(renderer, icon, nullptr, &destination);
+  }
+}
+
+void draw_interface_icon(SDL_Renderer* renderer, std::string_view asset,
+                         const SDL_Rect& destination, Color color) {
+  if (SDL_Texture* icon = cached_texture(
+          renderer, executable_asset("icons/" + std::string(asset) + ".png"));
+      icon != nullptr) {
+    SDL_SetTextureColorMod(icon, color.red, color.green, color.blue);
+    SDL_SetTextureAlphaMod(icon, color.alpha);
+    SDL_RenderCopy(renderer, icon, nullptr, &destination);
+  }
+}
+
+void draw_review_icon(SDL_Renderer* renderer,
+                      std::optional<GameReviewVerdict> verdict, int x, int y) {
+  if (!verdict.has_value()) return;
+  const Color color = kFocus;
+  const std::string_view asset = *verdict == GameReviewVerdict::Positive
+      ? "thumbs-up-solid" : "thumbs-down-solid";
+  draw_interface_icon(renderer, asset, {x, y, 17, 17}, color);
+}
+
+void draw_trophy_icon(SDL_Renderer* renderer, int x, int y, bool completed) {
+  const Color color = completed ? kHoney : Color{155, 166, 155};
+  draw_interface_icon(renderer, "trophy", {x, y, 17, 17}, color);
+}
+
+std::string compact_time(std::uint64_t milliseconds) {
+  const auto minutes = milliseconds / 60000U;
+  if (minutes < 60U) return std::to_string(minutes) + "M";
+  return std::to_string(minutes / 60U) + "H";
+}
+
+std::string review_percent(std::uint64_t reviewed, std::uint64_t total) {
+  if (total == 0) return "-";
+  return std::to_string((reviewed * 100U) / total) + "%";
+}
+
+void render_rounded_artwork(SDL_Renderer* renderer, SDL_Texture* texture,
+                            const SDL_Rect& frame, int radius) {
+  int texture_width = 0;
+  int texture_height = 0;
+  if (SDL_QueryTexture(texture, nullptr, nullptr, &texture_width,
+                       &texture_height) != 0 ||
+      texture_width <= 0 || texture_height <= 0) {
+    return;
+  }
+
+  // Cards already derive their width from the source aspect ratio.  Rendering
+  // to the exact integer bounds avoids a one-pixel letterbox seam without
+  // cropping any artwork.
+  const SDL_Rect destination = frame;
+  for (int line = 0; line < destination.h; ++line) {
+    int inset = 0;
+    const int edge = std::min(line, destination.h - line - 1);
+    if (edge < radius) {
+      const double vertical = radius - edge - 0.5;
+      inset = static_cast<int>(std::ceil(
+          radius - std::sqrt(std::max(0.0, radius * radius -
+                                               vertical * vertical))));
+    }
+    const SDL_Rect source{
+        inset * texture_width / destination.w,
+        line * texture_height / destination.h,
+        std::max(1, (destination.w - inset * 2) * texture_width / destination.w), 1};
+    const SDL_Rect target{destination.x + inset, destination.y + line,
+                          destination.w - inset * 2, 1};
+    SDL_RenderCopy(renderer, texture, &source, &target);
+  }
+}
+
+int dashboard_card_width(SDL_Renderer* renderer,
+                         const GameDashboardPresentation& dashboard,
+                         const DashboardGameCard& card, int height) {
+  const auto* game = dashboard.find_game(card.item_id);
+  if (game == nullptr) return 194;
+  auto artwork = game->inventory.artwork_path;
+  if (!artwork.empty() && artwork.is_relative()) {
+    artwork = executable_asset(artwork.generic_string());
+  }
+  auto* texture = artwork.empty() ? nullptr : cached_texture(renderer, artwork);
+  int width = 0;
+  int artwork_height = 0;
+  if (texture == nullptr ||
+      SDL_QueryTexture(texture, nullptr, nullptr, &width, &artwork_height) != 0 ||
+      width <= 0 || artwork_height <= 0) return 194;
+  return std::max(80, static_cast<int>(width *
+                                       (static_cast<double>(height) / artwork_height)));
+}
+
+int dashboard_card_height(SDL_Renderer* renderer,
+                          const GameDashboardPresentation& dashboard,
+                          const DashboardGameCard& card, int base_height) {
+  if (base_height <= 260) return base_height;
+  const auto* game = dashboard.find_game(card.item_id);
+  if (game == nullptr) return base_height;
+  auto artwork = game->inventory.artwork_path;
+  if (!artwork.empty() && artwork.is_relative()) {
+    artwork = executable_asset(artwork.generic_string());
+  }
+  auto* texture = artwork.empty() ? nullptr : cached_texture(renderer, artwork);
+  int width = 0;
+  int height = 0;
+  if (texture == nullptr || SDL_QueryTexture(texture, nullptr, nullptr, &width, &height) != 0 ||
+      width <= 0 || height <= 0) return base_height;
+  // Big Mode gives portrait covers a full hero treatment, while landscape
+  // covers retain their natural wide-card character rather than becoming a
+  // screen-tall strip.
+  return width >= height ? 348 : base_height;
+}
+
+Color dashboard_row_color(DashboardRowKind kind) {
+  constexpr std::array<Color, 11> colors{{
+      {246, 194, 101, 238}, {131, 194, 174, 238}, {137, 184, 219, 238},
+      {180, 161, 216, 238}, {239, 160, 132, 238}, {128, 188, 201, 238},
+      {216, 174, 111, 238}, {142, 196, 139, 238}, {216, 151, 172, 238},
+      {154, 163, 170, 238},
+      {178, 149, 216, 238},
+  }};
+  return colors[static_cast<std::size_t>(kind) % colors.size()];
+}
+
+void draw_dashboard_row_chip(SDL_Renderer* renderer, DashboardRowKind kind,
+                             int y) {
+  const auto label = dashboard_row_label(kind);
+  const SDL_Rect chip{18, y, text_width(label, 2) + 28, 28};
+  fill_rect(renderer, chip, dashboard_row_color(kind));
+  draw_centered_text(renderer, label, chip.x + chip.w / 2, chip.y + 5, 2,
+                     kText);
+}
+
+void draw_dashboard_selected_title(SDL_Renderer* renderer,
+                                   const GameDashboardPresentation& dashboard,
+                                   const DashboardRow& row, int y) {
+  if (row.games.empty()) return;
+  const auto focus = std::min(dashboard.item_focus(row.kind), row.games.size() - 1);
+  const auto* game = dashboard.find_game(row.games[focus].item_id);
+  if (game == nullptr) return;
+  std::string game_title = game->inventory.title;
+  if (const auto parenthesis = game_title.find('(');
+      parenthesis != std::string::npos) {
+    game_title.erase(parenthesis);
+  }
+  std::string normalized_title;
+  bool previous_was_space = false;
+  for (const char character : game_title) {
+    if (character == ' ') {
+      if (!normalized_title.empty() && !previous_was_space) {
+        normalized_title.push_back(character);
+      }
+      previous_was_space = true;
+    } else {
+      normalized_title.push_back(character);
+      previous_was_space = false;
+    }
+  }
+  game_title = std::move(normalized_title);
+  const std::string suffix = "  .  " +
+      std::string(game_platform_short_label(game->inventory.platform));
+  std::string title = game_title + suffix;
+  const SDL_Rect chip{kWidth - text_width(title, 2) - 32, y,
+                      text_width(title, 2) + 28, 28};
+  fill_rect(renderer, chip, dashboard_row_color(row.kind));
+  draw_centered_text(renderer, title, chip.x + chip.w / 2, chip.y + 5, 2, kText);
+}
+
+void draw_dashboard_selected_setting(SDL_Renderer* renderer,
+                                    const DashboardRow& row, std::size_t focus,
+                                    int y) {
+  if (row.settings.empty()) return;
+  const auto& label = row.settings[std::min(focus, row.settings.size() - 1)];
+  const SDL_Rect chip{kWidth - text_width(label, 2) - 32, y,
+                      text_width(label, 2) + 28, 28};
+  fill_rect(renderer, chip, dashboard_row_color(row.kind));
+  draw_centered_text(renderer, label, chip.x + chip.w / 2, chip.y + 5, 2, kText);
+}
+
+void draw_focus_sheen(SDL_Renderer* renderer, const SDL_Rect& bounds) {
+  // A narrow diagonal band of diminishing white strokes gives the active art
+  // a soft glass highlight without changing the artwork or adding another
+  // panel. It is clipped to the tile so it cannot bleed into its neighbours.
+  SDL_Rect previous_clip{};
+  const SDL_bool had_clip = SDL_RenderIsClipEnabled(renderer);
+  SDL_RenderGetClipRect(renderer, &previous_clip);
+  SDL_RenderSetClipRect(renderer, &bounds);
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+  for (int stripe = 0; stripe < 38; ++stripe) {
+    const auto alpha = static_cast<std::uint8_t>(
+        28 - (stripe * 24) / 37);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, alpha);
+    const int x = bounds.x + 18 + stripe * 3;
+    SDL_RenderDrawLine(renderer, x, bounds.y + 3,
+                       x - 104, bounds.y + bounds.h - 3);
+  }
+  SDL_RenderSetClipRect(renderer, had_clip ? &previous_clip : nullptr);
+}
+
+void render_dashboard_game_card(SDL_Renderer* renderer,
+                                const GameDashboardPresentation& dashboard,
+                                const DashboardGameCard& card, SDL_Rect bounds,
+                                bool focused, float scale) {
+  scale = std::clamp(scale, 0.80F, 1.05F);
+  if (scale < 0.999F || scale > 1.001F) {
+    const int width = std::max(1, static_cast<int>(std::round(bounds.w * scale)));
+    const int height = std::max(1, static_cast<int>(std::round(bounds.h * scale)));
+    bounds = {bounds.x + (bounds.w - width) / 2,
+              bounds.y + (bounds.h - height) / 2, width, height};
+  }
+  const auto* game = dashboard.find_game(card.item_id);
+  if (game == nullptr) return;
+  draw_tile_shadow(renderer, bounds);
+  std::filesystem::path artwork = game->inventory.artwork_path;
+  if (!artwork.empty() && artwork.is_relative()) {
+    artwork = executable_asset(artwork.generic_string());
+  }
+  SDL_Texture* texture = artwork.empty() ? nullptr : cached_texture(renderer, artwork);
+  if (texture != nullptr) {
+    render_rounded_artwork(renderer, texture, bounds, gRoundedTiles ? 14 : 0);
+  } else {
+    const auto seed = static_cast<std::uint32_t>(
+        std::hash<std::string>{}(game->inventory.item_id));
+    fill_rect(renderer, bounds,
+              {static_cast<std::uint8_t>(76 + seed % 70),
+               static_cast<std::uint8_t>(98 + (seed >> 8U) % 70),
+               static_cast<std::uint8_t>(115 + (seed >> 16U) % 70)});
+    draw_centered_text(renderer, game->inventory.title.substr(0, 18),
+                       bounds.x + bounds.w / 2, bounds.y + bounds.h / 2 - 8,
+                       2, {255, 250, 231});
+  }
+  if (focused) draw_focus_sheen(renderer, bounds);
+  if (game->profile.verdict.has_value()) {
+    const SDL_Rect review_badge{bounds.x + bounds.w - 39, bounds.y + 10, 29, 29};
+    fill_rect(renderer, review_badge, {255, 250, 231, 205});
+    draw_review_icon(renderer, game->profile.verdict,
+                     review_badge.x + 6, review_badge.y + 6);
+  }
+  if (focused) outline_rect(renderer, bounds, 4, kFocus);
+}
+
+void render_dashboard_background(SDL_Renderer* renderer,
+                                 const GameDashboardPresentation& dashboard) {
+  constexpr std::string_view prefix = "builtin:";
+  const auto reference = dashboard.profile_background_ref();
+  if (starts_with(reference, prefix)) {
+    if (const auto* background = find_built_in_background(
+            reference.substr(prefix.size())); background != nullptr) {
+      if (background->flat_color) {
+        SDL_SetRenderDrawColor(
+            renderer, static_cast<std::uint8_t>((background->color_rgb >> 16) & 0xffU),
+            static_cast<std::uint8_t>((background->color_rgb >> 8) & 0xffU),
+            static_cast<std::uint8_t>(background->color_rgb & 0xffU), 255);
+        SDL_RenderClear(renderer);
+        return;
+      }
+      render_storybook_background(
+          renderer, executable_asset("backgrounds/" +
+                                     std::string(background->filename)));
+      return;
+    }
+  }
+  render_storybook_background(renderer);
+}
+
+void render_dashboard_filters(SDL_Renderer* renderer,
+                              const GameDashboardPresentation& dashboard) {
+  render_dashboard_background(renderer, dashboard);
+  constexpr std::array<std::string_view, 5> labels{
+      "SYSTEM", "REVIEW", "PLAY", "FAMILY", "SHOW"};
+  // Lucide's standard list-filter glyph; no title bar or control legend.
+  if (SDL_Texture* filter_icon = cached_texture(
+          renderer, executable_asset("icons/filter.png"));
+      filter_icon != nullptr) {
+    SDL_SetTextureColorMod(filter_icon, kText.red, kText.green, kText.blue);
+    SDL_SetTextureAlphaMod(filter_icon, kText.alpha);
+    const SDL_Rect destination{16, 14, 50, 50};
+    SDL_RenderCopy(renderer, filter_icon, nullptr, &destination);
+  }
+  for (std::size_t index = 0; index < labels.size(); ++index) {
+    const bool focused = index == static_cast<std::size_t>(dashboard.filter_category());
+    const SDL_Rect tab{78 + static_cast<int>(index) * 108, 14, 100, 52};
+    fill_rect(renderer, tab, focused ? kPanelFocused : kPanel);
+    if (focused) outline_rect(renderer, tab, 4, kFocus);
+    draw_centered_text(renderer, labels[index], tab.x + tab.w / 2, tab.y + 17,
+                       2, focused ? kText : kMuted);
+  }
+
+  std::vector<std::string> options;
+  switch (dashboard.filter_category()) {
+    case GameFilterCategory::Platform:
+      options.push_back("ALL");
+      for (const auto& platform : dashboard.available_platforms()) {
+        options.emplace_back(game_platform_short_label(platform.platform));
+      }
+      break;
+    case GameFilterCategory::Review:
+      options = {"ALL", "?", "+", "-"};
+      break;
+    case GameFilterCategory::Progress:
+      options = {"ALL", "PLAYING", "COMPLETE"};
+      break;
+    case GameFilterCategory::Family:
+      options = {"ALL", "RECOMMENDED", "FOR KIDS"};
+      for (const auto& child : dashboard.child_profiles()) options.push_back(child.display_name);
+      break;
+    case GameFilterCategory::Visibility:
+      options = {"CURRENT", "HIDDEN"};
+      break;
+  }
+  const auto focus = dashboard.filter_option_focus();
+  const bool platform_category =
+      dashboard.filter_category() == GameFilterCategory::Platform;
+  const std::size_t visible_options = platform_category ? 4 : 6;
+  const int option_height = platform_category ? 76 : 50;
+  const int option_gap = platform_category ? 10 : 8;
+  const std::size_t first = focus < visible_options ? 0 : focus - visible_options + 1;
+  for (std::size_t index = first;
+       index < std::min(options.size(), first + visible_options); ++index) {
+    const SDL_Rect option{48,
+                          88 + static_cast<int>(index - first) *
+                                   (option_height + option_gap),
+                          544, option_height};
+    const bool selected = index == focus;
+    fill_rect(renderer, option, selected ? kPanelFocused : kPanel);
+    if (selected) outline_rect(renderer, option, 4, kFocus);
+    const bool platform_option = dashboard.filter_category() == GameFilterCategory::Platform &&
+                                 index > 0 && index - 1 < dashboard.available_platforms().size();
+    if (platform_option) {
+      draw_platform_icon(renderer, dashboard.available_platforms()[index - 1].platform,
+                         option.x + 22, option.y + 17, selected ? kText : kMuted,
+                         42);
+    }
+    draw_text(renderer, options[index].substr(0, 26),
+              option.x + (platform_option ? 84 : 22),
+              option.y + (platform_option ? 27 : 14),
+              platform_option ? 3 : 2, selected ? kText : kMuted);
+  }
+  present_frame(renderer);
+}
+
+void render_dashboard_search(SDL_Renderer* renderer,
+                             const GameDashboardPresentation& dashboard) {
+  render_dashboard_background(renderer, dashboard);
+  fill_rect(renderer, {18, 14, 604, 56}, kPanel);
+  draw_text(renderer, "SEARCH", 32, 33, 2, kMuted);
+  const std::string query = dashboard.search_query().empty() ? "_" : std::string(dashboard.search_query()) + "_";
+  draw_text(renderer, query.substr(0, 34), 146, 28, 3, kText);
+  std::string filters = dashboard.filter().active() ? "FILTERED" : "ALL GAMES";
+  fill_rect(renderer, {18, 76, text_width(filters, 1) + 24, 22}, dashboard_row_color(DashboardRowKind::Platforms));
+  draw_text(renderer, filters, 30, 82, 1, kText);
+  const auto results = dashboard.search_results();
+  constexpr std::size_t visible = 3;
+  const std::size_t first = dashboard.search_result_focus() < visible ? 0 : dashboard.search_result_focus() - visible + 1;
+  for (std::size_t index = first; index < std::min(results.size(), first + visible); ++index) {
+    const SDL_Rect row{18, 106 + static_cast<int>(index - first) * 42, 604, 34};
+    const bool focused = dashboard.search_results_focused() && index == dashboard.search_result_focus();
+    fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
+    if (focused) outline_rect(renderer, row, 3, kFocus);
+    draw_text(renderer, results[index].inventory.title.substr(0, 31), 34, row.y + 10, 2, focused ? kText : kMuted);
+    draw_platform_icon(renderer, results[index].inventory.platform, 578, row.y + 7, focused ? kText : kMuted);
+  }
+  constexpr std::string_view keys = "QWERTYUIOPASDFGHJKLZXCVBNM<_";
+  constexpr int columns = 10;
+  for (std::size_t index = 0; index < keys.size(); ++index) {
+    const int column = static_cast<int>(index % columns);
+    const int row = static_cast<int>(index / columns);
+    const SDL_Rect key{18 + column * 61, 258 + row * 58, 54, 48};
+    const bool focused = !dashboard.search_results_focused() && index == dashboard.search_keyboard_focus();
+    fill_rect(renderer, key, focused ? kPanelFocused : kPanel);
+    if (focused) outline_rect(renderer, key, 3, kFocus);
+    const std::string label = keys[index] == '<' ? "<" : keys[index] == '_' ? "SPACE" : std::string(1, keys[index]);
+    draw_centered_text(renderer, label, key.x + key.w / 2, key.y + 15, keys[index] == '_' ? 1 : 2, focused ? kText : kMuted);
+  }
+  present_frame(renderer);
+}
+
+void render_dashboard_details(SDL_Renderer* renderer,
+                              const GameDashboardPresentation& dashboard) {
+  render_dashboard_background(renderer, dashboard);
+  const auto* game = dashboard.selected_game();
+  if (game == nullptr) {
+    draw_heading_panel(renderer, {72, 20, 496, 80}, "GAME", "NOT AVAILABLE");
+    draw_scroll_right_hint(renderer);
+    present_frame(renderer);
+    return;
+  }
+  fill_rect(renderer, {18, 12, 604, 52}, {255, 250, 231, 240});
+  draw_text(renderer, game->inventory.title.substr(0, 30), 32, 23, 3, kText);
+  draw_platform_icon(renderer, game->inventory.platform, 590, 28, kMuted);
+  constexpr std::array<std::string_view, 3> tabs{"OVERVIEW", "REVIEW", "FAMILY"};
+  for (std::size_t index = 0; index < tabs.size(); ++index) {
+    const bool active = index == static_cast<std::size_t>(dashboard.detail_page());
+    const SDL_Rect tab{82 + static_cast<int>(index) * 160, 78, 150, 30};
+    fill_rect(renderer, tab, active ? kPanelFocused : kPanel);
+    if (active) outline_rect(renderer, tab, 3, kFocus);
+    draw_centered_text(renderer, tabs[index], tab.x + tab.w / 2, tab.y + 10, 1,
+                       active ? kText : kMuted);
+  }
+  if (dashboard.detail_page() == GameDetailPage::Overview) {
+    SDL_Rect artwork{34, 126, 274, 224};
+    fill_rect(renderer, artwork, {93, 127, 110});
+    std::filesystem::path path = game->inventory.artwork_path;
+    if (dashboard.detail_artwork_focus() > 0 &&
+        dashboard.detail_artwork_focus() <=
+            game->inventory.screenshot_paths.size()) {
+      path = game->inventory.screenshot_paths[
+          dashboard.detail_artwork_focus() - 1];
+    }
+    if (!path.empty() && path.is_relative()) path = executable_asset(path.generic_string());
+    if (auto* texture = path.empty() ? nullptr : cached_texture(renderer, path); texture != nullptr) {
+      SDL_RenderCopy(renderer, texture, nullptr, &artwork);
+    }
+    fill_rect(renderer, {330, 126, 276, 224}, kPanel);
+    draw_text(renderer, std::string(game_platform_name(game->inventory.platform)), 350, 148, 2, kText);
+    draw_text(renderer, compact_time(game->play.active_milliseconds), 350, 190, 4, kFocus);
+    draw_text(renderer, "PLAYED", 350, 232, 1, kMuted);
+    draw_review_icon(renderer, game->profile.verdict, 352, 272);
+    draw_trophy_icon(renderer, 396, 272, game->profile.completed);
+    draw_centered_text(renderer, "A PLAY", 468, 320, 2, kText);
+    if (!game->inventory.screenshot_paths.empty()) {
+      draw_centered_text(
+          renderer,
+          std::to_string(dashboard.detail_artwork_focus() + 1) + "/" +
+              std::to_string(game->inventory.screenshot_paths.size() + 1),
+          artwork.x + artwork.w / 2, 360, 1, kMuted);
+    }
+  } else {
+    std::vector<std::pair<std::string, bool>> choices;
+    if (dashboard.detail_page() == GameDetailPage::Review) {
+      choices = {{"THUMBS UP", game->profile.verdict == GameReviewVerdict::Positive},
+                 {"THUMBS DOWN", game->profile.verdict == GameReviewVerdict::Negative},
+                 {"COMPLETE", game->profile.completed}};
+    } else {
+      choices = {{"RECOMMENDED", game->household.recommended},
+                 {"FOR KIDS", game->household.for_kids},
+                 {"HIDDEN", game->household.hidden}};
+      for (const auto& child : dashboard.child_profiles()) {
+        const bool assigned = std::find(game->child_allowed_profile_ids.begin(),
+                                        game->child_allowed_profile_ids.end(),
+                                        child.id) != game->child_allowed_profile_ids.end();
+        choices.emplace_back(child.display_name, assigned);
+      }
+    }
+    for (std::size_t index = 0; index < choices.size(); ++index) {
+      const SDL_Rect row{106, 136 + static_cast<int>(index) * 44, 428, 36};
+      const bool focused = index == dashboard.detail_focus();
+      fill_rect(renderer, row, focused ? kPanelFocused : kPanel);
+      if (focused) outline_rect(renderer, row, 3, kFocus);
+      draw_text(renderer, choices[index].first.substr(0, 26), row.x + 20,
+                row.y + 12, 2, kText);
+      draw_text(renderer, choices[index].second ? "ON" : "-", row.x + row.w - 52,
+                row.y + 12, 2, choices[index].second ? kFocus : kMuted);
+    }
+  }
+  if (!dashboard.notice().empty()) {
+    draw_centered_text(renderer, dashboard.notice(), kWidth / 2, 410, 2, kFocus);
+  }
+  draw_footer(renderer, "L R PAGE   A SELECT   B BACK");
+  present_frame(renderer);
+}
+
+}  // namespace
+
+void render_game_dashboard(SDL_Renderer* renderer,
+                           const GameDashboardPresentation& dashboard) {
+  apply_interface_theme(dashboard.interface_theme());
+  apply_accent(dashboard.accent_rgb());
+  gRoundedTiles = dashboard.rounded_tiles();
+  gTileShadows = dashboard.tile_shadows();
+  if (dashboard.stage() == GameDashboardStage::Filters) {
+    render_dashboard_filters(renderer, dashboard);
+    return;
+  }
+  if (dashboard.stage() == GameDashboardStage::Search) {
+    render_dashboard_search(renderer, dashboard);
+    return;
+  }
+  if (dashboard.stage() == GameDashboardStage::Details) {
+    render_dashboard_details(renderer, dashboard);
+    return;
+  }
+  render_dashboard_background(renderer, dashboard);
+  const auto rows = dashboard.rows();
+  if (rows.empty()) {
+    draw_heading_panel(renderer, {90, 174, 460, 112}, "NO MATCHES");
+  } else {
+    const auto row_focus = dashboard.row_focus();
+    const bool big_mode = dashboard.big_mode();
+    const std::size_t first = big_mode
+                                  ? row_focus
+                                  : (rows.size() <= 2 ? 0
+                                                      : std::min(row_focus, rows.size() - 2));
+    constexpr int kSmallRowStride = 216;
+    const auto row_height_for = [&](std::size_t index) {
+      // Big Mode retains the exact normal-row rhythm for stats, platforms,
+      // and settings. Only a game-art rail expands, and it consumes precisely
+      // the space of two normal rows.
+      return big_mode && !rows[index].games.empty()
+                 ? kSmallRowStride * 2
+                 : kSmallRowStride;
+    };
+    const auto row_scroll_for = [&](std::size_t index) {
+      int offset = 0;
+      for (std::size_t row = 0; row < index && row < rows.size(); ++row) {
+        offset += row_height_for(row);
+      }
+      return static_cast<float>(offset);
+    };
+    // This stores only a viewport origin, not rendered content. Each row and
+    // each card below is still drawn directly at its interpolated position.
+    // On a new input we start from the currently visible fractional origin,
+    // which also makes rapid direction changes continuous.
+    struct ViewportMotion {
+      const GameDashboardPresentation* dashboard{nullptr};
+      std::size_t row_count{0};
+      float from{0.0F};
+      float target{0.0F};
+      std::uint32_t started{0};
+    };
+    static ViewportMotion motion;
+    struct CarouselMotion {
+      const GameDashboardPresentation* dashboard{nullptr};
+      std::size_t row_key{0};
+      std::size_t item_count{0};
+      std::size_t focus{0};
+      float from{0.0F};
+      float target{0.0F};
+      std::uint32_t started{0};
+    };
+    static CarouselMotion carousel;
+    static CarouselMotion settings_carousel;
+    const auto now = SDL_GetTicks();
+    const bool reset_motion = !dashboard.motion_enabled() ||
+        motion.dashboard != &dashboard || motion.row_count != rows.size();
+    const float target_scroll = row_scroll_for(first);
+    float current_scroll = target_scroll;
+    if (reset_motion) {
+      motion = {&dashboard, rows.size(), current_scroll, current_scroll, now};
+    } else {
+      const float elapsed = static_cast<float>(now - motion.started);
+      const float progress = std::min(1.0F, elapsed / 150.0F);
+      const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                      (1.0F - progress);
+      current_scroll = motion.from + (motion.target - motion.from) * eased;
+      if (std::abs(motion.target - target_scroll) > 0.001F) {
+        motion.from = current_scroll;
+        motion.target = target_scroll;
+        motion.started = now;
+      }
+    }
+    if (motion.dashboard == &dashboard && dashboard.motion_enabled()) {
+      const float elapsed = static_cast<float>(now - motion.started);
+      const float progress = std::min(1.0F, elapsed / 150.0F);
+      const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                      (1.0F - progress);
+      current_scroll = motion.from + (motion.target - motion.from) * eased;
+    }
+    for (std::size_t row_index = 0; row_index < rows.size(); ++row_index) {
+      const auto& row = rows[row_index];
+      const bool focused_row = row_index == row_focus;
+      const bool large_game_row = big_mode && !row.games.empty();
+      const int card_height = large_game_row ? 364 : 174;
+      const int title_y = static_cast<int>(std::round(
+          16.0F + row_scroll_for(row_index) - current_scroll));
+      // Full-height game art needs a little more air below its heading than
+      // compact utility tiles. This also applies when a game rail begins as
+      // the second visible row and intentionally runs below the viewport.
+      const int card_y = title_y + (large_game_row ? 40 : 34);
+      // Reserve the bottom strip exclusively for the deliberate next-row
+      // preview chip. Without this guard an entering row can draw its own
+      // title underneath that chip, producing a doubled label.
+      if (card_y >= kHeight - 48 || card_y + card_height <= 0) continue;
+      draw_dashboard_row_chip(renderer, row.kind, title_y);
+      if (focused_row) {
+        if (!row.settings.empty()) {
+          draw_dashboard_selected_setting(renderer, row, dashboard.item_focus(row.kind), title_y);
+        } else {
+          draw_dashboard_selected_title(renderer, dashboard, row, title_y);
+        }
+      }
+      if (!row.games.empty()) {
+        const auto focus = std::min(dashboard.item_focus(row.kind), row.games.size() - 1);
+        const auto card_height_for = [&](std::size_t item) {
+          return dashboard_card_height(renderer, dashboard, row.games[item], card_height);
+        };
+        const auto card_width = [&](std::size_t item) {
+          return dashboard_card_width(renderer, dashboard, row.games[item],
+                                      card_height_for(item));
+        };
+        const std::size_t row_key = static_cast<std::size_t>(row.kind);
+        const bool reset_carousel = !focused_row || !dashboard.motion_enabled() ||
+            carousel.dashboard != &dashboard || carousel.row_key != row_key ||
+            carousel.item_count != row.games.size();
+        float target_offset = 0.0F;
+        if (reset_carousel) {
+          for (std::size_t index = 0; index < focus; ++index) {
+            target_offset += static_cast<float>(card_width(index) + 12);
+          }
+        } else {
+          target_offset = carousel.target;
+          if (focus > carousel.focus) {
+            for (std::size_t index = carousel.focus; index < focus; ++index) {
+              target_offset += static_cast<float>(card_width(index) + 12);
+            }
+          } else {
+            for (std::size_t index = focus; index < carousel.focus; ++index) {
+              target_offset -= static_cast<float>(card_width(index) + 12);
+            }
+          }
+        }
+        float current_offset = target_offset;
+        if (reset_carousel) {
+          if (focused_row) carousel = {&dashboard, row_key, row.games.size(), focus,
+                                       target_offset, target_offset, now};
+        } else {
+          const float elapsed = static_cast<float>(now - carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = carousel.from + (carousel.target - carousel.from) * eased;
+          if (std::abs(carousel.target - target_offset) > 0.001F) {
+            carousel.from = current_offset;
+            carousel.target = target_offset;
+            carousel.focus = focus;
+            carousel.started = now;
+            current_offset = carousel.from;
+          }
+        }
+        if (focused_row && dashboard.motion_enabled()) {
+          const float elapsed = static_cast<float>(now - carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = carousel.from + (carousel.target - carousel.from) * eased;
+        }
+        const float motion_progress = dashboard.motion_progress(now);
+        const float motion_eased = 1.0F - (1.0F - motion_progress) *
+            (1.0F - motion_progress) * (1.0F - motion_progress);
+        const float focus_scale = focused_row && dashboard.motion_active(now)
+            ? 0.92F + 0.08F * motion_eased +
+                  0.022F * std::sin(motion_progress * 3.14159265F)
+            : 1.0F;
+        std::size_t first_visible = focus;
+        float first_offset = target_offset;
+        while (first_visible > 0 &&
+               18.0F + first_offset - current_offset > 18.0F) {
+          --first_visible;
+          first_offset -= static_cast<float>(card_width(first_visible) + 12);
+        }
+        float offset = first_offset;
+        for (std::size_t index = first_visible; index < row.games.size(); ++index) {
+          const int width = card_width(index);
+          const int height = card_height_for(index);
+          const int card_x = static_cast<int>(std::round(18.0F + offset - current_offset));
+          if (card_x >= kWidth - 18) break;
+          if (card_x + width > 18) {
+            render_dashboard_game_card(renderer, dashboard, row.games[index],
+                                       {card_x, card_y + (card_height - height) / 2,
+                                        width, height},
+                                       focused_row && index == focus,
+                                       focused_row && index == focus ? focus_scale : 0.92F);
+          }
+          offset += static_cast<float>(width + 12);
+        }
+      } else if (!row.platforms.empty()) {
+        const auto focus = std::min(dashboard.item_focus(row.kind), row.platforms.size() - 1);
+        const std::size_t platform_first = focus < 3 ? 0 : focus - 2;
+        for (std::size_t index = platform_first;
+             index < std::min(row.platforms.size(), platform_first + 3); ++index) {
+          const SDL_Rect card{18 + static_cast<int>(index - platform_first) * 206,
+                              card_y, 194, card_height};
+          const bool selected = focused_row && index == focus;
+          const bool active = std::find(dashboard.filter().platforms.begin(),
+                                        dashboard.filter().platforms.end(),
+                                        row.platforms[index].platform) !=
+                              dashboard.filter().platforms.end();
+          // Selection is the dashboard cursor; an active platform is a
+          // persistent filter. Keep the card surface neutral and reserve the
+          // compact Lucide check badge for the active-filter state.
+          const Color selected_panel{kPanelFocused.red, kPanelFocused.green,
+                                     kPanelFocused.blue, 255};
+          draw_tile_shadow(renderer, card);
+          fill_rect(renderer, card, selected ? selected_panel : kPanel);
+          if (selected) outline_rect(renderer, card, 4, kFocus);
+          // Platform art is the content of this row.  Keep its canvas nearly
+          // card-sized: the wordmark/count are deliberately only a small
+          // footer rather than competing with the icon.  The art follows the
+          // profile accent, so it belongs to the active Sprout theme instead
+          // of inheriting the source logo's near-black ink.
+          draw_platform_icon(renderer, row.platforms[index].platform,
+                             card.x + card.w / 2 - 66, card.y + 5, kFocus, 132);
+          draw_centered_text(renderer,
+                             game_platform_short_label(row.platforms[index].platform),
+                             card.x + card.w / 2, card.y + 143, 1, kText);
+          draw_centered_text(renderer, std::to_string(row.platforms[index].game_count),
+                             card.x + card.w / 2, card.y + 157, 1, kMuted);
+          if (active) {
+            const SDL_Rect badge{card.x + card.w - 39, card.y + 10, 29, 29};
+            fill_rect(renderer, badge, {kFocus.red, kFocus.green, kFocus.blue, 235});
+            draw_interface_icon(renderer, "check", {badge.x + 6, badge.y + 6, 17, 17},
+                                kPanel);
+          }
+        }
+      } else if (row.statistics.has_value()) {
+        const auto& stats = *row.statistics;
+        const std::array<std::pair<std::string, std::string>, 4> cards{{
+            {"CURATED", review_percent(stats.recommended_reviewed,
+                                        stats.recommended_total)},
+            {"REVIEWED", review_percent(stats.library_reviewed,
+                                         stats.library_total)},
+            {"OUTSIDE", std::to_string(stats.outside_recommended_reviewed)},
+            {"WON", std::to_string(stats.completed)},
+        }};
+        const auto focus = std::min(dashboard.item_focus(row.kind), cards.size() - 1);
+        const std::size_t card_first = focus < 3 ? 0 : focus - 2;
+        for (std::size_t index = card_first;
+             index < std::min(cards.size(), card_first + 3); ++index) {
+          const SDL_Rect card{18 + static_cast<int>(index - card_first) * 206,
+                              card_y, 194, card_height};
+          const bool selected = focused_row && dashboard.item_focus(row.kind) == index;
+          draw_tile_shadow(renderer, card);
+          fill_rect(renderer, card, selected ? kPanelFocused : kPanel);
+          if (selected) outline_rect(renderer, card, 4, kFocus);
+          draw_centered_text(renderer, cards[index].second, card.x + card.w / 2,
+                             card.y + 42, 6, kFocus);
+          draw_centered_text(renderer, cards[index].first, card.x + card.w / 2,
+                             card.y + 121, 2, kMuted);
+        }
+      } else if (!row.settings.empty()) {
+        const auto focus = std::min(dashboard.item_focus(row.kind), row.settings.size() - 1);
+        constexpr float kSettingsStride = 206.0F;
+        const float target_offset = static_cast<float>(focus) * kSettingsStride;
+        const std::size_t row_key = static_cast<std::size_t>(row.kind);
+        float current_offset = target_offset;
+        const bool reset_carousel = !focused_row || !dashboard.motion_enabled() ||
+            settings_carousel.dashboard != &dashboard ||
+            settings_carousel.row_key != row_key ||
+            settings_carousel.item_count != row.settings.size();
+        if (reset_carousel) {
+          if (focused_row) settings_carousel = {&dashboard, row_key,
+                                                row.settings.size(), focus, target_offset,
+                                                target_offset, now};
+        } else {
+          const float elapsed = static_cast<float>(now - settings_carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = settings_carousel.from +
+              (settings_carousel.target - settings_carousel.from) * eased;
+          if (std::abs(settings_carousel.target - target_offset) > 0.001F) {
+            settings_carousel.from = current_offset;
+            settings_carousel.target = target_offset;
+            settings_carousel.started = now;
+            current_offset = settings_carousel.from;
+          }
+        }
+        if (focused_row && dashboard.motion_enabled()) {
+          const float elapsed = static_cast<float>(now - settings_carousel.started);
+          const float progress = std::min(1.0F, elapsed / 130.0F);
+          const float eased = 1.0F - (1.0F - progress) * (1.0F - progress) *
+                                          (1.0F - progress);
+          current_offset = settings_carousel.from +
+              (settings_carousel.target - settings_carousel.from) * eased;
+        }
+        for (std::size_t index = 0; index < row.settings.size(); ++index) {
+          const int card_x = static_cast<int>(std::round(
+              18.0F + static_cast<float>(index) * kSettingsStride - current_offset));
+          if (card_x >= kWidth - 18) break;
+          if (card_x + 194 <= 18) continue;
+          const SDL_Rect card{card_x, card_y, 194, card_height};
+          const bool selected = focused_row && index == focus;
+          const bool enabled = row.settings[index] == "BIG MODE" && dashboard.big_mode();
+          draw_tile_shadow(renderer, card);
+          fill_rect(renderer, card, selected ? kPanelFocused
+                                             : (enabled ? Color{255, 239, 188, 240}
+                                                        : kPanel));
+          if (selected) outline_rect(renderer, card, 4, kFocus);
+          else if (enabled) outline_rect(renderer, card, 3, kHoney);
+          if (row.settings[index] == "PROFILE") {
+            constexpr std::string_view prefix = "builtin:";
+            const auto reference = dashboard.profile_avatar_ref();
+            if (starts_with(reference, prefix)) {
+              if (const auto* avatar = find_built_in_avatar(
+                      reference.substr(prefix.size())); avatar != nullptr) {
+                try {
+                  const SDL_Rect portrait{card.x + 28, card.y + 18,
+                                          card.w - 56, card.h - 36};
+                  static_cast<void>(render_treated_portrait(
+                      renderer, executable_asset("avatars/thumbs/" +
+                                                 std::string(avatar->id) + ".png"),
+                      portrait, selected ? kFocus : kHoney, selected ? 6.0F : 4.0F));
+                } catch (const std::exception&) {
+                }
+              }
+            }
+          } else if (row.settings[index] == "BACKGROUND") {
+            constexpr std::string_view prefix = "builtin:";
+            const auto reference = dashboard.profile_background_ref();
+            if (starts_with(reference, prefix)) {
+              if (const auto* background = find_built_in_background(
+                      reference.substr(prefix.size())); background != nullptr) {
+                const SDL_Rect scene{card.x + 8, card.y + 8,
+                                     card.w - 16, card.h - 16};
+                if (background->flat_color) {
+                  fill_rect(renderer, scene,
+                            {static_cast<std::uint8_t>((background->color_rgb >> 16) & 0xffU),
+                             static_cast<std::uint8_t>((background->color_rgb >> 8) & 0xffU),
+                             static_cast<std::uint8_t>(background->color_rgb & 0xffU), 255});
+                } else if (SDL_Texture* texture = cached_texture(
+                        renderer, executable_asset("backgrounds/" +
+                                                   std::string(background->filename)));
+                    texture != nullptr) {
+                  SDL_RenderCopy(renderer, texture, nullptr, &scene);
+                }
+              }
+            }
+          } else if (row.settings[index] == "BIG MODE") {
+            const Color glyph = dashboard.big_mode() ? kFocus : kMuted;
+            const auto asset = dashboard.big_mode() ? "icons/big-mode.png"
+                                                    : "icons/small-mode.png";
+            if (SDL_Texture* icon = cached_texture(renderer, executable_asset(asset));
+                icon != nullptr) {
+              SDL_SetTextureColorMod(icon, glyph.red, glyph.green, glyph.blue);
+              SDL_SetTextureAlphaMod(icon, glyph.alpha);
+              const SDL_Rect destination{card.x + 45, card.y + 28,
+                                         card.w - 90, card.h - 56};
+              SDL_RenderCopy(renderer, icon, nullptr, &destination);
+            } else {
+              const SDL_Rect screen{card.x + 38, card.y + 38, card.w - 76,
+                                    card.h - 76};
+              outline_rect(renderer, screen, 3, glyph);
+            }
+          } else if (row.settings[index] == "TILE STYLE") {
+            const bool rounded = dashboard.rounded_tiles();
+            draw_interface_icon(renderer, rounded ? "tile-circle" : "tile-square",
+                                {card.x + 46, card.y + 30, 102, 102}, kFocus);
+          } else if (row.settings[index] == "SHADOWS") {
+            const Color glyph = dashboard.tile_shadows() ? kFocus : kMuted;
+            const SDL_Rect sample{card.x + 48, card.y + 42, card.w - 96, card.h - 84};
+            if (dashboard.tile_shadows()) draw_tile_shadow(renderer, sample);
+            fill_rect(renderer, sample, glyph);
+          } else if (row.settings[index] == "MOTION") {
+            draw_motion_toggle_icon(renderer, {card.x, card.y, card.w, card.h},
+                                    dashboard.motion_enabled());
+          } else if (row.settings[index] == "THEME") {
+            if (SDL_Texture* icon = cached_texture(renderer, executable_asset("icons/theme.png"));
+                icon != nullptr) {
+              SDL_SetTextureColorMod(icon, kFocus.red, kFocus.green, kFocus.blue);
+              SDL_SetTextureAlphaMod(icon, 255);
+              const SDL_Rect destination{card.x + 46, card.y + 30, 102, 102};
+              SDL_RenderCopy(renderer, icon, nullptr, &destination);
+            }
+          } else if (row.settings[index] == "ACCENT") {
+            const Color accent{static_cast<std::uint8_t>((dashboard.accent_rgb() >> 16) & 0xffU),
+                               static_cast<std::uint8_t>((dashboard.accent_rgb() >> 8) & 0xffU),
+                               static_cast<std::uint8_t>(dashboard.accent_rgb() & 0xffU)};
+            if (SDL_Texture* icon = cached_texture(renderer, executable_asset("icons/accent.png"));
+                icon != nullptr) {
+              SDL_SetTextureColorMod(icon, accent.red, accent.green, accent.blue);
+              SDL_SetTextureAlphaMod(icon, 255);
+              const SDL_Rect destination{card.x + 46, card.y + 30, 102, 102};
+              SDL_RenderCopy(renderer, icon, nullptr, &destination);
+            }
+          } else {
+            draw_centered_text(renderer, row.settings[index], card.x + card.w / 2,
+                               card.y + 68, 2, kText);
+          }
+        }
+      }
+    }
+    // The preview sits after two normal row slots. In Big Mode a game rail
+    // consumes both slots, but stats/platform/settings consume one each. This
+    // prevents the preview label from duplicating and drawing over the second
+    // visible small rail.
+    std::size_t preview_index = first;
+    int consumed_slots = 0;
+    while (preview_index < rows.size() && consumed_slots < 2) {
+      consumed_slots += big_mode && !rows[preview_index].games.empty() ? 2 : 1;
+      ++preview_index;
+    }
+    if (preview_index < rows.size()) {
+      const bool preview_follows_game =
+          big_mode && !rows[first].games.empty();
+      draw_dashboard_row_chip(renderer, rows[preview_index].kind,
+                              preview_follows_game ? 430 : 448);
+    }
+  }
+  if (!dashboard.notice().empty()) {
+    const SDL_Rect notice{180, 442, 280, 30};
+    fill_rect(renderer, notice, {255, 244, 196, 236});
+    draw_centered_text(renderer, dashboard.notice(), kWidth / 2, 450, 1, kFocus);
+  }
+  present_frame(renderer);
+}
+
 void render_profile_archive(SDL_Renderer* renderer,
                             const ProfileArchivePresentation& archive) {
   render_storybook_background(renderer);
 
-  draw_heading_panel(renderer, {82, 16, 476, 78}, archive.title(),
-                     archive.description());
+  draw_centered_text(renderer, archive.title(), kWidth / 2, 30, 3, kText);
 
   const auto choices = archive.choices();
   constexpr std::size_t visible_count = 6;
@@ -915,20 +2006,180 @@ void render_profile_archive(SDL_Renderer* renderer,
                        414, 1,
                        archive.notice_is_error() ? kFocus : kText);
   }
-  draw_footer(renderer, "ARROWS MOVE   A SELECT   B BACK");
   present_frame(renderer);
 }
 
 void render_profile_avatars(
     SDL_Renderer* renderer, const ProfileAvatarPresentation& presentation,
     const std::filesystem::path& built_in_avatar_root) {
-  render_storybook_background(renderer);
+  const auto render_configured_background = [&] {
+    const auto* profile = presentation.selected_profile();
+    constexpr std::string_view prefix = "builtin:";
+    if (profile != nullptr && starts_with(profile->background_ref, prefix)) {
+      if (const auto* background = find_built_in_background(
+              std::string_view(profile->background_ref).substr(prefix.size()));
+          background != nullptr) {
+        if (background->flat_color) {
+          SDL_SetRenderDrawColor(renderer,
+              static_cast<std::uint8_t>((background->color_rgb >> 16) & 0xffU),
+              static_cast<std::uint8_t>((background->color_rgb >> 8) & 0xffU),
+              static_cast<std::uint8_t>(background->color_rgb & 0xffU), 255);
+          SDL_RenderClear(renderer);
+          return;
+        }
+        if (SDL_Texture* texture = cached_texture(
+                renderer, executable_asset("backgrounds/" +
+                    std::string(background->filename))); texture != nullptr) {
+          const SDL_Rect canvas{0, 0, kWidth, kHeight};
+          SDL_RenderCopy(renderer, texture, nullptr, &canvas);
+          return;
+        }
+      }
+    }
+    render_storybook_background(renderer);
+  };
+  if (presentation.stage() == ProfileAvatarStage::Accent) {
+    constexpr std::array<Color, 30> accents{{
+        {229,117,87},{240,126,72},{240,167,76},{228,204,85},{191,203,89},
+        {141,190,91},{82,182,108},{82,182,161},{78,182,191},{85,166,217},
+        {77,130,214},{105,118,216},{138,120,214},{155,120,208},{184,117,196},
+        {210,116,172},{216,111,135},{200,93,93},{168,78,85},{129,75,86},
+        {245,241,230},{221,213,199},{191,195,200},{147,155,165},{112,121,133},
+        {66,72,80},{45,50,57},{255,255,255},{18,22,28},{142,110,77}}};
+    render_configured_background();
+    const Color selected = accents[presentation.focus_index()];
+    fill_rect(renderer, {84, 26, 472, 150}, kPanel);
+    outline_rect(renderer, {106, 48, 428, 106}, 6, selected);
+    fill_rect(renderer, {128, 76, 384, 52}, kPanelFocused);
+    outline_rect(renderer, {128, 76, 384, 52}, 4, selected);
+    constexpr std::size_t columns = 10;
+    const auto focus = presentation.focus_index();
+    for (std::size_t index = 0; index < accents.size(); ++index) {
+      const int column = static_cast<int>(index % columns);
+      const int row = static_cast<int>(index / columns);
+      const SDL_Rect tile{35 + column * 58, 220 + row * 72, 46, 56};
+      fill_rect(renderer, tile, accents[index]);
+      if (index == focus) outline_rect(renderer, tile, 5, kText);
+    }
+    present_frame(renderer);
+    return;
+  }
+  if (presentation.stage() == ProfileAvatarStage::Background) {
+    const auto backgrounds = presentation.backgrounds();
+    if (!backgrounds.empty()) {
+      const auto& background = backgrounds[presentation.focus_index()];
+      if (background.flat_color) {
+        SDL_SetRenderDrawColor(
+            renderer, static_cast<std::uint8_t>((background.color_rgb >> 16) & 0xffU),
+            static_cast<std::uint8_t>((background.color_rgb >> 8) & 0xffU),
+            static_cast<std::uint8_t>(background.color_rgb & 0xffU), 255);
+        SDL_RenderClear(renderer);
+      } else if (SDL_Texture* texture = cached_texture(
+                     renderer, executable_asset("backgrounds/" +
+                                                std::string(background.filename)));
+                 texture != nullptr) {
+        const SDL_Rect canvas{0, 0, kWidth, kHeight};
+        SDL_RenderCopy(renderer, texture, nullptr, &canvas);
+      }
 
-  fill_rect(renderer, {82, 14, 476, 72}, {255, 250, 231, 238});
-  draw_centered_text(renderer, "PROFILE APPEARANCE", kWidth / 2, 24, 4, kText);
+      // The focused choice owns the full screen; tiles are only the picker.
+      fill_rect(renderer, {0, 232, kWidth, kHeight - 232}, {12, 25, 35, 132});
+      constexpr std::size_t row_count = 2;
+      constexpr std::size_t visible_columns = 4;
+      const std::size_t total = backgrounds.size();
+      const std::size_t column_count = (total + row_count - 1U) / row_count;
+      const std::size_t focus = presentation.focus_index();
+      const std::size_t first_column = presentation.background_first_column();
+      for (std::size_t visible_column = 0; visible_column < visible_columns;
+           ++visible_column) {
+        const auto column = first_column + visible_column;
+        if (column >= column_count) break;
+        for (std::size_t row = 0; row < row_count; ++row) {
+          const std::size_t index = column * row_count + row;
+          if (index >= total) continue;
+          const auto& choice = backgrounds[index];
+          const bool selected = index == focus;
+          const SDL_Rect tile{50 + static_cast<int>(visible_column) * 138,
+                              250 + static_cast<int>(row) * 108, 128, 92};
+          const SDL_Rect art = tile;
+          if (choice.flat_color) {
+            fill_rect(renderer, art,
+                      {static_cast<std::uint8_t>((choice.color_rgb >> 16) & 0xffU),
+                       static_cast<std::uint8_t>((choice.color_rgb >> 8) & 0xffU),
+                       static_cast<std::uint8_t>(choice.color_rgb & 0xffU), 255});
+          } else if (SDL_Texture* texture = cached_texture(
+                         renderer, executable_asset("backgrounds/" +
+                                                    std::string(choice.filename)));
+                     texture != nullptr) {
+            // Match flat-colour choices: every picker tile uses the selected
+            // tile style, rather than letting image previews retain square
+            // corners behind the focus outline.
+            render_rounded_artwork(renderer, texture, art, gRoundedTiles ? 14 : 0);
+          }
+          if (selected) outline_rect(renderer, tile, 5, kFocus);
+        }
+      }
+      const bool has_previous = first_column > 0;
+      const bool has_next = first_column + visible_columns < column_count;
+      draw_interface_icon(renderer, "arrow-left", {14, 326, 32, 32},
+                          has_previous ? kText : Color{kMuted.red, kMuted.green, kMuted.blue, 82});
+      draw_interface_icon(renderer, "arrow-right", {594, 326, 32, 32},
+                          has_next ? kText : Color{kMuted.red, kMuted.green, kMuted.blue, 82});
+    }
+    present_frame(renderer);
+    return;
+  }
+
+  if (presentation.stage() == ProfileAvatarStage::Avatar) {
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+    const auto avatars = presentation.avatars();
+    const std::size_t total = avatars.size() +
+                              (presentation.custom_image_available() ? 1U : 0U);
+    if (total != 0) {
+      constexpr std::size_t row_count = 3;
+      const std::size_t column_count = (total + row_count - 1U) / row_count;
+      const std::size_t focus = presentation.focus_index();
+      const std::size_t first_column = presentation.avatar_first_column();
+      for (std::size_t visible_column = 0; visible_column < 3; ++visible_column) {
+        const auto column = first_column + visible_column;
+        if (column >= column_count) break;
+        for (std::size_t row = 0; row < row_count; ++row) {
+          const std::size_t index = column * row_count + row;
+          if (index >= total) continue;
+          const bool selected = index == focus;
+          const int size = selected ? 118 : 98;
+          const int center_x = 136 + static_cast<int>(visible_column) * 184;
+          const int center_y = 92 + static_cast<int>(row) * 150;
+          const SDL_Rect cell{center_x - size / 2, center_y - size / 2,
+                              size, size};
+          if (index < avatars.size()) {
+            try {
+              static_cast<void>(render_treated_portrait(
+                  renderer,
+                  built_in_avatar_thumbnail_path(built_in_avatar_root,
+                                                 avatars[index].id),
+                  cell, selected ? kFocus : Color{255, 250, 231},
+                  selected ? 6.0F : 3.0F));
+            } catch (const std::exception&) {
+              fill_rect(renderer, cell, kPanel);
+            }
+          } else {
+            fill_rect(renderer, cell, kPanel);
+            draw_centered_text(renderer, "+", center_x, center_y - 28, 8,
+                               selected ? kFocus : kMuted);
+          }
+        }
+      }
+    }
+    draw_scroll_right_hint(renderer);
+    present_frame(renderer);
+    return;
+  }
+
+  render_configured_background();
+
   if (presentation.stage() == ProfileAvatarStage::Profile) {
-    draw_centered_text(renderer, "CHOOSE A PROFILE TO CUSTOMIZE", kWidth / 2,
-                       70, 1, kMuted);
     const auto profiles = presentation.profiles();
     for (std::size_t index = 0; index < profiles.size(); ++index) {
       const SDL_Rect row{92, 116 + static_cast<int>(index) * 62, 456, 48};
@@ -944,11 +2195,6 @@ void render_profile_avatars(
                 438, row.y + 17, 1, kMuted);
     }
   } else if (presentation.stage() == ProfileAvatarStage::Appearance) {
-    const auto* profile = presentation.selected_profile();
-    draw_centered_text(renderer,
-                       profile == nullptr ? "WHAT WOULD YOU LIKE TO CHANGE?"
-                                          : "CUSTOMIZE " + profile->display_name,
-                       kWidth / 2, 74, 2, kMuted);
     constexpr std::array<std::string_view, 2> choices{
         "PROFILE IMAGE", "HOME BACKGROUND"};
     for (std::size_t index = 0; index < choices.size(); ++index) {
@@ -961,45 +2207,7 @@ void render_profile_avatars(
       draw_centered_text(renderer, choices[index], card.x + card.w / 2,
                          card.y + 132, 2, kText);
     }
-  } else if (presentation.stage() == ProfileAvatarStage::Background) {
-    const auto* profile = presentation.selected_profile();
-    draw_centered_text(renderer,
-                       profile == nullptr ? "CHOOSE A HOME BACKGROUND"
-                                          : "BACKGROUND FOR " + profile->display_name,
-                       kWidth / 2, 68, 2, kMuted);
-    const auto backgrounds = presentation.backgrounds();
-    for (std::size_t index = 0; index < backgrounds.size(); ++index) {
-      const int column = static_cast<int>(index % 2U);
-      const int row = static_cast<int>(index / 2U);
-      const SDL_Rect cell{72 + column * 258, 108 + row * 142, 238, 124};
-      fill_rect(renderer, cell,
-                index == presentation.focus_index() ? kPanelFocused : kPanel);
-      SDL_Texture* texture = cached_texture(
-          renderer, executable_asset("backgrounds/" +
-                                     std::string(backgrounds[index].filename)));
-      if (texture != nullptr) {
-        const SDL_Rect image{cell.x + 6, cell.y + 6, cell.w - 12, 88};
-        SDL_RenderCopy(renderer, texture, nullptr, &image);
-      }
-      if (index == presentation.focus_index()) outline_rect(renderer, cell, 4, kFocus);
-      draw_centered_text(renderer, backgrounds[index].display_name,
-                         cell.x + cell.w / 2, cell.y + 98, 1, kText);
-    }
-    const SDL_Rect header{82, 16, 476, 76};
-    fill_rect(renderer, header, kPanel);
-    draw_centered_text(renderer, "PROFILE APPEARANCE", kWidth / 2, 24, 4, kText);
-    draw_centered_text(renderer,
-                       profile == nullptr ? "CHOOSE A HOME BACKGROUND"
-                                          : "BACKGROUND FOR " + profile->display_name,
-                       kWidth / 2, 68, 2, kMuted);
   } else {
-    const auto* profile = presentation.selected_profile();
-    draw_centered_text(
-        renderer,
-        profile == nullptr ? "CHOOSE A PORTRAIT"
-                           : "PORTRAIT FOR " + profile->display_name,
-        kWidth / 2, 68, 2, kMuted);
-
     constexpr int cell_size = 112;
     constexpr int gap_x = 20;
     constexpr int gap_y = 20;
@@ -1058,15 +2266,13 @@ void render_profile_avatars(
     draw_centered_text(renderer, presentation.notice(), kWidth / 2, 430, 1,
                        kFocus);
   }
-  draw_footer(renderer, "ARROWS MOVE   A SELECT   B BACK");
   present_frame(renderer);
 }
 
 void render_profile_image_crop(SDL_Renderer* renderer,
                                const ProfileImageCropPresentation& crop) {
   render_storybook_background(renderer);
-  draw_heading_panel(renderer, {82, 16, 476, 78}, "CROP PROFILE PORTRAIT",
-                     "MOVE THE PHOTO INSIDE THE SQUARE");
+  draw_centered_text(renderer, "CROP", kWidth / 2, 28, 3, kText);
 
   const auto pixels = crop.preview_rgba();
   SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32,
@@ -1087,15 +2293,53 @@ void render_profile_image_crop(SDL_Renderer* renderer,
     draw_centered_text(renderer, crop.error_message().substr(0, 68), kWidth / 2, 414, 1,
                        kFocus);
   }
-  draw_footer(renderer, "ARROWS MOVE   L R ZOOM   A USE   B CANCEL");
   present_frame(renderer);
 }
 
 void render_parent_pin(SDL_Renderer* renderer,
                        const ParentPinPresentation& pin) {
-  render_storybook_background(renderer);
-  draw_heading_panel(renderer, {82, 12, 476, 70}, pin.title(),
-                     pin.description());
+  // PIN entry is deliberately neutral: this is a focused security flow, not
+  // another dashboard card over a potentially busy profile illustration.
+  set_color(renderer, kBackground);
+  SDL_RenderClear(renderer);
+  const bool combo = pin.uses_button_combo();
+  draw_centered_text(renderer, pin.title(), kWidth / 2, 54, 4, kText);
+  if (!combo) draw_centered_text(renderer, pin.description(), kWidth / 2, 98, 1, kMuted);
+
+  if (pin.is_confirmation()) {
+    const SDL_Rect panel{126, 132, 388, 174};
+    fill_rect(renderer, panel, kPanel);
+    outline_rect(renderer, panel, 4, kFocus);
+    draw_centered_text(renderer, "PIN SAVED", kWidth / 2, 182, 3, kFocus);
+    draw_centered_text(renderer, "PARENT PROFILE PROTECTED", kWidth / 2, 236, 1, kMuted);
+    present_frame(renderer);
+    return;
+  }
+  if (pin.uses_button_combo()) {
+    if (pin.ready_to_save()) {
+      draw_centered_text(renderer, "COMBINATION READY", kWidth / 2, 206, 3, kFocus);
+      draw_centered_text(renderer, "A SAVE", kWidth / 2, 284, 2, kText);
+      draw_centered_text(renderer, "B CANCEL", kWidth / 2, 322, 1, kMuted);
+      present_frame(renderer);
+      return;
+    }
+    const auto count = pin.entered_digits();
+    for (int index = 0; index < 4; ++index) {
+      const SDL_Rect box{164 + index * 82, 142, 62, 70};
+      fill_rect(renderer, box, kPanel);
+      outline_rect(renderer, box, 3, index < static_cast<int>(count) ? kFocus : kPanelFocused);
+      if (index < static_cast<int>(count)) draw_centered_text(renderer, "*", box.x + box.w / 2, 157, 4, kFocus);
+    }
+    // Keep the countdown quiet while someone is actively entering a combo.
+    // The final half maps across the entire bar to make the actual deadline clear.
+    const float remaining = pin.expiry_fraction();
+    const float visible_fraction = remaining >= 0.5F ? 1.0F : remaining * 2.0F;
+    fill_rect(renderer, {0, kHeight - 5,
+                         static_cast<int>(kWidth * visible_fraction), 5}, kFocus);
+    if (!pin.error_message().empty()) draw_centered_text(renderer, pin.error_message(), kWidth / 2, 370, 1, kFocus);
+    present_frame(renderer);
+    return;
+  }
 
   const SDL_Rect pin_field{196, 88, 248, 48};
   fill_rect(renderer, pin_field, kPanel);

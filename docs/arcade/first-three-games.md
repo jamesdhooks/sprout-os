@@ -1,186 +1,94 @@
 # First Three Arcade Games
 
-These games are the committed consumers for the reusable engine foundation. “Complete” means the package, engine features, content, assets, progression, persistence, tests, and Windows play evidence below all exist; a runnable mechanic alone is still a prototype.
+Mouse & Cheese Maze, Blocks & Buttons, and Starlight Snake are the committed
+consumers of Sprout Runtime v1. They share runtime services and design language,
+not game rules or copied implementation layers. Native and PICO-8 editions are
+standalone implementations of the same game concepts.
 
-## 1. Mouse & Cheese Maze
+## Mouse & Cheese Maze
 
-### Player experience
+The native edition preserves its deterministic full-screen hedge-and-dirt maze
+renderer, irregular connected footprints, seeded start and goal variation,
+animated half-route hint, progressive density, and per-profile progress. The
+mouse is bottom-centred with directional idle/run animation and deliberate tail
+overscan; the cheese uses a readable triangular profile and sparkle animation.
+Reaching it presents a game-specific pop-and-bob `Cheese!` card before the next
+maze loads automatically.
 
-- The whole maze remains visible and fills the 320×240 logical canvas, apart
-  from narrow symmetric side gutters required by the odd-cell maze grid.
-- D-pad moves the mouse one tile per press; held input interpolates continuously
-  between tile centers at a fixed cadence without an initial repeat pause.
-- Reaching the cheese completes the level with a short readable celebration,
-  then advances automatically. Primary action may shorten—but not eliminate—the
-  celebration; secondary action asks the host to return.
-- There are no enemies, lives, timers, move limits, or required hints.
+The native campaign retains its existing progression. The PICO-8 edition ships
+a separate 100-level deterministic campaign. Its renderer uses two deliberate
+sprite families: 12x12 for the large tier and 9x9 source art for later tiers.
+PICO level seeds and metrics remain offline-validated; campaign search never
+runs on the device.
 
-### Content and progression
+Both editions provide:
 
-Use seeded randomized depth-first generation with optional loop insertion. BFS selects a cheese cell within the requested route-distance band. Generation records route length, board dimensions, branches, junctions, dead ends, wrong-branch depth, loop count, generator version, and seed.
+- smooth held-direction movement without an initial platform repeat delay;
+- A for a bounded BFS hint whose dots fade with distance;
+- B/back for host return during play;
+- a three-second, cancellable B hold on the title to reset progress;
+- reset input release and fresh-press requirements;
+- deterministic QA level jumps and capture states;
+- profile-scoped current-level and completion persistence.
 
-The Windows package currently implements deterministic depth-first mazes,
-farthest-reachable BFS goal placement, a persisted campaign seed and current
-level, varied deterministic start rooms and initial facing, automatic next-
-level flow, and progressive board-density bands. Cheese placement is measured
-from the selected start, so each level retains a long traversable route. Each
-band maps its odd-dimension grid plus a one-cell perimeter directly onto the
-entire 320x240 play area. X and Y cell extents are derived independently, so
-the perimeter is exactly one grid cell on every side without residual gutters.
-That perimeter uses a quiet forest-ground color and separates playable tiles
-from the display edge.
+The shared game-design record is [Mouse & Cheese](../../game-design/mouse-cheese/README.md).
 
-Mazes with at most 63 logical rooms retain a full rectangular footprint so the
-early campaign remains simple. Larger mazes deterministically grow a connected
-playable footprint from their level seed before carving passages. The omitted
-share begins at roughly four percent and reaches 22 percent at the maximum
-grid, producing irregular edges and occasional interior forest pockets without
-disconnecting any playable room. These omitted cells are intentional terrain
-inside the fixed screen grid; they do not alter the exact one-cell display-edge
-perimeter. Once either cell axis becomes smaller than the 16-pixel indicator,
-the generator excludes every logical room whose complete wall envelope would
-overlap the indicator plus a one-current-cell margin on its right and bottom.
-The reservation therefore expands across more logical rooms as cells become
-smaller, leaving visible background around the UI instead of hiding a playable
-passage or hedge beneath it.
+## Blocks & Buttons
 
-A 28-pixel-high, content-width indicator at the top left shows only the numeric
-level and remains independent of maze density. It uses the shared ExtraBold
-display face inside a fully rounded, layered storybook chip with a soft shadow,
-golden rim, warm cream center, and plum numerals. Early levels therefore use
-very few large, richly resampled cells; later levels add cells until reaching
-the densest grid.
-Mouse and goal artwork scale as a proportion of the current cell and remain
-centered on it. Mouse coverage is calculated from its body silhouette rather
-than its tail-inclusive extent or transparent 256px atlas cell. Its complete
-head-to-rump silhouette remains within the cell while only the tail may cross a
-boundary. Rendering uses a
-floor pass, actor pass, and masked wall pass so crossed walls correctly occlude
-the mouse. Both actors visibly grow with early-level tiles and shrink with later
-density bands.
+Move the workshop robot through an 8x8 room and push every crate onto a
+red button. A moves one step of history backward during active play. A blocked
+crate on a precomputed dead square produces the calm `Crate stuck` retry state;
+this is not limited to visually obvious corners.
 
-Floor and wall cells may differ slightly in width and height to satisfy the
-exact screen mapping. Actor sprites retain uniform scale based on the smaller
-cell axis and therefore never stretch.
+Both editions consume the same tracked 30-room campaign. The offline workflow
+starts from solved states, applies legal reverse pulls, proves each result with
+a forward push solver, rejects duplicates and trivial layouts, and records
+minimum pushes, direction changes, crate dependencies, dead squares, solution
+signatures, and layout hashes. Runtime code consumes compact validated rooms
+and never executes campaign search.
 
-Footprint generation, passage carving, start selection, and goal placement all
-share the same deterministic level PRNG. Only active footprint rooms are valid
-start candidates; breadth-first goal and hint searches traverse only carved
-floor cells. Omitted cells submit neither floor nor terrain sprites, allowing
-the quiet forest background color to fill the unused space. They remain
-impassable. Shared wall-junction cells are resolved from their cardinal hedge
-neighbours when the render tile buffer is built, keeping the green boundary
-continuous without filling the space beyond it.
+Progress persists the campaign schema, room, robot and crate positions, move
+and push counts, and completion. Rooms 1-8 introduce one-crate positioning;
+9-20 add two-crate ordering; 21-30 use two or three crates with deeper planning
+and safe deadlock temptations. A workshop celebration advances automatically;
+the final card records campaign completion and returns to the title flow.
 
-Carved passages use the warm dirt texture rather than the pale sand texture.
-This gives the white mouse a strong value contrast at every density while the
-dark-green background remains visually distinct from both paths and hedges.
+Native presentation uses a 480x480, 60-pixel-cell arena with 80-pixel workshop
+scenery columns and strict orthographic top-down props. The PICO cart uses
+16-pixel collision and artwork cells for its robot, walls, crates, and buttons;
+east is a runtime mirror of west.
 
-| Levels | Maze grid | Cell width | Cell height |
-| --- | --- | --- | --- |
-| 1 | 5x3 | 45.7px | 48.0px |
-| 2-3 | 7x5 | 35.6px | 34.3px |
-| 4-6 | 9x7 | 29.1px | 26.7px |
-| 7-10 | 11x9 | 24.6px | 21.8px |
-| 11-15 | 13x9 | 21.3px | 21.8px |
-| 16-24 | 15x11 | 18.8px | 18.5px |
-| 25-39 | 17x13 | 16.8px | 16.0px |
-| 40-59 | 19x15 | 15.2px | 14.1px |
-| 60-89 | 21x15 | 13.9px | 14.1px |
-| 90-129 | 23x17 | 12.8px | 12.6px |
-| 130-219 | 25x19 to 27x19 | 11.9-11.0px | 11.4px |
-| 220-349 | 29x21 to 31x23 | 10.3-9.7px | 10.4-9.6px |
-| 350-509 | 33x23 to 35x25 | 9.1-8.6px | 9.6-8.9px |
-| 510-689 | 37x27 to 39x27 | 8.2-7.8px | 8.3px |
-| 690-839 | 41x29 to 43x31 | 7.4-7.1px | 7.7-7.3px |
-| 840-949 | 45x31 to 47x33 | 6.8-6.5px | 7.3-6.9px |
-| 950-979 | 49x35 | 6.3px | 6.5px |
-| 980-1000 | 53x39 | 5.8px | 5.9px |
+The shared game-design record and generation thresholds are in
+[Blocks & Buttons](../../game-design/blocks-buttons/README.md).
 
-The curated 1,000-layout campaign, loop insertion, and exported metrics remain
-planned content-pipeline work.
+## Starlight Snake
 
-An undisclosed hint is available through `H` on the Windows host or the
-Start+A+Left inspection chord. The Windows key synthesizes that same portable
-chord rather than occupying the secondary action. Secondary/B remains reserved
-by the host for returning to Sprout during gameplay. The hint solves from the
-mouse's current cell to the cheese using breadth-first search and draws only
-the first half of that route, capped at 12 cells. Animated storybook breadcrumb
-dots fade with distance and disappear after three seconds; requesting another
-hint recomputes the route from the current position.
+Starlight Snake offers two modes in both editions:
 
-The title menu reads the persisted current level through the optional native
-title-status contract. Holding the secondary action for three seconds fills a
-circular progress indicator, resets solved count and current level, and updates
-the menu to `Level 1`. Releasing early cancels the reset without modifying
-storage.
+- **Round:** collect 12 fruit for an explicit win;
+- **Endless:** continue until a wall or body collision and retain a separate
+  best score.
 
-The target campaign contains 1,000 resolved layouts with seed provenance.
-Early levels use large tiles and short routes; later bands increase board size
-and navigation complexity while preserving legibility. Daily and endless modes
-will generate from a supplied seed using the same versioned generator.
+Left/right selects a mode on the title, A starts or continues, and a deliberate
+three-second B hold resets best scores and completed-round counts. Active runs
+are session-scoped. Persisted data contains the schema, selected mode,
+mode-specific best scores, and completed rounds.
 
-A hidden, edge-triggered QA chord can jump by 1, 10, or 100 levels and caps at
-the target campaign boundary. It uses only portable runtime actions; it is a
-development inspection aid, not player progression.
+The snake uses four facing heads, straight bodies, deterministic rotated
+corners, four tapered tails, and stable connector contracts. Queued legal turns,
+free-cell fruit placement, speed stages, eat bursts, readable mode-specific
+win/fail cards, and original cues are part of both editions. Native play fills
+a 20x15 grid at 32 pixels per cell with backed overlay chips; PICO play uses a
+14x14 garden inside a one-cell boundary.
 
-### Completion evidence
-
-- The generator is deterministic and connectivity is proven.
-- Campaign export contains 1,000 unique accepted layouts with a monotonic broad difficulty curve and no unreadable tile size.
-- Every resolved layout is replayed by an automated validator.
-- Progress, current level, completed levels, and selected mode resume per profile.
-- At least three achievements exercise structured events without being required for progression.
-- Windows keyboard and controller checks cover movement, completion, next level, restart after resume, and return.
-
-## 2. Blocks & Buttons
-
-### Player experience
-
-- D-pad moves the player and pushes one crate when the destination is free.
-- All crates on buttons completes the room.
-- A provably deadlocked state shows a calm retry state; primary action restarts instantly.
-- Secondary action asks the host to return.
-- V1 has no undo and no move limit.
-
-### Content and progression
-
-Generate offline from solved states using legal reverse pulls, then solve forward. Reject unsolvable, trivial, duplicate, visually poor, or misleadingly equivalent rooms. Store resolved layouts and solution-derived metrics; the runtime never runs the full campaign solver.
-
-The shipped campaign contains 1,000 curated rooms. Early levels use one crate, middle bands introduce two, and later bands use at most three. Difficulty parameters include minimum pushes, direction changes, crate-order dependencies, player repositioning, plausible push count, deadlock temptations, and board dimensions.
-
-### Completion evidence
-
-- The offline solver proves every shipped room and records minimum pushes.
-- Static and dynamic deadlock checks agree with solver fixtures.
-- Campaign export contains 1,000 unique rooms with solution/signature deduplication and reviewed progression samples.
-- Runtime state resumes player, crates, room, move/push counts, and completion state per profile.
-- Automated playthrough fixtures cover legal pushes, blocked pushes, win, deadlock, retry, save, and restore.
-- Windows keyboard and controller checks cover the complete room lifecycle and return.
-
-## 3. Snake
-
-### Player experience
-
-- D-pad queues a legal direction; the snake advances at fixed deterministic intervals.
-- Fruit always spawns on a free cell.
-- Wall or body collision ends the run; primary action restarts immediately.
-- Secondary action asks the host to return.
-- The board, score, seed/mode label, and end state remain readable at 320×240.
-
-### Modes and progression
-
-V1 includes standard endless mode and a seeded daily run. The difficulty curve shortens the movement interval after configured fruit thresholds and records the parameters used for each run. A relaxed wraparound variant and obstacle mode remain later additions unless testing shows they are needed for accessibility.
-
-High scores are stored per profile and mode. A resumable run stores the seed, RNG stream state, snake cells, direction queue, fruit, score, tick phase, difficulty stage, and terminal state. Replaying the same seed and action frames must yield the same snapshots and fruit sequence.
-
-### Completion evidence
-
-- Shared engine text, sprite/tile rendering, input edges, state flow, storage, and checkpoint APIs replace the one-off equivalents in the prototype.
-- Tests cover deterministic fruit sequences, full-board behavior, queued turns, self/wall collision, speed thresholds, daily seed replay, high scores, save/restore, achievements, and return.
-- Minimal original pixel art replaces rectangle-only final presentation while retaining a low-cost fallback renderer for tests.
-- Windows keyboard and controller checks cover play, restart, daily mode, suspend/resume, and return.
+Daily mode and active-run restoration are deferred. The shared design record is
+[Starlight Snake](../../game-design/snake/README.md).
 
 ## Shared definition of done
 
-All three packages use the same engine lifecycle, input frame, renderer, asset lookup, text system, difficulty record, profile checkpoint, and event vocabulary. Game-specific generation, solving, rules, and metrics remain outside the runtime host. No package may carry a copied private font renderer, storage codec, or host-integration wrapper.
+Every edition must pass deterministic gameplay tests, package and palette
+validation, title/reset-state checks, representative progression captures, and
+desktop play review. Native packages additionally use shared atlas, mip,
+sampling, SFX, input, persistence, and title-reset services. PICO carts remain
+single-file, budget-valid, independently authored cartridges compatible with
+the licensed desktop runtime and the selected Onion emulator path.

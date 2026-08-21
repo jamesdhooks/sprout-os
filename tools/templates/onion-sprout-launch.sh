@@ -33,9 +33,19 @@ else
   fi
 fi
 if [ "$LOCK_ACQUIRED" -ne 1 ]; then
+  # Onion may race its idle router against the already-running App command.
+  # Returning immediately makes that router queue another copy every second;
+  # wait behind the real owner instead, without ever touching fb0 ourselves.
+  ACTIVE_OWNER="$(cat "$SPROUT_LOCK_DIR/pid" 2>/dev/null || true)"
   printf '%s duplicate-launch-refused owner=%s\n' \
     "$(date +%Y-%m-%dT%H:%M:%S)" \
-    "$(cat "$SPROUT_LOCK_DIR/pid" 2>/dev/null || echo unknown)" >>"$LOG_FILE"
+    "${ACTIVE_OWNER:-unknown}" >>"$LOG_FILE"
+  case "$ACTIVE_OWNER" in
+    ''|*[!0-9]*) exit 0 ;;
+  esac
+  while kill -0 "$ACTIVE_OWNER" 2>/dev/null; do
+    sleep 1
+  done
   exit 0
 fi
 printf '%s\n' "$$" >"$SPROUT_LOCK_DIR/pid"
@@ -45,6 +55,7 @@ export LD_LIBRARY_PATH="$APP_ROOT/lib:/lib:/config/lib:$ONION_RUNTIME_ROOT/lib:$
 export SDL_VIDEODRIVER=mmiyoo
 export SPROUT_DIRECT_FRAMEBUFFER=/dev/fb0
 export SPROUT_CONTAINED=1
+export SPROUT_INPUT_PROBE=1
 export SPROUT_ONION_RUNTIME_ROOT="$ONION_RUNTIME_ROOT"
 export SPROUT_EXIT_MARKER="${SPROUT_EXIT_MARKER:-/tmp/sprout-authorized-exit-$$}"
 export SDL_AUDIODRIVER=mmiyoo
@@ -125,6 +136,16 @@ while :; do
   fi
   if [ "$STATUS" -eq 75 ]; then
     exit 75
+  fi
+  if [ "$STATUS" -eq 74 ]; then
+    # Sprout has flushed its stores and released SDL. Suspending here ensures
+    # Onion's framebuffer owner is resumed only after the device wakes.
+    sync
+    SPROUT_SUSPEND_PATH="${SPROUT_SUSPEND_PATH:-/sys/power/state}"
+    if [ -w "$SPROUT_SUSPEND_PATH" ]; then
+      echo mem >"$SPROUT_SUSPEND_PATH" 2>/dev/null || true
+    fi
+    exit 0
   fi
 
   printf '%s unapproved-exit-restarting status=%s\n' \

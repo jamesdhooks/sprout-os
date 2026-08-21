@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -12,6 +14,16 @@ using sprout::launcher::EventType;
 using sprout::launcher::LauncherState;
 using sprout::launcher::ProfileRole;
 using sprout::launcher::Screen;
+
+std::vector<sprout::launcher::Profile> make_profiles(std::size_t count) {
+  std::vector<sprout::launcher::Profile> profiles;
+  for (std::size_t index = 0; index < count; ++index) {
+    profiles.push_back({"profile-" + std::to_string(index),
+                        "Profile " + std::to_string(index),
+                        ProfileRole::Child, 0, "builtin:sprout"});
+  }
+  return profiles;
+}
 
 void expect(bool condition, std::string_view message) {
   if (!condition) {
@@ -34,6 +46,28 @@ void profile_navigation_wraps() {
   expect(state.focus_index() == 0, "right should wrap to the first profile");
 }
 
+void profile_selector_defaults_to_last_accessed_profile() {
+  auto profiles = make_profiles(4);
+  profiles[3].last_accessed = true;
+  LauncherState state(std::move(profiles));
+  expect(state.focus_index() == 3,
+         "profile selector should focus the last accessed profile on launch");
+}
+
+void profile_vertical_navigation_moves_the_carousel() {
+  LauncherState state(make_profiles(6));
+  (void)state.handle(Action::Right);
+  (void)state.handle(Action::Down);
+  expect(state.focus_index() == 2,
+         "down should advance the single profile carousel");
+  (void)state.handle(Action::Up);
+  expect(state.focus_index() == 1,
+         "up should reverse the single profile carousel");
+  (void)state.handle(Action::Up);
+  expect(state.focus_index() == 0,
+         "up should wrap the carousel backwards");
+}
+
 void child_profile_opens_child_home() {
   LauncherState state(sprout::launcher::make_demo_household());
   const auto event = state.handle(Action::Confirm);
@@ -41,12 +75,14 @@ void child_profile_opens_child_home() {
   expect(event->type == EventType::ProfileActivated, "selection should activate a profile");
   expect(event->profile_id == "child-alex", "child fixture ID should be preserved");
   expect(state.screen() == Screen::ChildHome, "child should open child home");
-  expect(state.menu_items().size() == 2,
-         "child Start menu should expose two visual appearance cards");
-  expect(state.menu_items()[0] == "Profile Picture",
-         "left child card should edit the active profile picture");
-  expect(state.menu_items()[1] == "Background",
-         "right child card should edit the active background");
+  expect(state.menu_items().size() == 4,
+         "child Start menu should expose one concise role menu");
+  expect(state.menu_items()[0] == "Game Dashboard",
+         "child menu should return to the unified dashboard first");
+  expect(state.menu_items()[1] == "Profile Picture" &&
+             state.menu_items()[2] == "Background" &&
+             state.menu_items()[3] == "Profile Select",
+         "child menu should contain only games, appearance, and profile actions");
 }
 
 void parent_profile_opens_parent_home() {
@@ -56,29 +92,23 @@ void parent_profile_opens_parent_home() {
   expect(event.has_value(), "parent selection should emit an event");
   expect(event->profile_id == "parent-preview", "parent fixture ID should be preserved");
   expect(state.screen() == Screen::ParentHome, "parent should open parent home");
-  expect(state.menu_items().size() == 10, "parent home should expose its focused preview menu");
-  expect(state.menu_items()[3] == "Sprout Arcade",
-         "parent home should expose the local Arcade collection");
-  expect(state.menu_items()[5] == "Profile Settings",
-         "parent home should expose profile image controls");
-  expect(state.menu_items()[7] == "Backup & Restore",
-         "parent home should expose portable profile backup");
-  expect(state.menu_items()[8] == "Lock Parent Access",
-         "parent home should expose explicit manual lock");
+  expect(state.menu_items().size() == 5 &&
+             state.menu_items()[0] == "Game Guide",
+         "parent Start menu should expose one concise role menu");
 }
 
 void home_navigation_and_lifecycle_are_explicit() {
   LauncherState state(sprout::launcher::make_demo_household());
   (void)state.handle(Action::Confirm);
   (void)state.handle(Action::Up);
-  expect(state.focus_index() == 1, "up should wrap on the child card menu");
+  expect(state.focus_index() == 3, "up should wrap on the child Start menu");
 
   (void)state.handle(Action::Down);
   const auto invoked = state.handle(Action::Confirm);
   expect(invoked.has_value(), "menu confirmation should emit an event");
   expect(invoked->type == EventType::MenuItemInvoked, "menu event should identify invocation");
-  expect(invoked->target == "Profile Picture",
-         "child card event should carry its appearance target");
+  expect(invoked->target == "Game Dashboard",
+         "child menu event should carry its game target");
 
   const auto returned = state.handle(Action::Back);
   expect(returned.has_value(), "back should emit a return event");
@@ -113,6 +143,8 @@ int main() {
   try {
     fixture_has_parent_and_child();
     profile_navigation_wraps();
+    profile_selector_defaults_to_last_accessed_profile();
+    profile_vertical_navigation_moves_the_carousel();
     child_profile_opens_child_home();
     parent_profile_opens_parent_home();
     home_navigation_and_lifecycle_are_explicit();

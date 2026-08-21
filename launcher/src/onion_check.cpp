@@ -1,6 +1,4 @@
-#include "sprout/launcher/launcher_state.hpp"
 #include "sprout/launcher/daily_time_policy.hpp"
-#include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/local_library.hpp"
 #include "sprout/launcher/parent_access_store.hpp"
@@ -168,16 +166,6 @@ int main(int argc, char* argv[]) {
       startup_health.mark_ready(restarted.attempt_id);
     }
 
-    sprout::launcher::LauncherState state(
-        sprout::launcher::make_demo_household());
-    (void)state.handle(sprout::launcher::Action::Confirm);
-    sprout::launcher::LibraryPresentation library(
-        sprout::launcher::make_demo_library(),
-        sprout::launcher::LibrarySection::All);
-    const auto launch = library.handle(sprout::launcher::Action::Confirm);
-    if (!launch.has_value() || !launch->launch_target.has_value()) {
-      throw std::runtime_error("Typed launch request check failed");
-    }
 
     std::cout << "onion-baseline=v4.3.1-1@7dfc008b851398dcfe57819519efe5f958c77f65\n";
     std::cout << "toolchain=arm-linux-gnueabihf-gcc-8.3.0@sha256:a8da1021449c80c0ccb75e263f1dfc75b5a004278fefa8a54151e55698a352f4\n";
@@ -190,12 +178,6 @@ int main(int argc, char* argv[]) {
                      hash_finished - hash_started)
                      .count()
               << '\n';
-    const auto& launch_target =
-        std::get<sprout::launcher::EmulatedLaunchTarget>(
-            *launch->launch_target);
-    std::cout << "typed-launch-request=" << launch_target.item_id
-              << '\n';
-
     if (arguments.sd_card_root.has_value()) {
       const auto scan = sprout::launcher::LocalLibraryScanner(
                             *arguments.sd_card_root)

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout Native Game"
+  short_description: "Build games on the reusable native runtime"
+  default_prompt: "Use $sprout-native-game to implement or revise a native Sprout Arcade game."

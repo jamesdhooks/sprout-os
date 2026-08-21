@@ -4,7 +4,7 @@
     "source": "original-project-artwork",
     "license": "GPL-3.0-or-later",
     "generator": "tools/import-sprite-atlases.py",
-    "palette": "sprout-storybook-1"
+    "palette": "mouse-cheese-v1"
   },
   "atlases": [
     {
@@ -21,6 +21,25 @@
       "size": [
         1024,
         1024
+      ],
+      "sampling": "nearest",
+      "mips": [
+        {
+          "image": "assets/rich-character@0.25x.png",
+          "size": [
+            256,
+            256
+          ],
+          "scale": 0.25
+        },
+        {
+          "image": "assets/rich-character@0.5x.png",
+          "size": [
+            512,
+            512
+          ],
+          "scale": 0.5
+        }
       ]
     },
     {
@@ -29,6 +48,25 @@
       "size": [
         512,
         512
+      ],
+      "sampling": "nearest",
+      "mips": [
+        {
+          "image": "assets/rich-world@0.25x.png",
+          "size": [
+            128,
+            128
+          ],
+          "scale": 0.25
+        },
+        {
+          "image": "assets/rich-world@0.5x.png",
+          "size": [
+            256,
+            256
+          ],
+          "scale": 0.5
+        }
       ]
     }
   ],

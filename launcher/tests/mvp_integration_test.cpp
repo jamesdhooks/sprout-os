@@ -1,5 +1,5 @@
 #include "sprout/launcher/daily_time_policy.hpp"
-#include "sprout/launcher/library_presentation.hpp"
+#include "sprout/launcher/game_library_entry.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/local_library.hpp"
 #include "sprout/launcher/onion_launch_adapter.hpp"
@@ -134,15 +134,11 @@ LibraryEntry entry_for(const EmulatedLibraryItem& item, bool favorite,
   };
 }
 
-EmulatedLaunchTarget select_first(std::vector<LibraryEntry> entries,
-                                  LibrarySection section) {
-  LibraryPresentation presentation(std::move(entries), section);
-  const auto selected = presentation.handle(Action::Confirm);
-  expect(selected.has_value() &&
-             selected->type == LibraryPresentationEventType::LaunchRequested &&
-             selected->launch_target.has_value(),
-         "library fixture should produce a typed launch request");
-  return std::get<EmulatedLaunchTarget>(*selected->launch_target);
+EmulatedLaunchTarget select_first(std::vector<LibraryEntry> entries) {
+  expect(!entries.empty(), "fixture should contain a launch target");
+  const auto* target = std::get_if<EmulatedLaunchTarget>(&entries.front().launch_target);
+  expect(target != nullptr, "fixture should use an emulated launch target");
+  return *target;
 }
 
 void complete_host_journey() {
@@ -229,10 +225,7 @@ void complete_host_journey() {
     expect(state.screen() == Screen::ParentHome &&
                !controller.has_pin_prompt(),
            "persisted end-of-day grant should enter parent mode");
-    for (int index = 0; index < 8; ++index) {
-      (void)controller.handle(Action::Down, {1'000, "2026-08-02"});
-    }
-    (void)controller.handle(Action::Confirm, {1'000, "2026-08-02"});
+    controller.lock_and_return_to_profiles();
     expect(state.screen() == Screen::ProfileSelect &&
                !access.is_unlocked(1'000, "2026-08-02"),
            "manual parent lock should revoke the persisted grant immediately");
@@ -261,10 +254,9 @@ void complete_host_journey() {
                                           OnionSystem::SuperNintendo;
                                  });
   const auto gb_target =
-      select_first({entry_for(gb, false, 0)}, LibrarySection::Recent);
+      select_first({entry_for(gb, false, 0)});
   const auto snes_target =
-      select_first({entry_for(snes, true, std::nullopt)},
-                   LibrarySection::Favorites);
+      select_first({entry_for(snes, true, std::nullopt)});
   RecordingProcess process;
   OnionLaunchAdapter adapter(root.path() / "sd", process);
   expect(adapter.launch(gb_target).completed() &&

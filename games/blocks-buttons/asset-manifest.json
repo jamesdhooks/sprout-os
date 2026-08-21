@@ -4,7 +4,7 @@
     "source": "original-procedural-pixel-art",
     "license": "GPL-3.0-or-later",
     "generator": "tools/generate-arcade-assets.py",
-    "palette": "sprout-arcade-1"
+    "palette": "blocks-buttons-v1"
   },
   "atlases": [
     {"id": "main", "image": "assets/sprites.png", "size": [128, 64]}

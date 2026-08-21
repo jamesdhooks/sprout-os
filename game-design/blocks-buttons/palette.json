@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "id": "blocks-buttons-v1",
+  "native": ["#102F5B", "#173B70", "#16579B", "#2584CE", "#39AFCC", "#66768C", "#A9BCC8", "#E4EEF0", "#8F2C36", "#D93932", "#EF654B", "#704327", "#B86B38", "#E4A35B", "#FFC53B", "#F6F0DF"],
+  "pico8": {"standardIndices": [0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 12, 13, 15], "extendedRemaps": {}}
+}

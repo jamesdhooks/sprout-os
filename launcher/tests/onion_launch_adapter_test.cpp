@@ -246,10 +246,12 @@ void test_runtime_handoff_is_atomic_and_shell_safe() {
 
   std::ifstream input(runtime_root / "cmd_to_run.sh", std::ios::binary);
   const std::string command{std::istreambuf_iterator<char>(input), {}};
-  require(command.starts_with("#!/bin/sh\n"),
-          "staged Onion command should be an executable shell script");
-  require(command.find("Family'\\''s Game.gb") != std::string::npos,
-          "single quotes in ROM names must remain one shell argument");
+  require(command.starts_with("LD_PRELOAD=/mnt/SDCARD/miyoo/lib/libpadsp.so "),
+          "staged command must start with Onion's native launch form");
+  require(command.find("Family's Game.gb") != std::string::npos,
+          "apostrophes in ROM names must remain one Onion command argument");
+  require(command.find("\" \"") != std::string::npos,
+          "handoff must use Onion's double-quoted launcher/ROM command shape");
   require(command.find("LD_PRELOAD=/mnt/SDCARD/miyoo/lib/libpadsp.so") !=
               std::string::npos,
           "staged command should preserve Onion's audio preload contract");

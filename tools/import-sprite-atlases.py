@@ -163,7 +163,17 @@ def compile_manifest(config_path: Path) -> dict[str, Any]:
             f"atlas {atlas_id}",
         )
         width, height = atlas_size(source)
-        result["atlases"].append({"id": atlas_id, "image": image_name, "size": [width, height]})
+        output_atlas = {"id": atlas_id, "image": image_name, "size": [width, height]}
+        sampling = entry.get("sampling", "linear")
+        if sampling not in ("nearest", "linear"):
+            raise ValueError(f"atlas {atlas_index}.sampling must be nearest or linear")
+        output_atlas["sampling"] = sampling
+        mips = entry.get("mips", [])
+        if not isinstance(mips, list):
+            raise ValueError(f"atlas {atlas_index}.mips must be an array")
+        if mips:
+            output_atlas["mips"] = mips
+        result["atlases"].append(output_atlas)
         atlas_ids.add(atlas_id)
         name_map: dict[str, str] = {}
         semantic_name_map: dict[str, str] = {}

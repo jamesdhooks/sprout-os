@@ -68,6 +68,8 @@ class ProfileRepository {
   void set_avatar_ref(const std::string& id, const std::string& avatar_ref);
   void set_background_ref(const std::string& id,
                           const std::string& background_ref);
+  void set_preferences_json(const std::string& id,
+                            const std::string& preferences_json);
   void archive_profile(const std::string& id);
   void restore_profile(const std::string& id);
 

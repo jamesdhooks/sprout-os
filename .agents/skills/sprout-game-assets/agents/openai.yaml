@@ -1,0 +1,12 @@
+interface:
+  display_name: "Sprout Game Assets"
+  short_description: "Generate and integrate target-aware game art"
+  default_prompt: "Use $sprout-game-assets to generate, archive, validate, and integrate Sprout game artwork."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "pixellab"
+      description: "PixelLab pixel-art generation and animation tools"
+      transport: "streamable_http"
+      url: "https://api.pixellab.ai/mcp"

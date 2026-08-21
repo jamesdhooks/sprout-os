@@ -78,14 +78,15 @@ bands without completing every generated maze:
 | +100 | Start + A + D-pad Down | Enter + Down |
 
 Holding a chord triggers once; release it before another jump. Jumps persist the
-new current level and cap at the planned 1,000-level campaign boundary. The
+new current level and cap at the edition's campaign boundary. The
 game consumes logical actions, so the same chord is portable to the Miyoo input
 adapter, but physical-device mapping remains unverified until dev-card testing.
 
 ## Visual check
 
 - Launcher Arcade view is readable at its 640×480 preview size.
-- Runtime content uses a 320×240 logical canvas with nearest/integer scaling where possible.
+- Runtime content uses each package's declared surface; the current native
+  collection targets the full 640x480 handheld output.
 - Title, score, best score, board, fruit, snake, and round-over state are readable without clipping.
 - Focus changes do not expose a stale or frozen launcher frame over the game.
 - Returning from the runtime restores the launcher at the expected size and focus.

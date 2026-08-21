@@ -65,7 +65,12 @@ main() {
     fi
 
     cd $sysdir
-    bootScreen "Boot"
+    # A contained Sprout boot owns the first application surface.  Do not show
+    # the active Onion theme's boot screen (for example NanoSwitch) briefly
+    # before handing the framebuffer straight to Sprout.
+    if ! sprout_containment_enabled; then
+        bootScreen "Boot"
+    fi
 
     # Set filebrowser branding to "Onion" and apply custom theme
     if [ -f "$sysdir/config/filebrowser/first.run" ]; then
@@ -117,12 +122,18 @@ main() {
         sh "$startup_script"
     done
 
-    # Auto launch. Contained boots always enter Sprout before any persisted game,
-    # GameSwitcher, RetroArch, or Advanced Menu startup command can run.
+    # Auto launch. Contained boots block persisted auto-resume, GameSwitcher,
+    # RetroArch, and Advanced Menu commands. A one-shot, validated Sprout
+    # handoff is the sole exception: it must reach Onion's unchanged game
+    # lifecycle so Activity Tracker and normal game return still work.
     if sprout_containment_enabled; then
-        rm -f "$sysdir/cmd_to_run.sh" 2> /dev/null
-        rm -f "$sysdir/.runGameSwitcher" 2> /dev/null
-        rm -f /tmp/quick_switch /tmp/run_advmenu 2> /dev/null
+        if [ -f "$sysdir/.sprout-handoff" ] && [ -f "$sysdir/cmd_to_run.sh" ]; then
+            state_change check_game
+        else
+            rm -f "$sysdir/cmd_to_run.sh" 2> /dev/null
+            rm -f "$sysdir/.runGameSwitcher" 2> /dev/null
+            rm -f /tmp/quick_switch /tmp/run_advmenu 2> /dev/null
+        fi
     else
         if [ ! -f $sysdir/config/.noAutoStart ]; then
             state_change check_game

@@ -69,6 +69,42 @@ void add_warning_once(std::vector<std::string>& warnings, std::string warning) {
   }
 }
 
+std::filesystem::path find_onion_artwork(
+    const std::filesystem::path& system_root,
+    const std::filesystem::path& rom_relative_path) {
+  constexpr std::array<std::string_view, 3> kArtworkExtensions{
+      ".png", ".jpg", ".jpeg"};
+  const std::array<std::filesystem::path, 2> artwork_bases{
+      system_root / "Imgs" / rom_relative_path,
+      system_root / "Imgs" / rom_relative_path.filename(),
+  };
+  // Household payloads generate compact, aspect-preserving card art here.
+  // Prefer it over Onion's full-resolution source cover whenever present.
+  for (auto base : artwork_bases) {
+    auto thumbnail = system_root / "Imgs" / ".sprout-thumbs" /
+        base.lexically_relative(system_root / "Imgs");
+    thumbnail.replace_extension(".png");
+    std::error_code error;
+    if (std::filesystem::is_regular_file(thumbnail, error) && !error) {
+      const auto canonical = std::filesystem::weakly_canonical(thumbnail, error);
+      if (!error && within(canonical, system_root)) return canonical;
+    }
+  }
+  for (auto base : artwork_bases) {
+    for (const auto extension : kArtworkExtensions) {
+      auto candidate = base;
+      candidate.replace_extension(extension);
+      std::error_code error;
+      if (!std::filesystem::is_regular_file(candidate, error) || error) {
+        continue;
+      }
+      const auto canonical = std::filesystem::weakly_canonical(candidate, error);
+      if (!error && within(canonical, system_root)) return canonical;
+    }
+  }
+  return {};
+}
+
 }  // namespace
 
 LocalLibraryScanner::LocalLibraryScanner(std::filesystem::path sd_card_root)
@@ -137,6 +173,20 @@ LibraryScanResult LocalLibraryScanner::discover() const {
       }
 
       const auto entry_path = iterator->path();
+      if (iterator->is_directory(error) && !error &&
+          lowercase(entry_path.filename().string()) == "imgs") {
+        iterator.disable_recursion_pending();
+        iterator.increment(error);
+        continue;
+      }
+      // Onion uses _hidden for multi-disc payloads referenced by a visible
+      // M3U. Those CHDs are dependencies, not separate library entries.
+      if (iterator->is_directory(error) && !error &&
+          lowercase(entry_path.filename().string()) == "_hidden") {
+        iterator.disable_recursion_pending();
+        iterator.increment(error);
+        continue;
+      }
       // Profile-cart copies are launch material owned by Sprout, not library
       // items. Skipping the directory also prevents recursive duplicate scans.
       if (contract->id == "PICO" && iterator->is_directory(error) &&
@@ -157,12 +207,14 @@ LibraryScanResult LocalLibraryScanner::discover() const {
                            encode_identity_part(path_as_utf8(relative_path));
             auto title = path_as_utf8(canonical_path.stem());
             std::filesystem::path artwork_path;
-            if (contract->id == "PICO") {
-              if (const auto known = pico8_catalogue.find(relative_path)) {
-                item_id = known->id;
-                title = known->title;
-                artwork_path = known->artwork_path;
-              }
+            if (const auto known =
+                    pico8_catalogue.find(contract->id, relative_path)) {
+              item_id = known->id;
+              title = known->title;
+              artwork_path = known->artwork_path;
+            }
+            if (artwork_path.empty()) {
+              artwork_path = find_onion_artwork(system_root, relative_path);
             }
             result.items.push_back(EmulatedLibraryItem{
                 .schema_version = EmulatedLibraryItem::kSchemaVersion,

@@ -21,6 +21,15 @@
     "dimensions": [1280, 720],
     "fit": "cover"
   },
+  "sounds": [
+    {"id": "push", "file": "assets/sfx/push.wav"},
+    {"id": "button", "file": "assets/sfx/button.wav"},
+    {"id": "blocked", "file": "assets/sfx/blocked.wav"},
+    {"id": "undo", "file": "assets/sfx/undo.wav"},
+    {"id": "win", "file": "assets/sfx/win.wav"},
+    {"id": "fail", "file": "assets/sfx/fail.wav"},
+    {"id": "reset", "file": "assets/sfx/reset.wav"}
+  ],
   "audience": "family",
   "capabilities": ["events", "local-storage"]
 }

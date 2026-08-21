@@ -8,11 +8,22 @@
 
 namespace sprout::runtime {
 
+enum class TextureSampling { Linear, Nearest };
+
+struct TextureMip {
+  std::filesystem::path image;
+  int width{};
+  int height{};
+  double scale{};
+};
+
 struct TextureAtlas {
   std::string id;
   std::filesystem::path image;
   int width{};
   int height{};
+  TextureSampling sampling{TextureSampling::Linear};
+  std::vector<TextureMip> mips;
 };
 
 struct SpriteFrame {

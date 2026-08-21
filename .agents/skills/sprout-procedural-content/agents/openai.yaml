@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sprout Procedural Content"
+  short_description: "Generate deterministic validated game content"
+  default_prompt: "Use $sprout-procedural-content to build or validate a seeded Sprout campaign."

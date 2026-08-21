@@ -1,10 +1,13 @@
 #include "desktop_view.hpp"
 #include "sprout/launcher/direct_framebuffer_surface.hpp"
 #include "sprout/launcher/daily_time_policy.hpp"
+#include "sprout/launcher/game_library_integration.hpp"
+#include "sprout/launcher/game_library_entry.hpp"
+#include "sprout/launcher/demo_library.hpp"
+#include "sprout/launcher/game_library_repository.hpp"
 #include "sprout/launcher/household_seed.hpp"
 #include "sprout/launcher/local_configuration.hpp"
 #include "sprout/launcher/launcher_state.hpp"
-#include "sprout/launcher/library_presentation.hpp"
 #include "sprout/launcher/local_library.hpp"
 #include "sprout/launcher/native_launch_adapter.hpp"
 #include "sprout/launcher/native_library.hpp"
@@ -399,18 +402,6 @@ int run_smoke_test(SDL_Renderer* renderer) {
   }
   LauncherState persisted(load_launcher_profiles(profiles));
   sprout::launcher::render_launcher(renderer, persisted, image_root);
-  sprout::launcher::LibraryPresentation library(
-      sprout::launcher::make_demo_library(),
-      sprout::launcher::LibrarySection::Recent);
-  sprout::launcher::render_library(renderer, library);
-  const auto launch_event = library.handle(Action::Confirm);
-  if (!launch_event.has_value() ||
-      launch_event->type !=
-          sprout::launcher::LibraryPresentationEventType::LaunchRequested ||
-      !launch_event->launch_target.has_value()) {
-    std::cerr << "Library smoke test did not emit a typed launch request\n";
-    return EXIT_FAILURE;
-  }
   sprout::launcher::ProfileArchiveService archives(profiles, time_policy,
                                                     image_root);
   sprout::launcher::ProfileArchivePresentation archive(
@@ -436,17 +427,42 @@ int run_smoke_test(SDL_Renderer* renderer) {
 
 std::vector<sprout::launcher::Profile> load_launcher_profiles(
     const sprout::launcher::ProfileRepository& repository) {
+  const auto interface_theme_from_preferences = [](std::string_view preferences) {
+    constexpr std::string_view key = "\"interface_theme\"";
+    const auto key_position = preferences.find(key);
+    if (key_position == std::string_view::npos) return std::string{"cream"};
+    const auto first_quote = preferences.find('"', preferences.find(':', key_position));
+    if (first_quote == std::string_view::npos) return std::string{"cream"};
+    const auto second_quote = preferences.find('"', first_quote + 1);
+    if (second_quote == std::string_view::npos) return std::string{"cream"};
+    const auto theme = preferences.substr(first_quote + 1, second_quote - first_quote - 1);
+    return theme == "white" || theme == "black" || theme == "grey" || theme == "cream"
+               ? std::string(theme) : std::string{"cream"};
+  };
+  const auto rounded_tiles_from_preferences = [](std::string_view preferences) {
+    return preferences.find("\"tile_style\":\"square\"") == std::string_view::npos;
+  };
+  const auto accent_from_preferences = [](std::string_view preferences, std::uint32_t fallback) {
+    constexpr std::string_view key = "\"accent_rgb\"";
+    const auto key_position = preferences.find(key);
+    const auto colon = preferences.find(':', key_position);
+    if (key_position == std::string_view::npos || colon == std::string_view::npos) return fallback;
+    const auto end = preferences.find_first_of(",}", colon + 1);
+    try { return static_cast<std::uint32_t>(std::stoul(std::string(preferences.substr(colon + 1, end - colon - 1)))); }
+    catch (...) { return fallback; }
+  };
   std::vector<sprout::launcher::Profile> profiles;
   for (const auto& stored : repository.list_profiles(false)) {
     profiles.push_back(sprout::launcher::Profile{
         .id = stored.id,
         .display_name = stored.display_name,
         .role = stored.role,
-        .accent_rgb = stored.role == sprout::launcher::ProfileRole::Child
-                          ? 0x70B77EU
-                          : 0x8E7DBEU,
+        .accent_rgb = accent_from_preferences(stored.preferences_json,
+                          stored.role == sprout::launcher::ProfileRole::Child ? 0x70B77EU : 0x8E7DBEU),
         .avatar_ref = stored.avatar_ref,
         .background_ref = stored.background_ref,
+        .interface_theme = interface_theme_from_preferences(stored.preferences_json),
+        .last_accessed = stored.preferences_json.find("\"last_accessed\":true") != std::string::npos,
     });
   }
   std::stable_sort(profiles.begin(), profiles.end(), [](const auto& left, const auto& right) {
@@ -505,6 +521,34 @@ bool commit_parent_exit_marker() {
   if (error) {
     std::filesystem::remove(staged, error);
     std::cerr << "Parent exit marker could not be committed\n";
+    return false;
+  }
+  return true;
+}
+
+bool commit_game_switcher_request() {
+  const char* configured = std::getenv("SPROUT_ONION_RUNTIME_ROOT");
+  if (configured == nullptr || std::string_view(configured).empty()) {
+    std::cerr << "Onion GameSwitcher is unavailable outside the device runtime\n";
+    return false;
+  }
+  const std::filesystem::path runtime_root(configured);
+  const auto marker = runtime_root / ".runGameSwitcher";
+  const auto staged = runtime_root / ".sprout-gameswitcher-request";
+  std::error_code error;
+  {
+    std::ofstream output(staged, std::ios::binary | std::ios::trunc);
+    if (!output) return false;
+    output << "sprout-gameswitcher-v1\n";
+    output.flush();
+    if (!output) return false;
+  }
+  std::filesystem::remove(marker, error);
+  error.clear();
+  std::filesystem::rename(staged, marker, error);
+  if (error) {
+    std::filesystem::remove(staged, error);
+    std::cerr << "Onion GameSwitcher request could not be committed\n";
     return false;
   }
   return true;
@@ -885,43 +929,51 @@ int main(int argc, char* argv[]) {
       SDL_Quit();
       return result;
     }
-    if (screenshot_screen == "library-recent" ||
-        screenshot_screen == "library-favorites" ||
-        screenshot_screen == "library-all" ||
-        screenshot_screen == "library-arcade" ||
-        screenshot_screen == "library-child" ||
-        screenshot_screen == "library-parent" ||
-        screenshot_screen == "library-empty" ||
-        screenshot_screen == "library-unavailable") {
-      auto section = sprout::launcher::LibrarySection::Recent;
-      if (screenshot_screen == "library-favorites") {
-        section = sprout::launcher::LibrarySection::Favorites;
-      } else if (screenshot_screen == "library-all") {
-        section = sprout::launcher::LibrarySection::All;
-      } else if (screenshot_screen == "library-arcade") {
-        section = sprout::launcher::LibrarySection::Arcade;
+    if (screenshot_screen == "game-dashboard" ||
+        screenshot_screen == "game-dashboard-filters" ||
+        screenshot_screen == "game-dashboard-details") {
+      TemporaryDirectory directory("game-dashboard-screenshot");
+      sprout::launcher::GameLibraryRepository repository(
+          directory.path() / "game-library.sqlite3");
+      const auto entries = sprout::launcher::make_demo_library();
+      sprout::launcher::reconcile_library_entries(repository, entries, 1000);
+      for (std::size_t index = 0; index < entries.size(); ++index) {
+        repository.set_household_state(
+            entries[index].id,
+            {.recommended = index < 3,
+             .for_kids = index < 4,
+             .hidden = index == 4,
+             .updated_by = "parent-primary",
+             .updated_at = 1000});
       }
-      sprout::launcher::LibraryPresentation library(
-          screenshot_screen == "library-empty"
-              ? std::vector<sprout::launcher::LibraryEntry>{}
-              : section == sprout::launcher::LibrarySection::Arcade &&
-                  arcade_root.has_value()
-              ? discovered_native_library(*arcade_root)
-              : sprout::launcher::make_demo_library(),
-          section);
-      if (screenshot_screen == "library-unavailable") {
-        (void)library.handle(Action::Up);
-        (void)library.handle(Action::Confirm);
+      repository.set_review("parent-primary", entries[0].id,
+                            sprout::launcher::GameReviewVerdict::Positive,
+                            1100);
+      repository.set_completed("parent-primary", entries[0].id, true, 1100);
+      repository.set_review("parent-primary", entries[1].id,
+                            sprout::launcher::GameReviewVerdict::Negative,
+                            1100);
+      repository.begin_play_session("preview-session", "parent-primary",
+                                    entries[0].id, "preview", 1200);
+      repository.finish_play_session(
+          "preview-session", sprout::launcher::GameLaunchOutcome::Completed,
+          7'620'000, 1300);
+      auto household = sprout::launcher::make_demo_household();
+      std::vector<sprout::launcher::Profile> children;
+      for (const auto& profile : household) {
+        if (profile.role == sprout::launcher::ProfileRole::Child) {
+          children.push_back(profile);
+          repository.set_child_allowed(profile.id, entries[0].id, true);
+        }
       }
-      auto profile_context = sprout::launcher::make_demo_household();
-      const sprout::launcher::Profile* active_profile = nullptr;
-      if (screenshot_screen == "library-child") {
-        active_profile = &profile_context[0];
-      } else if (screenshot_screen == "library-parent") {
-        active_profile = &profile_context[1];
+      sprout::launcher::GameDashboardPresentation dashboard(
+          repository, "parent-primary", std::move(children));
+      if (screenshot_screen == "game-dashboard-filters") {
+        (void)dashboard.handle(Action::Filters, 1400);
+      } else if (screenshot_screen == "game-dashboard-details") {
+        (void)dashboard.handle(Action::Confirm, 1400);
       }
-      sprout::launcher::render_library(renderer, library, active_profile, {},
-                                       built_in_avatar_root);
+      sprout::launcher::render_game_dashboard(renderer, dashboard);
       const int result = save_screenshot(renderer, screenshot_path);
       SDL_DestroyRenderer(renderer);
       SDL_DestroyWindow(window);
@@ -1101,13 +1153,22 @@ int main(int argc, char* argv[]) {
     return result;
   }
 
-  const bool startup_art_loaded =
+  // A one-shot marker exists only after Onion returns from a Sprout-launched
+  // game. Do not replay the cold-boot artwork on that path.
+  const bool returning_from_onion = data_root.has_value() &&
+      std::filesystem::exists(*data_root / "data" / "onion-return-session");
+  const bool startup_art_loaded = !returning_from_onion &&
       sprout::launcher::render_startup_splash(renderer, startup_splash);
+  if (returning_from_onion) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+  }
   std::cerr << "SPROUT_STARTUP first-frame-presented art="
             << (startup_art_loaded ? "loaded" : "fallback") << std::endl;
   // Give the opening artwork enough time to read as an intentional boot
   // screen rather than a flash between Onion and profile selection.
-  SDL_Delay(startup_art_loaded ? 2500 : 250);
+  SDL_Delay(returning_from_onion ? 0 : (startup_art_loaded ? 2500 : 250));
 
   SDL_GameController* controller = nullptr;
   for (int index = 0; index < SDL_NumJoysticks(); ++index) {
@@ -1123,6 +1184,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::StartupHealthStore> startup_health;
   std::unique_ptr<sprout::launcher::RecoveryPresentation> recovery;
   std::unique_ptr<sprout::launcher::ProfileRepository> profiles;
+  std::unique_ptr<sprout::launcher::GameLibraryRepository> game_library;
   std::unique_ptr<sprout::launcher::DailyTimePolicyStore> daily_time_policy;
   std::unique_ptr<sprout::launcher::ProfileArchiveService> profile_archives;
   std::unique_ptr<sprout::launcher::ProfileArchivePresentation> archive;
@@ -1133,8 +1195,11 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<sprout::launcher::ProfileAvatarPresentation> profile_avatars;
   std::unique_ptr<sprout::launcher::ParentAccessStore> parent_access;
   std::unique_ptr<sprout::launcher::ParentPinPresentation> parent_pin;
+  enum class ParentPinWorkflow { Setup, ChangeVerify, ChangeCreate, ChangeDone };
+  ParentPinWorkflow parent_pin_workflow{ParentPinWorkflow::Setup};
+  std::uint32_t parent_pin_last_input{0};
   std::unique_ptr<sprout::launcher::ParentAccessController> access_controller;
-  std::unique_ptr<sprout::launcher::LibraryPresentation> library;
+  std::unique_ptr<sprout::launcher::GameDashboardPresentation> game_dashboard;
   sprout::launcher::SystemLaunchProcess launch_process;
   std::unique_ptr<sprout::launcher::NativeLaunchAdapter> native_launch;
   std::unique_ptr<sprout::launcher::OnionRuntimeHandoffProcess>
@@ -1151,6 +1216,17 @@ int main(int argc, char* argv[]) {
   const auto initialize_persistent_launcher = [&] {
     profiles = std::make_unique<sprout::launcher::ProfileRepository>(
         *data_root / "data" / "profiles.sqlite3");
+    game_library = std::make_unique<sprout::launcher::GameLibraryRepository>(
+        *data_root / "data" / "game-library.sqlite3");
+    const auto library_observed_at = current_access_time().utc_seconds;
+    sprout::launcher::reconcile_library_entries(
+        *game_library, library_entries, library_observed_at);
+    const auto recovered_sessions =
+        game_library->recover_interrupted_sessions(library_observed_at);
+    if (recovered_sessions > 0) {
+      std::cerr << "Library activity warning: recovered "
+                << recovered_sessions << " interrupted session(s)\n";
+    }
     if (household_seed.has_value() && profiles->list_profiles(false).empty()) {
       sprout::launcher::apply_household_seed(*profiles, *household_seed);
       auto seeded_configuration = configuration->has_active()
@@ -1158,6 +1234,14 @@ int main(int argc, char* argv[]) {
           : sprout::launcher::LocalConfiguration{};
       seeded_configuration.next_setup_step = sprout::launcher::SetupStep::Complete;
       (void)configuration->save(std::move(seeded_configuration));
+    }
+    if (household_seed.has_value()) {
+      const auto migration = sprout::launcher::migrate_household_seed_library(
+          *game_library, *household_seed, library_entries,
+          library_observed_at);
+      for (const auto& unresolved : migration.unresolved_items) {
+        std::cerr << "Library seed warning: unresolved " << unresolved << '\n';
+      }
     }
     daily_time_policy =
         std::make_unique<sprout::launcher::DailyTimePolicyStore>(
@@ -1181,6 +1265,10 @@ int main(int argc, char* argv[]) {
     parent_access = std::make_unique<sprout::launcher::ParentAccessStore>(
         *data_root / "data" / "security.sqlite3",
         *data_root / "secrets" / "device-access.key");
+    // A parent unlock is a session credential, not a device credential.  Do
+    // not carry an in-memory selection grant across a cold Sprout launch.
+    // This keeps the parent profile protected after an Onion/device restart.
+    parent_access->lock();
     image_source = pending_profile_image(*data_root);
     wizard = std::make_unique<sprout::launcher::SetupWizard>(
         *configuration, *profiles, daily_time_policy.get());
@@ -1266,13 +1354,195 @@ int main(int argc, char* argv[]) {
   bool dirty = true;
   int exit_status = EXIT_SUCCESS;
   bool interactive_frame_logged = false;
+  const auto launch_library_target =
+      [&](sprout::launcher::LibraryLaunchTarget launch_target,
+          const auto& report_result) {
+        if (std::holds_alternative<sprout::launcher::NativeLaunchTarget>(
+                launch_target)) {
+          if (native_launch == nullptr || state->active_profile() == nullptr) {
+            report_result("SPROUT RUNTIME IS UNAVAILABLE");
+            return true;
+          }
+          auto target =
+              std::get<sprout::launcher::NativeLaunchTarget>(launch_target);
+          const auto* active_profile = state->active_profile();
+          const auto activity_started = current_time_policy_sample();
+          const auto activity_session =
+              "native-activity-" + active_profile->id + "-" +
+              std::to_string(activity_started.monotonic_milliseconds);
+          std::optional<std::string> policy_session;
+          if (active_profile->role == sprout::launcher::ProfileRole::Child &&
+              daily_time_policy != nullptr) {
+            const auto sample = current_time_policy_sample();
+            policy_session = "native-" + active_profile->id + "-" +
+                             std::to_string(sample.monotonic_milliseconds);
+            const auto decision = daily_time_policy->begin_session(
+                active_profile->id, *policy_session, target.item_id, sample);
+            if (!decision.launch_allowed) {
+              report_result("DAILY PLAY TIME IS USED UP");
+              return true;
+            }
+          }
+
+          SDL_HideWindow(window);
+          const auto activity_clock_started = std::chrono::steady_clock::now();
+          const auto launch_result = native_launch->launch(target);
+          const auto activity_duration =
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now() - activity_clock_started);
+          SDL_ShowWindow(window);
+          SDL_RaiseWindow(window);
+          SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
+          std::cout << "native launch result: " << launch_result.item_id
+                    << " outcome=" << static_cast<int>(launch_result.outcome);
+          if (launch_result.exit_code.has_value()) {
+            std::cout << " exit=" << *launch_result.exit_code;
+          }
+          if (!launch_result.detail.empty()) {
+            std::cout << " detail=" << launch_result.detail;
+          }
+          std::cout << '\n';
+          const bool process_ran =
+              launch_result.outcome ==
+                  sprout::launcher::NativeLaunchOutcome::Completed ||
+              launch_result.outcome ==
+                  sprout::launcher::NativeLaunchOutcome::AbnormalExit;
+          if (process_ran && game_library != nullptr) {
+            game_library->begin_play_session(
+                activity_session, active_profile->id, target.item_id, "native",
+                activity_started.utc_seconds);
+            game_library->finish_play_session(
+                activity_session,
+                launch_result.completed()
+                    ? sprout::launcher::GameLaunchOutcome::Completed
+                    : sprout::launcher::GameLaunchOutcome::Abnormal,
+                static_cast<std::uint64_t>(
+                    std::max<std::int64_t>(0, activity_duration.count())),
+                current_access_time().utc_seconds);
+          }
+          if (policy_session.has_value()) {
+            const auto decision = daily_time_policy->pause_session(
+                *policy_session, current_time_policy_sample());
+            if (decision.status.expired) {
+              report_result("DAILY PLAY TIME IS USED UP");
+              return true;
+            }
+          }
+          report_result(launch_result.completed()
+                            ? "RETURNED TO SPROUT"
+                            : "GAME COULD NOT START: " + launch_result.detail);
+          return true;
+        }
+
+        auto target =
+            std::get<sprout::launcher::EmulatedLaunchTarget>(launch_target);
+        if (onion_launch == nullptr || state->active_profile() == nullptr) {
+          report_result("ONION RUNTIME HANDOFF IS UNAVAILABLE");
+          return true;
+        }
+        const auto* active_profile = state->active_profile();
+        if (active_profile->role == sprout::launcher::ProfileRole::Child &&
+            daily_time_policy != nullptr) {
+          const auto status = daily_time_policy->status(
+              active_profile->id, current_time_policy_sample());
+          if (status.expired) {
+            report_result("DAILY PLAY TIME IS USED UP");
+            return true;
+          }
+        }
+        // Onion owns the game and GameSwitcher lifecycle. Preserve this
+        // one-shot return target so its post-game Sprout launch restores the
+        // dashboard rather than behaving like a cold boot.
+        const auto return_session = *data_root / "data" / "onion-return-session";
+        {
+          std::ofstream output(return_session, std::ios::binary | std::ios::trunc);
+          output << active_profile->id << '\n' << target.item_id << '\n';
+          output.flush();
+          if (!output) {
+            report_result("GAME COULD NOT START: RETURN SESSION UNAVAILABLE");
+            return true;
+          }
+        }
+        const auto launch_result = onion_launch->launch(target);
+        std::cout << "Onion handoff result: " << launch_result.item_id
+                  << " outcome=" << static_cast<int>(launch_result.outcome)
+                  << " detail=" << launch_result.detail << '\n';
+        if (!launch_result.completed()) {
+          std::error_code ignored;
+          std::filesystem::remove(return_session, ignored);
+          report_result("GAME COULD NOT START: " + launch_result.detail);
+          return true;
+        }
+        // A successful Onion handoff validates the request but does not prove
+        // the game start or return interval. Do not invent activity here.
+        exit_status = sprout::launcher::kOnionHandoffExitCode;
+        return false;
+      };
+  const auto open_game_dashboard = [&]() {
+    if (game_library == nullptr || profiles == nullptr ||
+        !state.has_value() || state->active_profile() == nullptr) {
+      return false;
+    }
+    const auto* active_profile = state->active_profile();
+    const bool parent_mode =
+        active_profile->role == sprout::launcher::ProfileRole::Parent;
+    std::vector<sprout::launcher::Profile> child_profiles;
+    if (parent_mode) {
+      for (const auto& profile : load_launcher_profiles(*profiles)) {
+        if (profile.role == sprout::launcher::ProfileRole::Child) {
+          child_profiles.push_back(profile);
+        }
+      }
+    }
+    const auto stored_active_profile = profiles->find_profile(active_profile->id);
+    const bool rounded_tiles = !stored_active_profile.has_value() ||
+        stored_active_profile->preferences_json.find("\"tile_style\":\"square\"") ==
+            std::string::npos;
+    const bool motion_enabled = !stored_active_profile.has_value() ||
+        stored_active_profile->preferences_json.find("\"motion\":false") ==
+            std::string::npos;
+    const bool tile_shadows = !stored_active_profile.has_value() ||
+        stored_active_profile->preferences_json.find("\"tile_shadows\":false") ==
+            std::string::npos;
+    game_dashboard =
+        std::make_unique<sprout::launcher::GameDashboardPresentation>(
+            *game_library, active_profile->id, std::move(child_profiles),
+            parent_mode, game_library->metadata_flag("dashboard.big_mode"),
+            active_profile->avatar_ref, active_profile->background_ref,
+            active_profile->interface_theme, active_profile->accent_rgb,
+            rounded_tiles, motion_enabled, tile_shadows);
+    return true;
+  };
+  // A return marker is created only immediately before a validated Onion
+  // launch. Consume it once; ordinary containment boots still begin at the
+  // profile selector.
+  if (data_root.has_value() && state.has_value()) {
+    const auto return_session = *data_root / "data" / "onion-return-session";
+    std::ifstream input(return_session, std::ios::binary);
+    std::string profile_id;
+    std::string item_id;
+    if (std::getline(input, profile_id) && std::getline(input, item_id) &&
+        !profile_id.empty() && state->activate_profile(profile_id) &&
+        open_game_dashboard()) {
+      game_dashboard->focus_game(item_id);
+      std::error_code ignored;
+      std::filesystem::remove(return_session, ignored);
+    }
+  }
   const auto handle_session_action = [&](Action action) {
     try {
+      if (action == Action::GameSwitcher) {
+        if (commit_game_switcher_request()) {
+          exit_status = sprout::launcher::kOnionHandoffExitCode;
+          return false;
+        }
+        return true;
+      }
       if (action == Action::SystemMenu) {
         if (access_controller == nullptr) {
           return true;
         }
-        library.reset();
+        game_dashboard.reset();
         archive.reset();
         profile_avatars.reset();
         image_crop.reset();
@@ -1299,9 +1569,11 @@ int main(int argc, char* argv[]) {
         return true;
       }
       if (parent_pin != nullptr) {
+        parent_pin_last_input = SDL_GetTicks();
         const auto pin_event = parent_pin->handle(action);
         if (pin_event == sprout::launcher::ParentPinEvent::Cancelled) {
           parent_pin.reset();
+          parent_pin_workflow = ParentPinWorkflow::Setup;
           return true;
         }
         if (pin_event != sprout::launcher::ParentPinEvent::Submitted) {
@@ -1310,7 +1582,45 @@ int main(int argc, char* argv[]) {
 
         std::string pin = parent_pin->take_pin();
         constexpr std::string_view kCredentialRef = "secret:parent-primary";
-        parent_access->set_pin(std::string(kCredentialRef), std::move(pin));
+        if (parent_pin_workflow == ParentPinWorkflow::ChangeVerify) {
+          if (!parent_access->verify_pin(std::string(kCredentialRef), std::move(pin))) {
+            parent_pin->authentication_failed();
+            return true;
+          }
+          parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+              sprout::launcher::ParentPinMode::ComboCreate);
+          parent_pin_last_input = SDL_GetTicks();
+          parent_pin_workflow = ParentPinWorkflow::ChangeCreate;
+          return true;
+        }
+        parent_access->set_pin(std::string(kCredentialRef), std::move(pin),
+                               parent_pin_workflow == ParentPinWorkflow::ChangeCreate);
+        if (parent_pin_workflow == ParentPinWorkflow::ChangeCreate) {
+          parent_credential_ref = kCredentialRef;
+          // Settings lives after first-run setup, so persist the credential
+          // reference here as well as the hash in security.sqlite.  Without
+          // this, the PIN appears to work until the launcher restarts and the
+          // next controller is constructed with no credential reference.
+          if (configuration != nullptr) {
+            auto saved_configuration = configuration->load_active();
+            saved_configuration.parent_credential_ref =
+                std::string(kCredentialRef);
+            (void)configuration->save(std::move(saved_configuration));
+          }
+          // The controller captured its credential reference at construction.
+          // Rebuild it now so the just-created PIN protects the very next
+          // parent-profile selection, not only a later launcher restart.
+          if (state.has_value()) {
+            access_controller =
+                std::make_unique<sprout::launcher::ParentAccessController>(
+                    *state, parent_access.get(), parent_credential_ref);
+          }
+          parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+              sprout::launcher::ParentPinMode::Updated);
+          parent_pin_workflow = ParentPinWorkflow::ChangeDone;
+          parent_pin_last_input = SDL_GetTicks();
+          return true;
+        }
         parent_credential_ref = kCredentialRef;
         setup->complete_parent_pin_step(std::string(kCredentialRef));
         parent_pin.reset();
@@ -1326,10 +1636,12 @@ int main(int argc, char* argv[]) {
             setup->complete_avatar_step();
           } else {
             profile_avatars.reset();
-            state.emplace(load_launcher_profiles(*profiles));
-            access_controller =
-                std::make_unique<sprout::launcher::ParentAccessController>(
-                    *state, parent_access.get(), parent_credential_ref);
+            if (game_dashboard == nullptr) {
+              state.emplace(load_launcher_profiles(*profiles));
+              access_controller =
+                  std::make_unique<sprout::launcher::ParentAccessController>(
+                      *state, parent_access.get(), parent_credential_ref);
+            }
           }
           image_crop_advances_setup = false;
         }
@@ -1352,11 +1664,32 @@ int main(int argc, char* argv[]) {
           image_crop_advances_setup = false;
           return true;
         }
+        if (avatar_event->type ==
+                sprout::launcher::ProfileAvatarEventType::BackgroundAssigned &&
+            game_dashboard != nullptr &&
+            profile_avatars->selected_profile() != nullptr) {
+          game_dashboard->set_profile_background_ref(
+              profile_avatars->selected_profile()->background_ref);
+        }
+        if (avatar_event->type ==
+                sprout::launcher::ProfileAvatarEventType::AvatarAssigned &&
+            game_dashboard != nullptr &&
+            profile_avatars->selected_profile() != nullptr) {
+          game_dashboard->set_profile_avatar_ref(
+              profile_avatars->selected_profile()->avatar_ref);
+        }
+        if (avatar_event->type == sprout::launcher::ProfileAvatarEventType::AccentAssigned &&
+            game_dashboard != nullptr) {
+          game_dashboard->set_accent_rgb(profile_avatars->accent_rgb());
+          state->set_active_profile_accent_rgb(profile_avatars->accent_rgb());
+        }
         profile_avatars.reset();
-        state.emplace(load_launcher_profiles(*profiles));
-        access_controller =
-            std::make_unique<sprout::launcher::ParentAccessController>(
-                *state, parent_access.get(), parent_credential_ref);
+        if (game_dashboard == nullptr) {
+          state.emplace(load_launcher_profiles(*profiles));
+          access_controller =
+              std::make_unique<sprout::launcher::ParentAccessController>(
+                  *state, parent_access.get(), parent_credential_ref);
+        }
         return true;
       }
       if (setup != nullptr) {
@@ -1402,109 +1735,179 @@ int main(int argc, char* argv[]) {
         return true;
       }
 
-      if (library != nullptr) {
+      if (game_dashboard != nullptr) {
         if (!access_controller->ensure_active_profile_access(
-                current_access_time())) {
-          library.reset();
+                current_access_time()) ||
+            state->active_profile() == nullptr) {
+          game_dashboard.reset();
           return true;
         }
-        if (action == Action::Menu) {
-          library.reset();
+        if (action == Action::Up || action == Action::Down ||
+            action == Action::Left || action == Action::Right) {
+          game_dashboard->begin_motion(SDL_GetTicks());
+        }
+        const auto dashboard_event = game_dashboard->handle(
+            action, current_access_time().utc_seconds);
+        if (!dashboard_event.has_value()) return true;
+        if (dashboard_event->type ==
+            sprout::launcher::GameDashboardEventType::BackRequested) {
+          game_dashboard.reset();
+          access_controller->lock_and_return_to_profiles();
           return true;
         }
-        const auto library_event = library->handle(action);
-        if (!library_event.has_value()) {
-          return true;
-        }
-        if (library_event->type ==
-            sprout::launcher::LibraryPresentationEventType::BackRequested) {
-          library.reset();
-          (void)access_controller->handle(Action::Back, current_access_time());
-        } else if (library_event->type ==
-                       sprout::launcher::LibraryPresentationEventType::LaunchRequested &&
-                   library_event->launch_target.has_value()) {
-          if (std::holds_alternative<sprout::launcher::NativeLaunchTarget>(
-                  *library_event->launch_target)) {
-            if (native_launch == nullptr || state->active_profile() == nullptr) {
-              library->report_launch_result("SPROUT RUNTIME IS UNAVAILABLE");
-              return true;
-            }
-            auto target = std::get<sprout::launcher::NativeLaunchTarget>(
-                *library_event->launch_target);
-            const auto* active_profile = state->active_profile();
-            std::optional<std::string> policy_session;
-            if (active_profile->role == sprout::launcher::ProfileRole::Child &&
-                daily_time_policy != nullptr) {
-              const auto sample = current_time_policy_sample();
-              policy_session = "native-" + active_profile->id + "-" +
-                               std::to_string(sample.monotonic_milliseconds);
-              const auto decision = daily_time_policy->begin_session(
-                  active_profile->id, *policy_session, target.item_id, sample);
-              if (!decision.launch_allowed) {
-                library->report_launch_result("DAILY PLAY TIME IS USED UP");
-                return true;
+        if (dashboard_event->type ==
+            sprout::launcher::GameDashboardEventType::SettingsRequested) {
+          const auto& target = dashboard_event->item_id;
+          if (target == "SET PIN" && parent_access != nullptr) {
+            constexpr std::string_view kCredentialRef = "secret:parent-primary";
+            const bool existing_pin = parent_credential_ref.has_value();
+            parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+                existing_pin ? (parent_access->uses_button_combo(std::string(kCredentialRef))
+                                    ? sprout::launcher::ParentPinMode::ComboAuthenticate
+                                    : sprout::launcher::ParentPinMode::Authenticate)
+                             : sprout::launcher::ParentPinMode::ComboCreate);
+            parent_pin_last_input = SDL_GetTicks();
+            parent_pin_workflow = existing_pin ? ParentPinWorkflow::ChangeVerify
+                                                : ParentPinWorkflow::ChangeCreate;
+            (void)kCredentialRef;
+          } else
+          if ((target == "PROFILE" || target == "BACKGROUND" || target == "ACCENT") &&
+              profiles != nullptr && state->active_profile() != nullptr) {
+            profile_avatars =
+                std::make_unique<sprout::launcher::ProfileAvatarPresentation>(
+                    *profiles, image_source.has_value(), state->active_profile()->id,
+                    target == "BACKGROUND" ? sprout::launcher::ProfileAvatarStage::Background
+                    : target == "ACCENT" ? sprout::launcher::ProfileAvatarStage::Accent
+                    : sprout::launcher::ProfileAvatarStage::Avatar);
+          } else if (target == "BACKUP" && profile_archives != nullptr &&
+                     data_root.has_value()) {
+            archive = std::make_unique<sprout::launcher::ProfileArchivePresentation>(
+                *profiles, *profile_archives, *data_root / "exports",
+                *data_root / "imports");
+          } else if (target == "BIG MODE" && game_library != nullptr) {
+            const bool enabled = !game_dashboard->big_mode();
+            game_library->set_metadata_flag("dashboard.big_mode", enabled);
+            game_dashboard->set_big_mode(enabled);
+          } else if (target == "TILE STYLE" && profiles != nullptr &&
+                     state->active_profile() != nullptr) {
+            const bool rounded = !game_dashboard->rounded_tiles();
+            auto stored = profiles->find_profile(state->active_profile()->id);
+            if (stored.has_value()) {
+              auto preferences = stored->preferences_json;
+              constexpr std::string_view key = "\"tile_style\"";
+              const std::string value = rounded ? "rounded" : "square";
+              const auto position = preferences.find(key);
+              if (position == std::string::npos) {
+                const auto close = preferences.rfind('}');
+                preferences.insert(close == std::string::npos ? preferences.size() : close,
+                    (preferences.size() > 2 ? "," : "") + std::string{"\"tile_style\":\""} + value + "\"");
+              } else {
+                const auto first_quote = preferences.find('"', preferences.find(':', position));
+                const auto second_quote = preferences.find('"', first_quote + 1);
+                if (first_quote != std::string::npos && second_quote != std::string::npos)
+                  preferences.replace(first_quote + 1, second_quote - first_quote - 1, value);
               }
+              profiles->set_preferences_json(state->active_profile()->id, preferences);
+              game_dashboard->set_rounded_tiles(rounded);
             }
-
-            SDL_HideWindow(window);
-            const auto launch_result = native_launch->launch(target);
-            SDL_ShowWindow(window);
-            SDL_RaiseWindow(window);
-            SDL_FlushEvents(SDL_FIRSTEVENT, SDL_LASTEVENT);
-            std::cout << "native launch result: " << launch_result.item_id
-                      << " outcome="
-                      << static_cast<int>(launch_result.outcome);
-            if (launch_result.exit_code.has_value()) {
-              std::cout << " exit=" << *launch_result.exit_code;
-            }
-            if (!launch_result.detail.empty()) {
-              std::cout << " detail=" << launch_result.detail;
-            }
-            std::cout << '\n';
-            if (policy_session.has_value()) {
-              const auto decision = daily_time_policy->pause_session(
-                  *policy_session, current_time_policy_sample());
-              if (decision.status.expired) {
-                library->report_launch_result("DAILY PLAY TIME IS USED UP");
-                return true;
+          } else if (target == "MOTION" && profiles != nullptr &&
+                     state->active_profile() != nullptr) {
+            const bool enabled = !game_dashboard->motion_enabled();
+            auto stored = profiles->find_profile(state->active_profile()->id);
+            if (stored.has_value()) {
+              auto preferences = stored->preferences_json;
+              constexpr std::string_view key = "\"motion\"";
+              const auto position = preferences.find(key);
+              if (position == std::string::npos) {
+                const auto close = preferences.rfind('}');
+                preferences.insert(close == std::string::npos ? preferences.size() : close,
+                    (preferences.size() > 2 ? "," : "") + std::string{"\"motion\":"} + (enabled ? "true" : "false"));
+              } else {
+                const auto value = preferences.find(':', position);
+                const auto end = preferences.find_first_of(",}", value);
+                preferences.replace(value + 1, end - value - 1, enabled ? "true" : "false");
               }
+              profiles->set_preferences_json(state->active_profile()->id, preferences);
+              game_dashboard->set_motion_enabled(enabled);
             }
-            library->report_launch_result(
-                launch_result.completed() ? "RETURNED TO SPROUT"
-                                          : "GAME COULD NOT START: " +
-                                                launch_result.detail);
-          } else {
-            auto target =
-                std::get<sprout::launcher::EmulatedLaunchTarget>(
-                    *library_event->launch_target);
-            if (onion_launch == nullptr || state->active_profile() == nullptr) {
-              library->report_launch_result("ONION RUNTIME HANDOFF IS UNAVAILABLE");
-              return true;
-            }
-            const auto* active_profile = state->active_profile();
-            if (active_profile->role == sprout::launcher::ProfileRole::Child &&
-                daily_time_policy != nullptr) {
-              const auto status = daily_time_policy->status(
-                  active_profile->id, current_time_policy_sample());
-              if (status.expired) {
-                library->report_launch_result("DAILY PLAY TIME IS USED UP");
-                return true;
+          } else if (target == "SHADOWS" && profiles != nullptr &&
+                     state->active_profile() != nullptr) {
+            const bool enabled = !game_dashboard->tile_shadows();
+            auto stored = profiles->find_profile(state->active_profile()->id);
+            if (stored.has_value()) {
+              auto preferences = stored->preferences_json;
+              constexpr std::string_view key = "\"tile_shadows\"";
+              const auto position = preferences.find(key);
+              if (position == std::string::npos) {
+                const auto close = preferences.rfind('}');
+                preferences.insert(close == std::string::npos ? preferences.size() : close,
+                    (preferences.size() > 2 ? "," : "") + std::string{"\"tile_shadows\":"} + (enabled ? "true" : "false"));
+              } else {
+                const auto value = preferences.find(':', position);
+                const auto end = preferences.find_first_of(",}", value);
+                preferences.replace(value + 1, end - value - 1, enabled ? "true" : "false");
               }
+              profiles->set_preferences_json(state->active_profile()->id, preferences);
+              game_dashboard->set_tile_shadows(enabled);
             }
-            const auto launch_result = onion_launch->launch(target);
-            std::cout << "Onion handoff result: " << launch_result.item_id
-                      << " outcome=" << static_cast<int>(launch_result.outcome)
-                      << " detail=" << launch_result.detail << '\n';
-            if (!launch_result.completed()) {
-              library->report_launch_result("GAME COULD NOT START: " +
-                                            launch_result.detail);
-              return true;
+          } else if (target == "THEME" && profiles != nullptr &&
+                     state->active_profile() != nullptr) {
+            const auto current = game_dashboard->interface_theme();
+            const std::string next = current == "cream" ? "white"
+                                   : current == "white" ? "black"
+                                   : current == "black" ? "grey" : "cream";
+            auto stored = profiles->find_profile(state->active_profile()->id);
+            if (stored.has_value()) {
+              constexpr std::string_view key = "\"interface_theme\"";
+              auto preferences = stored->preferences_json;
+              const auto key_position = preferences.find(key);
+              if (key_position == std::string::npos) {
+                const auto close = preferences.rfind('}');
+                preferences.insert(close == std::string::npos ? preferences.size() : close,
+                                   (preferences.size() > 2 ? "," : "") +
+                                       std::string{"\"interface_theme\":\""} + next + "\"");
+              } else {
+                const auto first_quote = preferences.find('"', preferences.find(':', key_position));
+                const auto second_quote = preferences.find('"', first_quote + 1);
+                if (first_quote != std::string::npos && second_quote != std::string::npos) {
+                  preferences.replace(first_quote + 1, second_quote - first_quote - 1, next);
+                }
+              }
+              profiles->set_preferences_json(state->active_profile()->id, preferences);
+              game_dashboard->set_interface_theme(next);
+              state->set_active_profile_interface_theme(next);
             }
-            exit_status = sprout::launcher::kOnionHandoffExitCode;
-            return false;
+          } else if (target == "LOCK") {
+            access_controller->lock_and_return_to_profiles();
+            game_dashboard.reset();
+          } else if (target == "PROFILES") {
+            game_dashboard.reset();
+            access_controller->lock_and_return_to_profiles();
           }
+          return true;
         }
-        return true;
+        const auto entry = std::find_if(
+            library_entries.begin(), library_entries.end(),
+            [&](const auto& candidate) {
+              return candidate.id == dashboard_event->item_id;
+            });
+        if (entry == library_entries.end()) {
+          game_dashboard->report_launch_result("GAME IS NOT AVAILABLE");
+          return true;
+        }
+        auto target = entry->launch_target;
+        if (auto* native =
+                std::get_if<sprout::launcher::NativeLaunchTarget>(&target)) {
+          native->profile_id = state->active_profile()->id;
+          const auto sample = current_time_policy_sample();
+          native->seed = sample.monotonic_milliseconds ^
+                         static_cast<std::uint64_t>(sample.utc_seconds);
+          if (native->seed == 0) native->seed = 1;
+        }
+        return launch_library_target(
+            std::move(target), [&](std::string message) {
+              game_dashboard->report_launch_result(std::move(message));
+            });
       }
 
       if (archive != nullptr) {
@@ -1522,10 +1925,15 @@ int main(int argc, char* argv[]) {
           archive.reset();
         } else {
           archive.reset();
-          state.emplace(load_launcher_profiles(*profiles));
-          access_controller =
-              std::make_unique<sprout::launcher::ParentAccessController>(
-                  *state, parent_access.get(), parent_credential_ref);
+          // Backup is a dashboard setting. Returning from it must restore the
+          // same dashboard object (row, card, filters and detail context),
+          // rather than rebuilding the session underneath it.
+          if (game_dashboard == nullptr) {
+            state.emplace(load_launcher_profiles(*profiles));
+            access_controller =
+                std::make_unique<sprout::launcher::ParentAccessController>(
+                    *state, parent_access.get(), parent_credential_ref);
+          }
         }
         return true;
       }
@@ -1534,24 +1942,19 @@ int main(int argc, char* argv[]) {
           state->screen() == sprout::launcher::Screen::ProfileSelect;
       auto session_event =
           access_controller->handle(action, current_access_time());
-      // Profile activation is deliberately a direct route into the game
-      // library. Parent PIN completion activates internally and emits no
-      // public event, so observe the resulting launcher state and invoke the
-      // existing Continue target in both child and parent paths.
+      // Profile activation normally emits its landing target through the
+      // access controller. Keep this fallback for older controller flows, but
+      // always use the single dashboard rather than a legacy library section.
       if (!session_event.has_value() && was_profile_select &&
           state->screen() != sprout::launcher::Screen::ProfileSelect &&
           !access_controller->has_pin_prompt()) {
         const auto* active_profile = state->active_profile();
-        if (active_profile != nullptr &&
-            active_profile->role == sprout::launcher::ProfileRole::Child) {
+        if (active_profile != nullptr) {
           session_event = sprout::launcher::ParentAccessEvent{
               .type = sprout::launcher::ParentAccessEventType::ActionInvoked,
               .profile_id = active_profile->id,
-              .target = "Continue",
+              .target = "Game Dashboard",
           };
-        } else {
-          session_event =
-              access_controller->handle(Action::Confirm, current_access_time());
         }
       }
       if (!session_event.has_value()) {
@@ -1561,53 +1964,32 @@ int main(int argc, char* argv[]) {
           sprout::launcher::ParentAccessEventType::ExitRequested) {
         return !commit_parent_exit_marker();
       }
-      const auto section = sprout::launcher::library_section_for_menu_target(
-          session_event->target);
-      if (section.has_value()) {
-        auto entries = library_entries;
-        const auto* active_profile = state->active_profile();
-        if (active_profile != nullptr) {
-          const bool child =
-              active_profile->role == sprout::launcher::ProfileRole::Child;
-          bool time_expired = false;
-          if (child && daily_time_policy != nullptr) {
-            time_expired =
-                daily_time_policy
-                    ->status(active_profile->id, current_time_policy_sample())
-                    .expired;
+      if (was_profile_select && profiles != nullptr &&
+          state->active_profile() != nullptr) {
+        const auto selected_id = state->active_profile()->id;
+        for (const auto& stored : profiles->list_profiles(false)) {
+          auto preferences = stored.preferences_json;
+          constexpr std::string_view key = "\"last_accessed\"";
+          const auto position = preferences.find(key);
+          const bool selected = stored.id == selected_id;
+          if (position == std::string::npos) {
+            const auto close = preferences.rfind('}');
+            preferences.insert(close == std::string::npos ? preferences.size() : close,
+                (preferences.size() > 2 ? "," : "") +
+                std::string{"\"last_accessed\":"} + (selected ? "true" : "false"));
+          } else {
+            const auto value = preferences.find(':', position);
+            const auto end = preferences.find_first_of(",}", value);
+            if (value != std::string::npos)
+              preferences.replace(value + 1, end - value - 1, selected ? "true" : "false");
           }
-          if (household_seed.has_value()) {
-            sprout::launcher::apply_seeded_profile_library_overlay(
-                *household_seed, active_profile->id, child, entries);
-          }
-          for (auto& entry : entries) {
-            std::visit(
-                [&](auto& target) {
-                  target.launch_allowed = entry.launch_allowed;
-                  if constexpr (std::is_same_v<
-                                    std::decay_t<decltype(target)>,
-                                    sprout::launcher::NativeLaunchTarget>) {
-                    target.profile_id = active_profile->id;
-                    const auto sample = current_time_policy_sample();
-                    target.seed =
-                        sample.monotonic_milliseconds ^
-                        static_cast<std::uint64_t>(sample.utc_seconds);
-                    if (target.seed == 0) target.seed = 1;
-                  }
-                },
-                entry.launch_target);
-            if (child && !entry.child_visible) {
-              entry.launch_allowed = false;
-              entry.unavailable_reason =
-                  "PARENT APPROVAL IS NOT CONFIGURED FOR THIS GAME";
-            } else if (child && time_expired) {
-              entry.launch_allowed = false;
-              entry.unavailable_reason = "DAILY PLAY TIME IS USED UP";
-            }
-          }
+          profiles->set_preferences_json(stored.id, preferences);
         }
-        library = std::make_unique<sprout::launcher::LibraryPresentation>(
-            std::move(entries), *section);
+      }
+      if ((session_event->target == "Family Dashboard" ||
+           session_event->target == "Game Guide" ||
+           session_event->target == "Game Dashboard") &&
+          open_game_dashboard()) {
         return true;
       }
       if (session_event->target == "Backup & Restore" &&
@@ -1644,75 +2026,257 @@ int main(int argc, char* argv[]) {
     }
   };
 
-  if (auto_launch_arcade_item.has_value()) {
-    if (!state.has_value() || setup != nullptr || recovery != nullptr ||
-        access_controller == nullptr || native_launch == nullptr) {
-      std::cerr << "Arcade auto-launch requires completed launcher setup\n";
-      running = false;
-    } else {
-      running = handle_session_action(Action::Confirm);
-      for (int step = 0; step < 3 && running; ++step) {
-        running = handle_session_action(Action::Right);
-      }
-      if (running) running = handle_session_action(Action::Confirm);
-      if (running && library != nullptr) {
-        const auto entries = library->entries();
-        const auto selected = std::find_if(
-            entries.begin(), entries.end(), [&](const auto& entry) {
-              return entry.id == *auto_launch_arcade_item;
-            });
-        if (selected == entries.end()) {
-          std::cerr << "Arcade auto-launch item was not found: "
-                    << *auto_launch_arcade_item << '\n';
-          running = false;
-        } else {
-          const auto offset = static_cast<std::size_t>(
-              std::distance(entries.begin(), selected));
-          for (std::size_t step = 0; step < offset && running; ++step) {
-            running = handle_session_action(Action::Right);
-          }
-          if (running) running = handle_session_action(Action::Confirm);
-        }
-      } else if (running) {
-        std::cerr << "Arcade auto-launch could not open the Arcade library\n";
-        running = false;
-      }
-      dirty = true;
-    }
-  }
-
   const bool contained_device = std::getenv("SPROUT_CONTAINED") != nullptr;
+  bool start_held = false;
+  bool select_held = false;
+  bool onion_exit_hold_active = false;
+  bool onion_exit_chord = false;
+  bool saving_for_sleep = false;
+  std::uint32_t saving_started_at = 0;
+  std::uint32_t onion_exit_hold_started = 0;
+  std::uint32_t last_dashboard_motion_frame = 0;
   while (running) {
     SDL_Event event{};
     if (SDL_WaitEventTimeout(&event, 16) != 0) {
       if (event.type == SDL_QUIT) {
-        if (!contained_device) {
+        if (contained_device) {
+          // A normal power press is surfaced by the Miyoo SDL backend as a
+          // quit event. Keep Sprout visible just long enough to acknowledge
+          // the save, then let the wrapper release fb0 and suspend safely.
+          saving_for_sleep = true;
+          saving_started_at = SDL_GetTicks();
+          dirty = true;
+        } else {
           running = false;
         }
+      } else if (saving_for_sleep) {
+        // Do not let a queued key activate anything while the device is
+        // committing its final frame and preparing to sleep.
+        continue;
       } else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
-        const auto action = sprout::launcher::keyboard_action(event.key.keysym.sym);
+        if (SDL_getenv("SPROUT_INPUT_PROBE") != nullptr) {
+          std::cerr << "SPROUT_INPUT key sym=" << event.key.keysym.sym
+                    << " scan=" << event.key.keysym.scancode << '\n';
+        }
+        const auto key = event.key.keysym.sym;
+        // A combo PIN consumes every labelled control directly, before the
+        // normal Start/Select chord and global navigation can reinterpret it.
+        if (parent_pin != nullptr && parent_pin->uses_button_combo()) {
+          if (const auto action = sprout::launcher::keyboard_action(key);
+              action.has_value()) {
+            running = handle_session_action(*action);
+            dirty = true;
+          }
+          continue;
+        }
+        const bool start_key = key == SDLK_RETURN;
+        const bool select_key = key == SDLK_ESCAPE || key == SDLK_t;
+        if (start_key) start_held = true;
+        if (select_key) select_held = true;
+        // Parent escape gesture: hold the two labelled front buttons together.
+        // Each button can retain its ordinary short-press behavior; only the
+        // sustained chord requests an Onion exit.
+        if (start_held && select_held) {
+          onion_exit_hold_active = true;
+          onion_exit_chord = true;
+          onion_exit_hold_started = SDL_GetTicks();
+          std::cerr << "Parent Onion exit hold started\n";
+          continue;
+        }
+        // Start and Select are delayed until key-up so the first button of a
+        // potential chord cannot open a dashboard page before the hold lands.
+        if (start_key || select_key) continue;
+        const auto action = sprout::launcher::keyboard_action(key);
         if (action.has_value()) {
           running = handle_session_action(*action);
           dirty = true;
         }
+      } else if (event.type == SDL_KEYUP) {
+        const auto key = event.key.keysym.sym;
+        const bool start_key = key == SDLK_RETURN;
+        const bool select_key = key == SDLK_ESCAPE || key == SDLK_t;
+        if (start_key) start_held = false;
+        if (select_key) select_held = false;
+        if (!start_held || !select_held) onion_exit_hold_active = false;
+        if ((start_key || select_key) && !onion_exit_chord) {
+          running = handle_session_action(start_key ? Action::Menu
+                                                    : Action::ProfileSelect);
+          dirty = true;
+        }
+        if (!start_held && !select_held) onion_exit_chord = false;
       } else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
+        if (SDL_getenv("SPROUT_INPUT_PROBE") != nullptr) {
+          std::cerr << "SPROUT_INPUT controller-button="
+                    << static_cast<int>(event.cbutton.button) << '\n';
+        }
+        // Some Miyoo revisions expose START/SELECT through SDL's controller
+        // path rather than the keyboard path. Mirror the keyboard chord here
+        // so the parent-only Start + Select escape hatch is always available.
+        const bool start_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_START;
+        const bool select_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK;
+        if (start_button) start_held = true;
+        if (select_button) select_held = true;
+        if (start_held && select_held) {
+          onion_exit_hold_active = true;
+          onion_exit_chord = true;
+          onion_exit_hold_started = SDL_GetTicks();
+          std::cerr << "Parent Onion exit hold started\n";
+          continue;
+        }
+        if (start_button || select_button) continue;
         const auto action = sprout::launcher::controller_action(event.cbutton.button);
         if (action.has_value()) {
           running = handle_session_action(*action);
           dirty = true;
         }
+      } else if (event.type == SDL_CONTROLLERBUTTONUP) {
+        const bool start_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_START;
+        const bool select_button = event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK;
+        if (start_button) start_held = false;
+        if (select_button) select_held = false;
+        if (!start_held || !select_held) onion_exit_hold_active = false;
+        if ((start_button || select_button) && !onion_exit_chord) {
+          running = handle_session_action(start_button ? Action::Menu
+                                                       : Action::ProfileSelect);
+          dirty = true;
+        }
+        if (!start_held && !select_held) onion_exit_chord = false;
+      } else if (event.type == SDL_CONTROLLERAXISMOTION &&
+                 SDL_getenv("SPROUT_INPUT_PROBE") != nullptr &&
+                 (event.caxis.value > 8000 || event.caxis.value < -8000)) {
+        std::cerr << "SPROUT_INPUT controller-axis="
+                  << static_cast<int>(event.caxis.axis) << " value="
+                  << event.caxis.value << '\n';
       }
+    }
+
+    if (onion_exit_hold_active &&
+        SDL_GetTicks() - onion_exit_hold_started >= 1200U) {
+      onion_exit_hold_active = false;
+      std::cerr << "Parent Onion exit hold fired\n";
+      // The chord is available only from an already-selected parent profile.
+      // Write the wrapper's explicit exit marker directly instead of opening a
+      // second PIN authorization flow, then let Onion resume its paused UI.
+      if (state.has_value() && state->active_profile() != nullptr &&
+          state->active_profile()->role == sprout::launcher::ProfileRole::Parent) {
+        game_dashboard.reset();
+        archive.reset();
+        profile_avatars.reset();
+        image_crop.reset();
+        running = !commit_parent_exit_marker();
+      }
+      dirty = true;
+    }
+    if (saving_for_sleep && SDL_GetTicks() - saving_started_at >= 650U) {
+      // SQLite writes are committed at each state transition; sync makes the
+      // final filesystem boundary explicit before the wrapper sleeps.
+      std::system("sync");
+      exit_status = sprout::launcher::kOnionSleepExitCode;
+      running = false;
+      continue;
+    }
+    // The profile-selector parent PIN uses the access controller rather than
+    // the settings workflow. It needs the same delayed fourth-marker advance
+    // and unattended expiry handling as the settings PIN.
+    if (access_controller != nullptr && access_controller->has_pin_prompt()) {
+      if (access_controller->expire_pin_if_needed()) {
+        dirty = true;
+      } else if (const auto access_event =
+                     access_controller->advance_pin_delay(current_access_time());
+                 access_event.has_value()) {
+        if (access_event->type ==
+            sprout::launcher::ParentAccessEventType::ExitRequested) {
+          running = !commit_parent_exit_marker();
+        } else if ((access_event->target == "Family Dashboard" ||
+                    access_event->target == "Game Dashboard") &&
+                   open_game_dashboard()) {
+          // Unlocking from profile selection is a complete navigation event;
+          // redraw the newly opened dashboard without another button press.
+        }
+        dirty = true;
+      }
+    }
+    // Keep the fourth combo marker on-screen long enough to be perceived
+    // before advancing to verification or the confirmation pass.
+    const bool combo_was_pending = parent_pin != nullptr && parent_pin->completion_pending();
+    if (parent_pin != nullptr &&
+        parent_pin_workflow == ParentPinWorkflow::ChangeVerify &&
+        parent_pin->advance_after_input_delay() ==
+            sprout::launcher::ParentPinEvent::Submitted) {
+      std::string pin = parent_pin->take_pin();
+      constexpr std::string_view kCredentialRef = "secret:parent-primary";
+      if (!parent_access->verify_pin(std::string(kCredentialRef), std::move(pin))) {
+        parent_pin->authentication_failed();
+      } else {
+        parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+            sprout::launcher::ParentPinMode::ComboCreate);
+        parent_pin_workflow = ParentPinWorkflow::ChangeCreate;
+      }
+      parent_pin_last_input = SDL_GetTicks();
+      dirty = true;
+    }
+    // Combo creation also completes after its fourth button settles on screen.
+    // Unlike numeric PINs it therefore never emits Submitted from the input
+    // handler itself; persist it from this delayed completion path.
+    if (parent_pin != nullptr &&
+        parent_pin_workflow == ParentPinWorkflow::ChangeCreate &&
+        parent_pin->advance_after_input_delay() ==
+            sprout::launcher::ParentPinEvent::Submitted) {
+      std::string pin = parent_pin->take_pin();
+      constexpr std::string_view kCredentialRef = "secret:parent-primary";
+      parent_access->set_pin(std::string(kCredentialRef), std::move(pin), true);
+      parent_credential_ref = kCredentialRef;
+      if (configuration != nullptr) {
+        auto saved_configuration = configuration->load_active();
+        saved_configuration.parent_credential_ref = std::string(kCredentialRef);
+        (void)configuration->save(std::move(saved_configuration));
+      }
+      if (state.has_value()) {
+        access_controller =
+            std::make_unique<sprout::launcher::ParentAccessController>(
+                *state, parent_access.get(), parent_credential_ref);
+      }
+      parent_pin = std::make_unique<sprout::launcher::ParentPinPresentation>(
+          sprout::launcher::ParentPinMode::Updated);
+      parent_pin_workflow = ParentPinWorkflow::ChangeDone;
+      parent_pin_last_input = SDL_GetTicks();
+      dirty = true;
+    }
+    if (parent_pin != nullptr && combo_was_pending &&
+        !parent_pin->completion_pending()) {
+      dirty = true;
+    }
+    if (parent_pin != nullptr && parent_pin_last_input != 0 &&
+        SDL_GetTicks() - parent_pin_last_input >= 20000U) {
+      parent_pin.reset();
+      parent_pin_workflow = ParentPinWorkflow::Setup;
+      dirty = true;
+    }
+    if (parent_pin != nullptr &&
+        parent_pin_workflow == ParentPinWorkflow::ChangeDone &&
+        SDL_GetTicks() - parent_pin_last_input >= 1200U) {
+      parent_pin.reset();
+      parent_pin_workflow = ParentPinWorkflow::Setup;
+      dirty = true;
     }
 
     const bool animated_profile_focus =
         state.has_value() && state->screen() == sprout::launcher::Screen::ProfileSelect &&
         recovery == nullptr && parent_pin == nullptr && image_crop == nullptr &&
-        profile_avatars == nullptr && setup == nullptr && library == nullptr &&
+        profile_avatars == nullptr && setup == nullptr &&
+        game_dashboard == nullptr &&
         archive == nullptr && SDL_getenv("SPROUT_STATIC_UI") == nullptr;
     if (animated_profile_focus) dirty = true;
+    if (parent_pin != nullptr && parent_pin->uses_button_combo()) dirty = true;
+    if (game_dashboard != nullptr &&
+        game_dashboard->motion_active(SDL_GetTicks())) {
+      dirty = true;
+    }
 
     if (dirty) {
-      if (recovery != nullptr) {
+      if (saving_for_sleep) {
+        sprout::launcher::render_saving(renderer);
+      } else if (recovery != nullptr) {
         sprout::launcher::render_recovery(renderer, *recovery);
       } else if (parent_pin != nullptr) {
         sprout::launcher::render_parent_pin(renderer, *parent_pin);
@@ -1727,12 +2291,9 @@ int main(int argc, char* argv[]) {
             renderer, *profile_avatars, built_in_avatar_root);
       } else if (setup != nullptr) {
         sprout::launcher::render_setup(renderer, *setup);
-      } else if (library != nullptr) {
-        sprout::launcher::render_library(
-            renderer, *library, state->active_profile(),
-            data_root.has_value() ? *data_root / "data" / "profile-images"
-                                  : std::filesystem::path{},
-            built_in_avatar_root);
+      } else if (game_dashboard != nullptr) {
+        sprout::launcher::render_game_dashboard(renderer, *game_dashboard);
+        last_dashboard_motion_frame = SDL_GetTicks();
       } else if (archive != nullptr) {
         sprout::launcher::render_profile_archive(renderer, *archive);
       } else {

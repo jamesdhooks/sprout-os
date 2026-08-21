@@ -18,7 +18,8 @@ class ParentAccessStore {
   ParentAccessStore(const ParentAccessStore&) = delete;
   ParentAccessStore& operator=(const ParentAccessStore&) = delete;
 
-  void set_pin(const std::string& credential_ref, std::string pin);
+  void set_pin(const std::string& credential_ref, std::string pin, bool button_combo = false);
+  [[nodiscard]] bool uses_button_combo(const std::string& credential_ref) const;
   [[nodiscard]] bool verify_pin(const std::string& credential_ref,
                                 std::string pin) const;
   void grant_until_end_of_day(const std::string& credential_ref,
